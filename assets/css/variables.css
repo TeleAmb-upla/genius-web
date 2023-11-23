@@ -58,11 +58,20 @@
   --color-blue: #0d6efd;
   --color-blue-rgb: 13, 110, 253;
 
+  --color-blue-genius:#033E60;
+  --color-blue-genius-rgb: 3, 62, 96;
+
+  --color-blue-light-genius:#2CB8C7;
+  --color-blue-light-genius-rgb: 44, 184, 199;
+
   --color-indigo: #6610f2;
   --color-indigo-rgb: 102, 16, 242;
 
   --color-purple: #6f42c1;
   --color-purple-rgb: 111, 66, 193;
+
+  --color-purple-genius:#714C89;
+  --color-purple-genius-rgb: 113, 76, 137;
 
   --color-pink: #f3268c;
   --color-pink-rgb: 243, 38, 140;
@@ -73,11 +82,20 @@
   --color-orange: #fd7e14;
   --color-orange-rgb: 253, 126, 20;
 
+  --color-orange-genius: #CF653D;
+  --color-orange-genius-rgb: 207, 101, 61;
+
   --color-yellow: #ffc107;
   --color-yellow-rgb: 255, 193, 7;
 
+  --color-yellow-genius: #EEEB90;
+  --color-yellow-genius-rgb: 238, 235, 144;
+
   --color-green: #059652;
   --color-green-rgb: 5, 150, 82;
+
+  --color-green-genius: #2E9967;
+  --color-green-genius-rgb: 44, 153, 103;
 
   --color-teal: #20c997;
   --color-teal-rgb: 32, 201, 151;
