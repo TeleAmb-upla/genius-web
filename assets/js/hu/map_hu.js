@@ -70,7 +70,7 @@ export async function map_hu() {
     L.control.layers(null, overlayMaps).addTo(currentMap);
 
     // Cargar y agregar el archivo GeoJSON al mapa
-    fetch('/assets/vec/capas/distritos.geojson')
+    fetch('/assets/vec/capas/PRC_Quilpue.geojson')
     .then(response => response.json())
     .then(geojsonData => {
         const geojsonLayer = L.geoJSON(geojsonData, {
@@ -78,12 +78,15 @@ export async function map_hu() {
                 color: "black",  // Establecer el color de los bordes
                 weight: 1,       // Grosor de los bordes
                 fillOpacity: 0   // Relleno completamente transparente
+            },
+            pointToLayer: function(feature, latlng) {
+                return null; // No visualizar puntos
             }
         }).addTo(currentMap);
-        // Agregar la capa a currentLayers
         currentLayers["GeoJSON Layer"] = geojsonLayer;
     })
     .catch(error => console.error('Error cargando el GeoJSON:', error));
+
     // Agregar el título centrado al mapa
     addCenteredTitle(currentMap);
 
