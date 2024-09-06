@@ -19,17 +19,60 @@ export async function map_ndvi_zonal_b() {
 
   const beforeMap = new maplibregl.Map({
     container: 'before',
-    style: 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+    style: {
+        version: 8,
+        sources: {
+            osm: {
+                type: 'raster',
+                tiles: [
+                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                ],
+                tileSize: 256,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }
+        },
+        layers: [
+            {
+                id: 'osm-tiles',
+                type: 'raster',
+                source: 'osm',
+                minzoom: 0,
+                maxzoom: 19
+            }
+        ]
+    },
     center: [-71.44249000, -33.04752000],
     zoom: 12.6
-  });
+});
 
-  const afterMap = new maplibregl.Map({
+const afterMap = new maplibregl.Map({
     container: 'after',
-    style: 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+    style: {
+        version: 8,
+        sources: {
+            osm: {
+                type: 'raster',
+                tiles: [
+                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                ],
+                tileSize: 256,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }
+        },
+        layers: [
+            {
+                id: 'osm-tiles',
+                type: 'raster',
+                source: 'osm',
+                minzoom: 0,
+                maxzoom: 19
+            }
+        ]
+    },
     center: [-71.44249000, -33.04752000],
     zoom: 12.6
-  });
+});
+
 
   // Agregar controles de navegación a la izquierda
   const beforeNavControl = new maplibregl.NavigationControl({ showCompass: true, showZoom: true });
