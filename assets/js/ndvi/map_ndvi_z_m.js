@@ -12,22 +12,65 @@ export async function map_ndvi_zonal_m() {
     <div id="after_manzanas" style="width: 100%; height: 100%;"></div>
     <div id="title" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background-color: rgba(255, 255, 255, 0.8); padding: 5px 10px; z-index: 2;">
       NDVI ZONAL MANZANAS
-    </div>
-  `;
+    </div> 
+  `; 
 
   const beforeMap = new maplibregl.Map({
-    container: 'before_manzanas', // Nuevo ID único
-    style: 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+    container: 'before_manzanas',
+    style: {
+        version: 8,
+        sources: {
+            carto: {
+                type: 'raster',
+                tiles: [
+                    'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+                ],
+                tileSize: 256,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
+            }
+        },
+        layers: [
+            {
+                id: 'carto-tiles',
+                type: 'raster',
+                source: 'carto',
+                minzoom: 0,
+                maxzoom: 19
+            }
+        ]
+    },
     center: [-71.44249000, -33.04752000],
     zoom: 12.6
-  });
+});
 
-  const afterMap = new maplibregl.Map({
-    container: 'after_manzanas', // Nuevo ID único
-    style: 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+const afterMap = new maplibregl.Map({
+    container: 'after_manzanas',
+    style: {
+        version: 8,
+        sources: {
+            carto: {
+                type: 'raster',
+                tiles: [
+                    'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+                ],
+                tileSize: 256,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
+            }
+        },
+        layers: [
+            {
+                id: 'carto-tiles',
+                type: 'raster',
+                source: 'carto',
+                minzoom: 0,
+                maxzoom: 19
+            }
+        ]
+    },
     center: [-71.44249000, -33.04752000],
     zoom: 12.6
-  });
+});
+
 
   // Agregar controles de navegación a la izquierda
   const beforeNavControl = new maplibregl.NavigationControl({ showCompass: true, showZoom: true });

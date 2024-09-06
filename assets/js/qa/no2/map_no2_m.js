@@ -15,20 +15,61 @@ export async function map_no2_m() {
         NO² ZONAL MANZANAS
       </div>
     `;
-  
     const beforeMap = new maplibregl.Map({
-      container: 'before_m_no2', // Nuevo ID único
-      style: 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+      container: 'before_m_no2', // Contenedor ajustado a 'before_m_no2'
+      style: {
+          version: 8,
+          sources: {
+              carto: {
+                  type: 'raster',
+                  tiles: [
+                      'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+                  ],
+                  tileSize: 256,
+                  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
+              }
+          },
+          layers: [
+              {
+                  id: 'carto-tiles',
+                  type: 'raster',
+                  source: 'carto',
+                  minzoom: 0,
+                  maxzoom: 19
+              }
+          ]
+      },
       center: [-71.44249000, -33.04752000],
       zoom: 12.6
-    });
+  });
   
-    const afterMap = new maplibregl.Map({
-      container: 'after_m_no2', // Nuevo ID único
-      style: 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+  const afterMap = new maplibregl.Map({
+      container: 'after_m_no2', // Contenedor ajustado a 'after_m_no2'
+      style: {
+          version: 8,
+          sources: {
+              carto: {
+                  type: 'raster',
+                  tiles: [
+                      'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+                  ],
+                  tileSize: 256,
+                  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
+              }
+          },
+          layers: [
+              {
+                  id: 'carto-tiles',
+                  type: 'raster',
+                  source: 'carto',
+                  minzoom: 0,
+                  maxzoom: 19
+              }
+          ]
+      },
       center: [-71.44249000, -33.04752000],
       zoom: 12.6
-    });
+  });
   
     // Agregar controles de navegación a la izquierda
     const beforeNavControl = new maplibregl.NavigationControl({ showCompass: true, showZoom: true });
