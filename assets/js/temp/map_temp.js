@@ -165,7 +165,7 @@ export async function map_t() {
         "LST Year": YearLayer,
         "LST Month": MonthLayer,
         "LST Trend": await map_trend(currentMap),
-        "Áreas Verdes": areasVerdesLayer
+        //"Áreas Verdes": areasVerdesLayer
     };
 
     L.control.layers(baseLayers, overlayLayers).addTo(currentMap);

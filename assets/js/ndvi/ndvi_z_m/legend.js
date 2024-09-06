@@ -13,24 +13,21 @@ export function createYearLegend() {
     legendContent.style.zIndex = '2';
   
          // Agregar un título para la leyenda del año
-         const title = '<h5> NDVI </h5>';
+         const title = '<h5> NDVI Anual</h5>';
   
          const ndviRanges = [
-      { min: -0.3359, max: -0.1 },
-      { min: -0.1, max: 0 },
       { min: 0, max: 0.1 },
-      { min: 0.1, max: 0.2 },
-      { min: 0.2, max: 0.3 },
-      { min: 0.3, max: 0.4 },
-      { min: 0.4, max: 0.5 },
-      { min: 0.5, max: 0.6 },
-      { min: 0.6, max: 0.7422 }
+      { min: 0.1, max: 0.27 },
+      { min: 0.27, max: 0.32 },
+      { min: 0.32, max: 0.40 },
+      { min: 0.40, max: 0.50 },
+
     ];
     legendContent.innerHTML = title + ndviRanges.map(range => {
       const color = ndviToColorYear_z_m(range.min);
       return `
         <div>
-          <span style="background: ${color}; width: 20px; height: 20px; display: inline-block;"></span> ${range.min.toFixed(1)} - ${range.max.toFixed(1)}
+          <span style="background: ${color}; width: 20px; height: 20px; display: inline-block;"></span> ${range.min.toFixed(2)} - ${range.max.toFixed(2)}
         </div>
       `;
     }).join('');
@@ -49,24 +46,21 @@ export function createYearLegend() {
     legendContent.style.padding = '10px';
     legendContent.style.zIndex = '2';
              // Agregar un título para la leyenda del año
-    const title = '<h5> NDVI </h5>';
-    const ndviRanges = [
-      { min: -0.3359, max: -0.1 },
-      { min: -0.1, max: 0 },
-      { min: 0, max: 0.1 },
-      { min: 0.1, max: 0.2 },
-      { min: 0.2, max: 0.3 },
-      { min: 0.3, max: 0.4 },
-      { min: 0.4, max: 0.5 },
-      { min: 0.5, max: 0.6 },
-      { min: 0.6, max: 0.7422 }
-    ];
+    const title = '<h5> NDVI Mensual</h5>';
+      const ndviRanges = [
+        { min: 0, max: 0.1 },
+        { min: 0.1, max: 0.27 },
+        { min: 0.27, max: 0.32 },
+        { min: 0.32, max: 0.40 },
+        { min: 0.40, max: 0.50 },
+  
+      ];
   
     legendContent.innerHTML = title + ndviRanges.map(range => {
       const color = ndviToColorMonth_z_m(range.min);
       return `
         <div>
-          <span style="background: ${color}; width: 20px; height: 20px; display: inline-block;"></span> ${range.min.toFixed(1)} - ${range.max.toFixed(1)}
+          <span style="background: ${color}; width: 20px; height: 20px; display: inline-block;"></span> ${range.min.toFixed(2)} - ${range.max.toFixed(2)}
         </div>
       `;
     }).join('');

@@ -32,7 +32,7 @@ export function createmonthLegendSVG() {
     const Values = [[7, 15], [15, 22], [22, 31], [31, 39], [39, 44]];  // Define los rangos como arrays
     const legendItems = Values.map((range, index) => {
         const LST_median = (range[0] + range[1]) / 2;  // Calcula el valor promedio del rango para obtener el color
-        const color = ToColorYear(LST_median);
+        const color = ToColorMonth(LST_median);
         const yPosition = 25 + index * 30;
         const label = `${range[0]}°C - ${range[1]}°C`;  // Muestra el rango con el símbolo de grados Celsius
 
@@ -44,7 +44,7 @@ export function createmonthLegendSVG() {
 
     return `
         <svg width="100" height="220" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="15" font-size="12" font-family="Arial">LST ANUAL</text>
+            <text x="0" y="15" font-size="12" font-family="Arial">LST Mensual</text>
             ${legendItems}
         </svg>
     `;

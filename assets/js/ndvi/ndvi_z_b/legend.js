@@ -10,28 +10,24 @@ export function createYearLegend() {
     legendContent.style.transform = 'translateY(-50%)'; // Solo transformar en el eje Y
     legendContent.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
     legendContent.style.padding = '10px';
-    legendContent.style.zIndex = '2';
+    legendContent.style.zIndex = '3';
 
              // Agregar un título para la leyenda del año
-             const title = '<h5> NDVI </h5>';
+             const title = '<h5> NDVI Anual</h5>';
   
     const ndviRanges = [
-      { min: -0.3359, max: -0.1 },
-      { min: -0.1, max: 0 },
-      { min: 0, max: 0.1 },
-      { min: 0.1, max: 0.2 },
-      { min: 0.2, max: 0.3 },
-      { min: 0.3, max: 0.4 },
-      { min: 0.4, max: 0.5 },
-      { min: 0.5, max: 0.6 },
-      { min: 0.6, max: 0.7422 }
+      { min: 0.1, max: 0.15 },
+      { min: 0.15, max: 0.20 },
+      { min: 0.20, max: 0.25 },
+      { min: 0.25, max: 0.35 },
+      { min: 0.35, max: 0.40 },
     ];
   
     legendContent.innerHTML = title +  ndviRanges.map(range => {
       const color = ndviToColorYear_z_b(range.min);
       return `
         <div>
-          <span style="background: ${color}; width: 20px; height: 20px; display: inline-block;"></span> ${range.min.toFixed(1)} - ${range.max.toFixed(1)}
+          <span style="background: ${color}; width: 20px; height: 20px; display: inline-block;"></span> ${range.min.toFixed(2)} - ${range.max.toFixed(2)}
         </div>
       `;
     }).join('');
@@ -50,24 +46,20 @@ export function createYearLegend() {
     legendContent.style.padding = '10px';
     legendContent.style.zIndex = '2';
            // Agregar un título para la leyenda del año
-           const title = '<h5> NDVI </h5>';
-    const ndviRanges = [
-      { min: -0.3359, max: -0.1 },
-      { min: -0.1, max: 0 },
-      { min: 0, max: 0.1 },
-      { min: 0.1, max: 0.2 },
-      { min: 0.2, max: 0.3 },
-      { min: 0.3, max: 0.4 },
-      { min: 0.4, max: 0.5 },
-      { min: 0.5, max: 0.6 },
-      { min: 0.6, max: 0.7422 }
-    ];
+           const title = '<h5> NDVI Mensual</h5>';
+           const ndviRanges = [
+            { min: 0.1, max: 0.15 },
+            { min: 0.15, max: 0.20 },
+            { min: 0.20, max: 0.25 },
+            { min: 0.25, max: 0.35 },
+            { min: 0.35, max: 0.40 },
+          ];
   
     legendContent.innerHTML =  title + ndviRanges.map(range => {
       const color = ndviToColorMonth_z_b(range.min);
       return `
         <div>
-          <span style="background: ${color}; width: 20px; height: 20px; display: inline-block;"></span> ${range.min.toFixed(1)} - ${range.max.toFixed(1)}
+          <span style="background: ${color}; width: 20px; height: 20px; display: inline-block;"></span> ${range.min.toFixed(2)} - ${range.max.toFixed(2)}
         </div>
       `;
     }).join('');

@@ -2,26 +2,35 @@ export function ndviToColorMonth(ndvi) {
     const minNDVI = -0.3281;
     const maxNDVI = 0.7969;
 
-    // Definir la paleta de colores
-    const palette = ['#FFFFFF', '#CE7E45', '#DF923D', '#F1B555', '#FCD163', '#99B718',
-        '#74A901', '#66A000', '#529400', '#3E8601', '#207401', '#056201',
-        '#004C00', '#023B01', '#012E01', '#011D01', '#011301'];
+    // Paleta de colores invertida que representa los diferentes valores de NDVI
+    const palette = ['ff0000', 'CE7E45', 'DF923D', 'F1B555', 'FCD163', '99B718',
+        '74A901', '529400', '3E8601', '207401', '056201', '004C00', '023B01',
+        '012E01', '011D01', '011301'];
 
-    let color = '#000000'; // Color por defecto en caso de error
+    // Asignamos rangos de NDVI a los colores
+    const ranges = [
+        { min: minNDVI, max: -0.12028, color: `#${palette[0]}` },    // Color rojo
+        { min: -0.12028, max: 0.09534, color: `#${palette[3]}` },   // Color amarillo claro
+        { min: 0.09534, max: 0.31096, color: `#${palette[6]}` },    // Color verde claro
+        { min: 0.31096, max: 0.52658, color: `#${palette[9]}` },    // Color verde
+        { min: 0.52658, max: maxNDVI, color: `#${palette[15]}` }    // Color verde oscuro
+    ];
 
-    // Asegurarse de que el valor de NDVI esté dentro del rango
-    if (ndvi < minNDVI) ndvi = minNDVI;
-    if (ndvi > maxNDVI) ndvi = maxNDVI;
+    // Si el NDVI está fuera del rango, devolvemos el color mínimo o máximo
+    if (ndvi <= minNDVI) {
+        return ranges[0].color;
+    }
+    if (ndvi >= maxNDVI) {
+        return ranges[ranges.length - 1].color;
+    }
 
-    // Normalizar el valor de NDVI dentro del rango [minNDVI, maxNDVI]
-    const ratio = (ndvi - minNDVI) / (maxNDVI - minNDVI);
+    // Asignar color basado en el rango al que pertenece el valor de NDVI
+    for (let i = 0; i < ranges.length; i++) {
+        if (ndvi >= ranges[i].min && ndvi < ranges[i].max) {
+            return ranges[i].color;
+        }
+    }
 
-    // Calcular el índice de la paleta correspondiente
-    const colorIndex = Math.floor(ratio * (palette.length - 1));
-
-    // Asignar el color de la paleta
-    color = palette[colorIndex];
-
-    return color;
+    // Retorna el color correspondiente al NDVI si no entra en ningún rango (caso extraño)
+    return ranges[0].color; // Fallback al color mínimo
 }
-// Compare this snippet from assets/js/temp/month/palette_month.js:

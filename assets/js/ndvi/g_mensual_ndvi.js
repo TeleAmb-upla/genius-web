@@ -25,7 +25,7 @@ export async function g_m_ndvi() {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial") 
-        .text("NDVI Interanual Distrito Urbano");
+        .text("NDVI Intranual Distrito Urbano");
 
    // titulos ejes 
    svg.append("text")

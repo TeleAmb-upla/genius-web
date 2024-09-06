@@ -25,7 +25,7 @@ export async function g_m_t() {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial") 
-        .text("LST IntraAnual Distrito Urbano");
+        .text("LST Intraanual Distrito Urbano");
 
    // titulos ejes 
    svg.append("text")
