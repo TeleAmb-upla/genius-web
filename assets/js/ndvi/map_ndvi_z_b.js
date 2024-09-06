@@ -22,20 +22,20 @@ export async function map_ndvi_zonal_b() {
     style: {
         version: 8,
         sources: {
-            osm: {
+            carto: {
                 type: 'raster',
                 tiles: [
-                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
                 ],
                 tileSize: 256,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
             }
         },
         layers: [
             {
-                id: 'osm-tiles',
+                id: 'carto-tiles',
                 type: 'raster',
-                source: 'osm',
+                source: 'carto',
                 minzoom: 0,
                 maxzoom: 19
             }
@@ -50,20 +50,20 @@ const afterMap = new maplibregl.Map({
     style: {
         version: 8,
         sources: {
-            osm: {
+            carto: {
                 type: 'raster',
                 tiles: [
-                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
                 ],
                 tileSize: 256,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
             }
         },
         layers: [
             {
-                id: 'osm-tiles',
+                id: 'carto-tiles',
                 type: 'raster',
-                source: 'osm',
+                source: 'carto',
                 minzoom: 0,
                 maxzoom: 19
             }
@@ -72,7 +72,6 @@ const afterMap = new maplibregl.Map({
     center: [-71.44249000, -33.04752000],
     zoom: 12.6
 });
-
 
   // Agregar controles de navegación a la izquierda
   const beforeNavControl = new maplibregl.NavigationControl({ showCompass: true, showZoom: true });
