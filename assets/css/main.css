@@ -2501,3 +2501,371 @@ section {
   background: var(--color-primary);
   text-decoration: none;
 }
+
+.button-container {
+  display: flex;
+  flex-wrap: wrap; /* Permite que las imágenes se muevan a la siguiente línea en pantallas más pequeñas */
+  justify-content: center;
+  align-items: stretch; /* Alinea las imágenes para que llenen todo el contenedor verticalmente */
+  gap: 20px; /* Añade espacio consistente entre las imágenes */
+  padding: 20px; /* Añade algo de relleno alrededor del contenedor */
+  height: 200px; /* Define una altura uniforme para el contenedor */
+}
+
+.button-container img {
+  margin: 0; /* Elimina el margen específico */
+  cursor: pointer;
+  max-width: 150px; /* Limita el ancho máximo para hacerlas más consistentes */
+  height: 100%; /* Asegura que las imágenes llenen el contenedor verticalmente */
+  object-fit: contain; /* Mantiene la proporción de las imágenes */
+  transition: transform 0.3s, box-shadow 0.3s; /* Transición para transformación y sombra */
+  border-radius: 10px; /* Redondea las esquinas */
+}
+
+.button-container img:hover {
+  transform: scale(1.1); /* Aumenta el tamaño de la imagen ligeramente al pasar el ratón */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Añade una sombra sutil */
+  border: 2px solid #ccc; /* Añade un borde al pasar el ratón */
+}
+
+
+
+/* Nueva clase para el estado seleccionado del botón */
+.selected-button {
+  border: 2px solid black; /* Borde negro para el estado seleccionado */
+}
+
+
+.button-container2 {
+  display: flex;
+  justify-content: center;
+  gap: 10px; /* Espacio entre los botones */
+  margin-top: 10px;
+}
+
+.button-container3 {
+  display: flex;
+  justify-content: center;
+  gap: 10px; /* Espacio entre los botones */
+  margin-top: 10px;
+}
+
+.button-container3 button {
+  width: auto;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+
+.button-container4 {
+  display: flex;
+  justify-content: center;
+  gap: 10px; /* Espacio entre los botones */
+  margin-top: 10px;
+}
+
+
+.button-container2 button {
+  width: auto;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+
+
+.button-container4 button {
+  width: auto;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+
+
+.map-container {
+  width: 1200px;
+  height: 800px;
+  position: relative;
+  overflow: hidden;
+}
+
+
+.select-left, .select-right {
+  position: absolute;
+  bottom: 10px;
+  border: none; /* Asegura que no haya bordes */
+  background-color: transparent; /* Asegura que no haya fondo */
+}
+
+.leaflet-sbs-range {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.leaflet-sbs-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  margin-left: -2px;
+  width: 4px;
+  background-color: #fff;
+  pointer-events: none;
+  z-index: 999;
+}
+
+.layers-control .layer-control {
+  display: block;
+  padding: 0.2em;
+}
+
+.layers-control input[type="radio"]:checked + label {
+  font-weight: bold;
+  color: blue;
+}
+
+/* Otros estilos de capas y mapas aquí se mantienen sin cambios... */
+
+
+
+/* NDVI */
+/* Mapa de Manzanas */
+#before_manzanas, #after_manzanas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+#before, #after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* LST */
+/* BARRIO LST */
+#before_b_lst, #after_b_lst {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Manzanas LST  */
+#before_m_lst, #after_m_lst {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* AOD */
+/* BARRIO AOD */
+#before_b_aod, #after_b_aod {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Manzanas AOD  */
+#before_m_aod, #after_m_aod {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* NO2 */
+/* BARRIO NO2 */
+#before_b_no2, #after_b_no2 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Manzanas NO2  */
+#before_m_no2, #after_m_no2 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* SO2 */
+/* BARRIO SO2 */
+#before_b_so2, #after_b_so2 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Manzanas SO2  */
+#before_m_so2, #after_m_so2 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+
+/* Estilos comunes para todos los botones */
+button {
+  border-radius: 5px; /* Redondear un poco las esquinas */
+  padding: 10px; /* Añadir algo de relleno */
+  background-color: #f9f9f9; /* Fondo ligeramente gris para contraste */
+  background-size: contain; /* Ajusta la imagen de fondo al tamaño del botón */
+  background-repeat: no-repeat; /* Evita la repetición de la imagen de fondo */
+  background-position: center; /* Centra la imagen de fondo */
+  transition: border-color 0.3s, border 0.3s; /* Transición suave para el borde */
+}
+
+/* Botones NDVI con borde verde */
+.button-green-border {
+  border: none; /* Sin borde inicial */
+}
+
+.button-green-border:hover,
+.button-green-border.selected {
+  border: 2px solid green; /* Borde verde al pasar el ratón o al seleccionar */
+}
+
+/* Botones de Islas de Calor con borde naranja */
+.button-orange-border {
+  border: none; /* Sin borde inicial */
+}
+
+.button-orange-border:hover,
+.button-orange-border.selected {
+  border: 2px solid orange; /* Borde naranja al pasar el ratón o al seleccionar */
+}
+
+/* Botones de Calidad de Aire */
+.button-air-quality {
+  border: none; /* Sin borde inicial */
+  background-color: transparent; /* Fondo transparente para calidad de aire */
+  width: 180px; /* Ancho personalizado para los botones de calidad de aire */
+  height: 150px; /* Altura personalizada para los botones de calidad de aire */
+}
+
+.button-air-quality:hover,
+.button-air-quality.selected {
+  border: 2px solid #007bff; /* Borde azul al pasar el ratón o al seleccionar */
+}
+
+/* Estilos para sub-botones específicos */
+.sub-button-aod,
+.sub-button-no2,
+.sub-button-so2 {
+  width: 100px; /* Tamaño de sub-botones */
+  height: 100px;
+  border: none; /* Sin borde inicial */
+}
+
+/* Colores de borde específicos para cada tipo de sub-botón */
+.sub-button-aod:hover,
+.sub-button-aod.selected {
+  border: 2px solid darkgreen; /* Borde verde oscuro al pasar el ratón o al seleccionar */
+}
+
+.sub-button-no2:hover,
+.sub-button-no2.selected {
+  border: 2px solid darkred; /* Borde rojo oscuro al pasar el ratón o al seleccionar */
+}
+
+.sub-button-so2:hover,
+.sub-button-so2.selected {
+  border: 2px solid darkblue; /* Borde azul oscuro al pasar el ratón o al seleccionar */
+}
+
+/* Estilos comunes para contenedores de sub-botones */
+.sub-button-container {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.sub-button-container div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Mostrar textos cuando el contenedor está activo */
+.ndvi-text,
+.t-text,
+.aire-text {
+  display: none; /* Inicialmente oculto */
+}
+
+.button-container2.active .ndvi-text,
+.button-container3.active .t-text,
+.button-container4.active .aire-text,
+.sub-button-container.active .aire-text {
+  display: block; /* Mostrar texto cuando el contenedor está activo */
+}
+
+/* CSS común para todas las tablas */
+#ndviTable,
+#ndviTableB,
+#ndviTableM,
+#tTable,
+#tTableB,
+#tTableM,
+#AODTable,
+#AODTable_B,
+#AODTable_M,
+#NO2Table,
+#NO2Table_B,
+#NO2Table_M,
+#SO2Table,
+#SO2Table_B,
+#SO2Table_M,
+#IluTable,
+#huellatable {
+    width: 80%; /* Ancho de las tablas */
+    margin: 0 auto; /* Centrar las tablas horizontalmente */
+    border-collapse: collapse; /* Colapsar los bordes */
+    display: none; /* Ocultar todas las tablas por defecto */
+}
+
+
+
+/* CSS común para todas las tablas */
+#ndviTable,
+#ndviTableB,
+#ndviTableM,
+#tTable,
+#tTableB,
+#tTableM,
+#AODTable,
+#AODTable_B,
+#AODTable_M,
+#NO2Table,
+#NO2Table_B,
+#NO2Table_M,
+#SO2Table,
+#SO2Table_B,
+#SO2Table_M,
+#IluTable,
+#huellatable {
+    width: 80%; /* Ancho de las tablas */
+    margin: 0 auto; /* Centra las tablas horizontalmente */
+    margin-bottom: 20px; /* Espacio entre las tablas */
+    border-collapse: collapse; /* Colapsa los bordes */
+    display: none; /* Oculta todas las tablas por defecto */
+}
