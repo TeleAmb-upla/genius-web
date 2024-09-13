@@ -167,8 +167,8 @@ export async function g_m_hu() {
         .on("mousemove", function(event, d) {
             // Tooltip para las barras (rectángulos)
             tooltip
-                .html("Año: " + d.data.Year + "<br>Area_DentroPRC: " + d.data.Area_DentroPRC
-                    + "<br>Area_FueraPRC: " + d.data.Area_FueraPRC + "<br>Precision_Kappa: " + d.data.Precision_Kappa)
+                .html("Año: " + d.data.Year + "<br>Area DentroPRC: " + d.data.Area_DentroPRC
+                    + "<br>Area FueraPRC: " + d.data.Area_FueraPRC + "<br>Precision Kappa: " + d.data.Precision_Kappa)
                 .style("left", (event.pageX + 10) + "px")  // Ajusta la posición del tooltip
                 .style("top", (event.pageY - 28) + "px");
         })

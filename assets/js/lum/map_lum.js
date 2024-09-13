@@ -29,6 +29,7 @@ function valueToRGB(value) {
     return `rgb(${r}, ${g}, ${b})`;
 }
 
+// Función para inicializar el mapa sin la imagen TIFF
 export async function map_lum() {
     // Comprueba si el mapa ya está inicializado y elimínalo si es necesario
     if (currentMap) {
@@ -55,24 +56,6 @@ export async function map_lum() {
         
     // Agregar la escala
     L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
-
-    // Leer el archivo  
-
-    const response = await fetch('/assets/vec/raster/NDVI_pixel/NDVI_Yearly/NDVI_Yearly_2017.tif');
-        const arrayBuffer = await response.arrayBuffer();
-
-    // Parsear el georaster
-    const georaster = await parseGeoraster(arrayBuffer);
-
-    // Crear la capa de GeoRaster con una función de color personalizada
-    currentLayer = new GeoRasterLayer({
-        georaster: georaster,
-        resolution: 1080, // Resolución de la capa, puedes ajustarla si es necesario
-        pixelValueToColorFn: valueToRGB // Usar la función de color personalizada
-    });
-
-    // Agregar la capa al mapa
-    currentLayer.addTo(currentMap);
 
     // Agregar el título centrado al mapa
     addCenteredTitle(currentMap);
