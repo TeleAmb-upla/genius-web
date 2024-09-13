@@ -7,6 +7,7 @@ export async function preprocessGeoJSON(url, currentMode) {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Failed to fetch data: ${response.statusText}`);
         const data = await response.json();
+        console.log('GeoJSON data:', data);  // Log para depurar
         data.features.forEach(feature => {
             if (feature.properties && feature.properties.NO2 !== undefined) {
                 feature.properties.color = currentMode === 'yearly' 
@@ -19,8 +20,7 @@ export async function preprocessGeoJSON(url, currentMode) {
         console.error('Error processing GeoJSON:', error);
         return null;
     }
-}
-
+}    
 function removeLayerAndEvents(map, layerId) {
     if (map.getLayer(layerId)) {
         map.off('click', layerId);

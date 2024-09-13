@@ -57,3 +57,36 @@ export async function map_trend(map) {
   // No agregar la capa al mapa aquí, solo retornarla
   return Layer;
 }
+
+export function createSTLegendSVG() {
+    // Definir los rangos de valores con colores en formato hexadecimal
+    const ranges = [
+        { min: -0.5, max: -0.25, color: '#FF0000' },  // Rojo fuerte
+        { min: -0.25, max: 0, color: '#FF6666' },     // Degradado rojo a blanco
+        { min: 0, max: 0, color: '#FFFFFF' },         // Blanco puro (cero)
+        { min: 0, max: 0.25, color: '#99CCFF' },      // Degradado blanco a azul claro
+        { min: 0.25, max: 0.5, color: '#0000FF' }     // Azul fuerte
+    ];
+
+    // Crear los elementos de la leyenda
+    const legendItems = ranges.map((range, index) => {
+        const color = range.color;
+        const yPosition = 25 + index * 30;
+        const label = range.min === range.max 
+            ? `${range.min.toFixed(2)}` // Si es 0 exacto, solo mostramos "0"
+            : `${range.min.toFixed(2)} - ${range.max.toFixed(2)}`; // Rango con dos valores
+
+        return `
+            <rect x="0" y="${yPosition}" width="20" height="20" style="fill:${color}" />
+            <text x="25" y="${yPosition + 15}" font-size="12" font-family="Arial">${label}</text>
+        `;
+    }).join(''); // Unir todos los elementos de la leyenda
+
+    // Devolver el SVG completo
+    return `
+        <svg width="150" height="${50 + ranges.length * 30}" xmlns="http://www.w3.org/2000/svg">
+            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Tendencia LST</text>
+            ${legendItems}
+        </svg>
+    `;
+}

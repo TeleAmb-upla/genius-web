@@ -1,37 +1,25 @@
 export function ndviToColorYear_z_m(ndvi) {
-  
-  const minNDVI = 0.15;  // Valor mínimo de NDVI
-  const maxNDVI = 0.50;   // Valor máximo de NDVI
+    const domain = [-0.3359, 0.7422]; // mínimo y máximo
+    // Paleta de colores invertida que representa los diferentes valores de NDVI
+    const range = [    '#ff0000', // Rojo intenso
+        '#DF923D', // Naranja
+        '#FCD163', // Amarillo
+        '#74A901', // Verde claro
+        '#023B01', // Verde oscuro
+        '#011301'];  // Casi negro, muy oscuro verde
 
-  // Paleta de colores invertida que representa los diferentes valores de NDVI
-  const palette = ['ff0000', 'CE7E45', 'DF923D', 'F1B555', 'FCD163', '99B718',
-      '74A901', '529400', '3E8601', '207401', '056201', '004C00', '023B01',
-      '012E01', '011D01', '011301'];
+    // Calcular el paso entre cada color en función del dominio
+    const step = (domain[1] - domain[0]) / (range.length - 1);
 
-  // Asignamos rangos de NDVI a los colores
-  const ranges = [
-      { min: minNDVI, max: 0.1, color: `#${palette[0]}` },    // Color rojo
-      { min: 0.1, max: 0.27, color: `#${palette[3]}` },   // Color amarillo claro
-      { min: 0.27, max: 0.32, color: `#${palette[8]}` },    // Color verde claro
-      { min: 0.32, max: 0.40, color: `#${palette[11]}` },    // Color verde
-      { min: 0.4, max: maxNDVI, color: `#${palette[14]}` }    // Color verde oscuro
-  ];
+    // Asignar los colores basado en el valor
+    if (ndvi < domain[0]) {
+        return range[0]; // Si es menor que el mínimo, devolver el primer color
+    } 
+    if (ndvi > domain[1]) {
+        return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
+    }
 
-  // Si el NDVI está fuera del rango, devolvemos el color mínimo o máximo
-  if (ndvi <= minNDVI) {
-      return ranges[0].color;
-  }
-  if (ndvi >= maxNDVI) {
-      return ranges[ranges.length - 1].color;
-  }
-
-  // Asignar color basado en el rango al que pertenece el valor de NDVI
-  for (let i = 0; i < ranges.length; i++) {
-      if (ndvi >= ranges[i].min && ndvi < ranges[i].max) {
-          return ranges[i].color;
-      }
-  }
-
-  // Retorna el color correspondiente al NDVI si no entra en ningún rango (caso extraño)
-  return ranges[0].color; // Fallback al color mínimo
+    // Encontrar el color adecuado dentro del rango
+    const index = Math.floor((ndvi - domain[0]) / step);
+    return range[index];
 }

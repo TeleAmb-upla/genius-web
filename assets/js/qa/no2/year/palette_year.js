@@ -1,30 +1,22 @@
-export function ToColorYear(NO2_Median) {
-    const minlst = 18.38;
-    const maxlst = 41.76;
+export function ToColorYear(value) {
+        // Definir los colores de la paleta
+        const domain = [1.6960082827681728, 7.4734310895588765]; // mínimo y máximo
+        const range =   ["#00E5FF", "#66C099", "#FFFF00", "#FF8800", "#FF0000", "#8B0000"];
+        
+        // Calcular el paso entre cada color en función del dominio
+        const step = (domain[1] - domain[0]) / (range.length - 1);
+    
+        // Asignar los colores basado en el valor
+        if (value < domain[0]) {
+            return range[0]; // Si es menor que el mínimo, devolver el primer color
+        } 
+        if (value > domain[1]) {
+            return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
+        }
+    
+        // Encontrar el color adecuado dentro del rango
+        const index = Math.floor((value - domain[0]) / step);
+        return range[index];
+    }
+    
 
-    const palette = [
-        '040274', '040281', '0502a3', '0502b8', '0502ce', '0502e6',
-        '0602ff', '235cb1', '307ef3', '269db1', '30c8e2', '32d3ef',
-        '3be285', '3ff38f', '86e26f', '3ae237', 'b5e22e', 'd6e21f',
-        'fff705', 'ffd611', 'ffb613', 'ff8b13', 'ff6e08', 'ff500d',
-        'ff0000', 'de0101', 'c21301', 'a71001', '911003'
-    ];
-
-    // Asegurarse de que el valor esté dentro del rango esperado
-    if (NO2_Median < minlst) NO2_Median = minlst;
-    if (NO2_Median > maxlst) NO2_Median = maxlst;
-
-    // Normalización del valor dentro del rango
-    let ratio = (NO2_Median - minlst) / (maxlst - minlst);
-
-    // Calcular el índice de color correspondiente en la paleta
-    const colorIndex = Math.floor(ratio * (palette.length - 1));
-    const color = palette[colorIndex];
-
-    // Convertir el color hexadecimal a RGB
-    const r = parseInt(color.substring(0, 2), 16);
-    const g = parseInt(color.substring(2, 4), 16);
-    const b = parseInt(color.substring(4, 6), 16);
-
-    return `rgb(${r}, ${g}, ${b})`;
-}

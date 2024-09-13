@@ -2,7 +2,7 @@ import { loadLayersyear } from './year/load_layer_year.js';
 import { createYearSelector, positionYearSelector } from './year/utils_year.js';
 import { loadLayersmonth } from './month/load_layer_month.js';
 import { createMonthSelector, positionMonthSelector } from './month/utils_month.js';
-import { map_trend } from './no2_trend/trend.js';
+import { map_trend, createSTLegendSVG } from './no2_trend/trend.js';
 import { createmonthLegendSVG, createyearLegendSVG } from './map_utilities_p.js';
 
 // Variables globales para almacenar el estado del mapa, las capas y el título
@@ -158,26 +158,24 @@ export async function map_no2_p() {
     L.control.layers(baseLayers, overlayLayers).addTo(currentMap);
 
     currentMap.on('overlayadd', function(event) {
-            // Asegurarse de eliminar la leyenda anterior
-            if (legendDiv) {
-                legendDiv.remove();
-            }
-
-            // Crear una nueva leyenda
-            legendDiv = document.createElement('div');
-            legendDiv.id = 'legend';
-            legendDiv.style.position = 'absolute';
-            legendDiv.style.top = '50%';
-            legendDiv.style.left = '10px';
-            legendDiv.style.transform = 'translateY(-50%)';
-            legendDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-            legendDiv.style.padding = '10px';
-            legendDiv.style.borderRadius = '8px';
-            legendDiv.style.zIndex = '1000';
-            currentMap.getContainer().appendChild(legendDiv);
-
-
-
+        // Asegurarse de eliminar la leyenda anterior
+        if (legendDiv) {
+            legendDiv.remove();
+        }
+    
+        // Crear una nueva leyenda
+        legendDiv = document.createElement('div');
+        legendDiv.id = 'legend';
+        legendDiv.style.position = 'absolute';
+        legendDiv.style.top = '50%';
+        legendDiv.style.left = '10px';
+        legendDiv.style.transform = 'translateY(-50%)';
+        legendDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
+        legendDiv.style.padding = '10px';
+        legendDiv.style.borderRadius = '8px';
+        legendDiv.style.zIndex = '1000';
+        currentMap.getContainer().appendChild(legendDiv);
+    
         if (event.name === "NO² Year") {
             yearLeftSelector.style.display = 'block';
             yearRightSelector.style.display = 'block';
@@ -185,8 +183,8 @@ export async function map_no2_p() {
             monthRightSelector.style.display = 'none';
             if (leftLayer) currentMap.addLayer(leftLayer);
             if (rightLayer) currentMap.addLayer(rightLayer);
-            legendDiv.innerHTML = createyearLegendSVG(); // Mostrar leyenda para LST Year
-
+            legendDiv.innerHTML = createyearLegendSVG(); // Mostrar leyenda para NO² Year
+    
         } else if (event.name === "NO² Month") {
             monthLeftSelector.style.display = 'block';
             monthRightSelector.style.display = 'block';
@@ -194,11 +192,13 @@ export async function map_no2_p() {
             yearRightSelector.style.display = 'none';
             if (leftLayer) currentMap.addLayer(leftLayer);
             if (rightLayer) currentMap.addLayer(rightLayer);
-            legendDiv.innerHTML = createmonthLegendSVG(); // Mostrar leyenda para LST Month
-
+            legendDiv.innerHTML = createmonthLegendSVG(); // Mostrar leyenda para NO² Month
+    
+        } else if (event.name === "NO² Trend") { // Corregido el nombre de la capa
+            legendDiv.innerHTML = createSTLegendSVG(); // Mostrar leyenda para NO² Trend
         }
     });
-
+    
     currentMap.on('overlayremove', function(event) {
         if (event.name === "NO² Year") {
             yearLeftSelector.style.display = 'none';
@@ -210,10 +210,11 @@ export async function map_no2_p() {
             monthRightSelector.style.display = 'none';
             if (leftLayer) currentMap.removeLayer(leftLayer);
             if (rightLayer) currentMap.removeLayer(rightLayer);
+        } else if (event.name === "NO² Trend") { // Corregido el nombre de la capa
+            // Limpiar la leyenda si se elimina la capa
+            if (legendDiv) {
+                legendDiv.innerHTML = '';
+            }
         }
-                // Limpiar la leyenda si se elimina cualquier capa
-                if (legendDiv) {
-                    legendDiv.innerHTML = '';
-                }
     });
-}
+}    

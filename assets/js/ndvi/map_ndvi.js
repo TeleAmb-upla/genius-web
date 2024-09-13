@@ -4,8 +4,8 @@ import { loadNdviLayersmonth } from './ndvi_month/funtion_ndvi_moth/load_layer_m
 import { createMonthSelector, positionMonthSelector } from './ndvi_month/funtion_ndvi_moth/utils_month.js';
 import { createyearLegendSVG, createmonthLegendSVG, addCenteredTitle } from './map_utilities_p.js';
 import { loadGeoJSONAndSetupLayers, createAvSelector, positionAvSelector } from './capas/utilis_select_av.js';
-import { map_stdev } from './ndvi_trend_dev/stddev.js';
-import { map_trend } from './ndvi_trend_dev/trend.js';
+import { map_stdev, createDevLegendSVG } from './ndvi_trend_dev/stddev.js';
+import { map_trend, createSTLegendSVG } from './ndvi_trend_dev/trend.js';
 
 // Variables globales para almacenar el estado del mapa y las capas
 let currentMap = null;
@@ -154,7 +154,7 @@ export async function map_ndvi() {
         if (legendDiv) {
             legendDiv.remove();
         }
-
+    
         // Crear una nueva leyenda
         legendDiv = document.createElement('div');
         legendDiv.id = 'legend';
@@ -168,45 +168,60 @@ export async function map_ndvi() {
         legendDiv.style.zIndex = '1000';
         currentMap.getContainer().appendChild(legendDiv);
     
-        if (event.name === "NDVI Year") {
-            yearLeftSelector.style.display = 'block';
-            yearRightSelector.style.display = 'block';
-            monthLeftSelector.style.display = 'none';
-            monthRightSelector.style.display = 'none';
-            if (avSelector) avSelector.style.display = 'none'; // Ocultar selector de áreas verdes
-            legendDiv.innerHTML = createyearLegendSVG();  // Mostrar la leyenda para el año
-
-            // Cambiar a capas de año
-            currentMap.removeLayer(leftMonthLayer);
-            currentMap.removeLayer(rightMonthLayer);
-            currentMap.addLayer(leftLayer);
-            currentMap.addLayer(rightLayer);
-            sideBySideControl.setLeftLayers(leftLayer);
-            sideBySideControl.setRightLayers(rightLayer);
-        } else if (event.name === "NDVI Month") {
-            monthLeftSelector.style.display = 'block';
-            monthRightSelector.style.display = 'block';
-            yearLeftSelector.style.display = 'none';
-            yearRightSelector.style.display = 'none';
-            if (avSelector) avSelector.style.display = 'none'; // Ocultar selector de áreas verdes
-            legendDiv.innerHTML = createmonthLegendSVG();  // Mostrar la leyenda para el mes
-
-            // Cambiar a capas de mes
-            currentMap.removeLayer(leftLayer);
-            currentMap.removeLayer(rightLayer);
-            currentMap.addLayer(leftMonthLayer);
-            currentMap.addLayer(rightMonthLayer);
-            sideBySideControl.setLeftLayers(leftMonthLayer);
-            sideBySideControl.setRightLayers(rightMonthLayer);
-        } else if (event.name === "Áreas Verdes") {
-            // Mostrar el selector de áreas verdes
-            if (!avSelector) {
-                avSelector = createAvSelector('av-selector', categoryLayers, currentMap);
-                positionAvSelector(avSelector, 'top');
-            }
-            avSelector.style.display = 'block'; // Mostrar siempre que "Áreas Verdes" esté activada
+        // Determinar qué leyenda mostrar basado en la capa que se activó
+        switch (event.name) {
+            case "NDVI Year":
+                yearLeftSelector.style.display = 'block';
+                yearRightSelector.style.display = 'block';
+                monthLeftSelector.style.display = 'none';
+                monthRightSelector.style.display = 'none';
+                if (avSelector) avSelector.style.display = 'none';
+                legendDiv.innerHTML = createyearLegendSVG();
+    
+                // Asegurar que las capas de años sean visibles
+                if (!currentMap.hasLayer(leftLayer)) {
+                    leftLayer = ndviLayersYearth["NDVI 2017"];
+                    rightLayer = ndviLayersYearth["NDVI 2023"];
+                    currentMap.addLayer(leftLayer);
+                    currentMap.addLayer(rightLayer);
+                    sideBySideControl.setLeftLayers(leftLayer);
+                    sideBySideControl.setRightLayers(rightLayer);
+                }
+                break;
+            case "NDVI Month":
+                monthLeftSelector.style.display = 'block';
+                monthRightSelector.style.display = 'block';
+                yearLeftSelector.style.display = 'none';
+                yearRightSelector.style.display = 'none';
+                if (avSelector) avSelector.style.display = 'none';
+                legendDiv.innerHTML = createmonthLegendSVG();
+    
+                // Asegurar que las capas de meses sean visibles
+                if (!currentMap.hasLayer(leftMonthLayer)) {
+                    leftMonthLayer = ndviLayersmonth["NDVI 01"];
+                    rightMonthLayer = ndviLayersmonth["NDVI 12"];
+                    currentMap.addLayer(leftMonthLayer);
+                    currentMap.addLayer(rightMonthLayer);
+                    sideBySideControl.setLeftLayers(leftMonthLayer);
+                    sideBySideControl.setRightLayers(rightMonthLayer);
+                }
+                break;
+            case "NDVI Trend":
+                legendDiv.innerHTML = createSTLegendSVG();
+                break;
+            case "NDVI StdDev":
+                legendDiv.innerHTML = createDevLegendSVG();
+                break;
+            case "Áreas Verdes":
+                if (!avSelector) {
+                    avSelector = createAvSelector('av-selector', categoryLayers, currentMap);
+                    positionAvSelector(avSelector, 'top');
+                }
+                avSelector.style.display = 'block';
+                break;
         }
     });
+    
 
     currentMap.on('overlayremove', function(event) {
         if (event.name === "NDVI Year") {

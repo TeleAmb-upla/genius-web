@@ -1,27 +1,22 @@
-export function ToColorMonth_z_b(OAD) {
-    const min = 0.14;
-    const max = 0.25;
-
-
-    // Asegurarse de que el valor NDVI esté dentro del rango esperado
-    if (OAD < min) OAD = min;
-    if (OAD > max) OAD = max;
-
-    // Mapeo de NDVI a color
-    let ratio = (OAD - min) / (max - min);
-    let r = 0, g = 0, b = 0;
-
-    if (ratio <= 0.5) {
-        // De rojo a amarillo
-        ratio *= 2;
-        r = 255;
-        g = Math.round(255 * ratio);
-    } else {
-        // De amarillo a verde
-        ratio = (ratio - 0.5) * 2;
-        r = Math.round(255 * (1 - ratio));
-        g = 255;
+export function ToColorMonth_z_b(value) {
+        
+        // Definir los colores de la paleta
+        const domain = [73.3, 131.9]; // mínimo y máximo
+        const range = ["#00008B", "#4B0082", "#8A2BE2", "#DA70D6", "#FF69B4", "#FFC0CB"].reverse();
+        
+        // Calcular el paso entre cada color en función del dominio
+        const step = (domain[1] - domain[0]) / (range.length - 1);
+    
+        // Asignar los colores basado en el valor
+        if (value < domain[0]) {
+            return range[0]; // Si es menor que el mínimo, devolver el primer color
+        } 
+        if (value > domain[1]) {
+            return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
+        }
+    
+        // Encontrar el color adecuado dentro del rango
+        const index = Math.floor((value - domain[0]) / step);
+        return range[index];
     }
-
-    return `rgb(${r}, ${g}, ${b})`;
-}
+    

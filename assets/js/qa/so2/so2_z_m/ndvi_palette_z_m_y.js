@@ -1,28 +1,21 @@
-export function ToColorYear_z_m(SO2) {
+export function ToColorYear_z_m(value) {
 
-  const min = 0.14;
-  const max = 0.25;
+    // Definir los colores de la paleta
+    const domain = [4.404461960739052, 5.125319125299692]; // mínimo y máximo
+    const range =   ["#A7F432", "#C3E934", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
+    
+    // Calcular el paso entre cada color en función del dominio
+    const step = (domain[1] - domain[0]) / (range.length - 1);
 
+    // Asignar los colores basado en el valor
+    if (value < domain[0]) {
+        return range[0]; // Si es menor que el mínimo, devolver el primer color
+    } 
+    if (value > domain[1]) {
+        return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
+    }
 
-  // Asegurarse de que el valor NDVI esté dentro del rango esperado
-  if (SO2 < min) SO2 = min;
-  if (SO2 > max) SO2 = max;
-
-  // Mapeo de NDVI a color
-  let ratio = (SO2 - min) / (max - min);
-  let r = 0, g = 0, b = 0;
-
-  if (ratio <= 0.5) {
-      // De rojo a amarillo
-      ratio *= 2;
-      r = 255;
-      g = Math.round(255 * ratio);
-  } else {
-      // De amarillo a verde
-      ratio = (ratio - 0.5) * 2;
-      r = Math.round(255 * (1 - ratio));
-      g = 255;
-  }
-
-  return `rgb(${r}, ${g}, ${b})`;
+    // Encontrar el color adecuado dentro del rango
+    const index = Math.floor((value - domain[0]) / step);
+    return range[index];
 }

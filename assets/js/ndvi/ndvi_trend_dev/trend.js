@@ -1,54 +1,26 @@
 function valueToSTColor(value) {
     // Definir los colores de la paleta
-    const red = [255, 0, 0];    // Rojo
-    const blue = [3, 19, 255];  // Azul
-    const white = [255, 255, 255]; // Blanco
+    const domain = [
+        -0.3, -0.05, -0.002, 0, 0.002, 0.05, 0.3
+    ];
+    const range = [
+        "#ff0000", // Rojo intenso para los valores negativos bajos
+        "#ff3d66", // Rojo medio para valores negativos moderados
+        "#ff75ad", // Rojo suave para valores negativos más cercanos a 0
+        "#ffffff", // Blanco para el valor 0
+        "#75aaff", // Azul claro para valores positivos bajos
+        "#4d66ff", // Azul medio para valores positivos moderados
+        "#0313ff"  // Azul intenso para valores positivos altos
+    ];
 
-    let color = '#000000'; // Color por defecto en caso de error
-
-    // Función para interpolar entre dos colores
-    function interpolateColor(color1, color2, factor) {
-        const result = color1.map((c1, i) => Math.round(c1 + factor * (color2[i] - c1)));
-        return `rgb(${result[0]}, ${result[1]}, ${result[2]})`;
-    }
-
-    // Rango de umbrales
-    const lowerNegativeLimit = -0.06;
-    const upperNegativeLimit = -0.03;
-    const lowerPositiveLimit = 0.03;
-    const upperPositiveLimit = 0.06;
-
-    // Valores negativos entre -0.06 y 0
-    if (value < 0) {
-        if (value >= lowerNegativeLimit && value < upperNegativeLimit) {
-            // Degradado de rojo a blanco entre -0.06 y -0.03
-            const normalizedValue = (value - lowerNegativeLimit) / (upperNegativeLimit - lowerNegativeLimit);
-            color = interpolateColor(red, white, Math.min(normalizedValue, 1));
-        } else if (value >= upperNegativeLimit && value <= 0) {
-            // Degradado de rojo a blanco entre -0.03 y 0
-            const normalizedValue = (value - upperNegativeLimit) / (0 - upperNegativeLimit);
-            color = interpolateColor(red, white, Math.min(normalizedValue, 1));
+    for (let i = 0; i < domain.length; i++) {
+        if (value <= domain[i]) {
+            return range[i];
         }
     }
-    // Valores positivos entre 0 y 0.06
-    else if (value > 0) {
-        if (value > 0 && value <= lowerPositiveLimit) {
-            // Degradado de blanco a azul entre 0 y 0.03
-            const normalizedValue = (value - 0) / (lowerPositiveLimit - 0);
-            color = interpolateColor(white, blue, Math.min(normalizedValue, 1));
-        } else if (value > lowerPositiveLimit && value <= upperPositiveLimit) {
-            // Degradado de blanco a azul entre 0.03 y 0.06
-            const normalizedValue = (value - lowerPositiveLimit) / (upperPositiveLimit - lowerPositiveLimit);
-            color = interpolateColor(white, blue, Math.min(normalizedValue, 1));
-        }
-    }
-    // Si el valor es exactamente 0, el color será blanco
-    else {
-        color = 'rgb(255, 255, 255)';
-    }
-
-    return color;
+    return range[range.length - 1];
 }
+
 
 export async function map_trend(map) {
   // Leer el archivo  
@@ -61,8 +33,7 @@ export async function map_trend(map) {
   // Crear la capa de GeoRaster con la nueva lógica de colores
   const Layer = new GeoRasterLayer({
       georaster: georaster,
-      opacity: 0.7,
-      pixelValuesToColorFn: values => {
+        pixelValuesToColorFn: values => {
           const Value = values[0];
           if (isNaN(Value)) {
               return null; // Retornar null si el valor es NaN
@@ -75,3 +46,39 @@ export async function map_trend(map) {
   // No agregar la capa al mapa aquí, solo retornarla
   return Layer;
 }
+
+
+export function createSTLegendSVG() {
+    // Definir los nuevos rangos de valores con colores en formato hexadecimal
+    const ranges = [
+        { min: -0.06, max: -0.03, color: '#FF0000' },  // Rojo fuerte
+        { min: -0.03, max: 0, color: '#FF6666' },      // Degradado rojo a blanco
+        { min: 0, max: 0, color: '#FFFFFF' },          // Blanco puro (cero)
+        { min: 0, max: 0.03, color: '#99CCFF' },       // Degradado blanco a azul claro
+        { min: 0.03, max: 0.06, color: '#0000FF' }     // Azul fuerte
+    ];
+
+    // Crear los elementos de la leyenda
+    const legendItems = ranges.map((range, index) => {
+        const color = range.color;
+        const yPosition = 25 + index * 30;
+        const label = range.min === range.max 
+            ? `${range.min.toFixed(2)}` // Si es 0 exacto, solo mostramos "0"
+            : `${range.min.toFixed(2)} - ${range.max.toFixed(2)}`; // Rango con dos valores
+
+        return `
+            <rect x="0" y="${yPosition}" width="20" height="20" style="fill:${color}" />
+            <text x="25" y="${yPosition + 15}" font-size="12" font-family="Arial">${label}</text>
+        `;
+    }).join(''); // Unir todos los elementos de la leyenda
+
+    // Devolver el SVG completo
+    return `
+        <svg width="150" height="${50 + ranges.length * 30}" xmlns="http://www.w3.org/2000/svg">
+            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Tendencia NDVI</text>
+            ${legendItems}
+        </svg>
+    `;
+}
+
+

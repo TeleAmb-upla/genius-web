@@ -6,12 +6,22 @@ let mapTitleDiv = null;
 
 // Función para crear la leyenda SVG para NDVI anual
 export function createyearLegendSVG() {
-    const ndviValues = [0.7422, 0.5, 0.25, 0, -0.1, -0.2, -0.3359];
+    const domain = [-0.3359, 0.7422]; // Mínimo y máximo
+    const steps = 6; // Cantidad de valores que queremos en la leyenda
+    const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
 
-    const legendItems = ndviValues.map((ndvi, index) => {
-        const color = ndviToColor(ndvi);
-        const yPosition = 25 + index * 30;
-        const label = `${Math.round(ndvi * 100) / 100}`;
+    // Generar los valores de la leyenda
+    const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
+
+    // Crear elementos de la leyenda con colores y rangos
+    const legendItems = Values.map((value, index) => {
+        if (index === Values.length - 1) return ''; // No mostrar para el último valor
+
+        const nextValue = Values[index + 1];
+        const color = ndviToColor(value);
+        const yPosition = 45 + index * 30; // Ajustar la posición Y para incluir el subtítulo
+
+        const label = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`;
 
         return `
             <rect x="0" y="${yPosition}" width="20" height="20" style="fill:${color}" />
@@ -19,9 +29,11 @@ export function createyearLegendSVG() {
         `;
     }).join('');
 
+    // Retornar el SVG completo con el subtítulo
     return `
-        <svg width="100" height="220" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="15" font-size="12" font-family="Arial">NDVI ANUAL</text>
+        <svg width="150" height="${45 + steps * 30}" xmlns="http://www.w3.org/2000/svg">
+            <text x="0" y="15" font-size="14" font-family="Arial">NDVI ANUAL</text>
+            <text x="0" y="30" font-size="12" font-family="Arial">Indicador de Áreas Verdes</text>
             ${legendItems}
         </svg>
     `;
@@ -29,12 +41,22 @@ export function createyearLegendSVG() {
 
 // Función para crear la leyenda SVG para NDVI mensual
 export function createmonthLegendSVG() {
-    const ndviValues = [0.7969, 0.6, 0.4, 0.2, 0, -0.1, -0.3281];
+    const domain = [-0.3281, 0.7969]; // Mínimo y máximo
+    const steps = 6; // Cantidad de valores que queremos en la leyenda
+    const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
 
-    const legendItems = ndviValues.map((ndvi, index) => {
-        const color = ndviToColorMonth(ndvi);
-        const yPosition = 25 + index * 30;
-        const label = `${Math.round(ndvi * 100) / 100}`;
+    // Generar los valores de la leyenda
+    const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
+
+    // Crear elementos de la leyenda con colores y rangos
+    const legendItems = Values.map((value, index) => {
+        if (index === Values.length - 1) return ''; // No mostrar para el último valor
+
+        const nextValue = Values[index + 1];
+        const color = ndviToColorMonth(value);
+        const yPosition = 45 + index * 30; // Ajustar la posición Y para incluir el subtítulo
+
+        const label = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`;
 
         return `
             <rect x="0" y="${yPosition}" width="20" height="20" style="fill:${color}" />
@@ -42,13 +64,16 @@ export function createmonthLegendSVG() {
         `;
     }).join('');
 
+    // Retornar el SVG completo con el subtítulo
     return `
-        <svg width="100" height="220" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="15" font-size="12" font-family="Arial">NDVI MENSUAL</text>
+        <svg width="150" height="${45 + steps * 30}" xmlns="http://www.w3.org/2000/svg">
+            <text x="0" y="15" font-size="14" font-family="Arial">NDVI MENSUAL</text>
+            <text x="0" y="30" font-size="12" font-family="Arial">Indicador de Áreas Verdes</text>
             ${legendItems}
         </svg>
     `;
 }
+
 
 // Función para agregar o actualizar el título centrado al mapa
 export function addCenteredTitle(map) {

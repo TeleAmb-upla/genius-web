@@ -4,7 +4,7 @@ import { loadLayersmonth } from './month/load_layer_month.js';
 import { createMonthSelector, positionMonthSelector } from './month/utils_month.js';
 import { createmonthLegendSVG, createyearLegendSVG } from './map_utilities_p.js';
 import { loadGeoJSONAndSetupLayers, createAvSelector, positionAvSelector } from './capas/utilis_select_av.js';
-import { map_trend } from './lst_trend/trend.js';
+import { map_trend, createSTLegendSVG } from './lst_trend/trend.js';
 
 // Variables globales
 let currentMap = null;
@@ -171,10 +171,12 @@ export async function map_t() {
     L.control.layers(baseLayers, overlayLayers).addTo(currentMap);
 
     currentMap.on('overlayadd', function(event) {
+        // Eliminar la leyenda previa si existe
         if (legendDiv) {
             legendDiv.remove();
         }
-
+    
+        // Crear un nuevo div para la leyenda
         legendDiv = document.createElement('div');
         legendDiv.id = 'legend';
         legendDiv.style.position = 'absolute';
@@ -186,7 +188,8 @@ export async function map_t() {
         legendDiv.style.borderRadius = '8px';
         legendDiv.style.zIndex = '1000';
         currentMap.getContainer().appendChild(legendDiv);
-
+    
+        // Lógica para mostrar la leyenda según la capa seleccionada
         if (event.name === "LST Year") {
             yearLeftSelector.style.display = 'block';
             yearRightSelector.style.display = 'block';
@@ -196,6 +199,7 @@ export async function map_t() {
             if (rightLayer) currentMap.addLayer(rightLayer);
             if (avSelector) avSelector.style.display = 'none';
             legendDiv.innerHTML = createyearLegendSVG();
+    
         } else if (event.name === "LST Month") {
             monthLeftSelector.style.display = 'block';
             monthRightSelector.style.display = 'block';
@@ -205,6 +209,17 @@ export async function map_t() {
             if (rightMonthLayer) currentMap.addLayer(rightMonthLayer);
             if (avSelector) avSelector.style.display = 'none';
             legendDiv.innerHTML = createmonthLegendSVG();
+    
+        } else if (event.name === "LST Trend") {
+            // Ocultar selectores que no son necesarios
+            yearLeftSelector.style.display = 'none';
+            yearRightSelector.style.display = 'none';
+            monthLeftSelector.style.display = 'none';
+            monthRightSelector.style.display = 'none';
+            if (avSelector) avSelector.style.display = 'none';
+    
+            // Mostrar la leyenda de LST Trend usando createSTLegendSVG
+            legendDiv.innerHTML = createSTLegendSVG();
         } else if (event.name === "Áreas Verdes") {
             if (!avSelector) {
                 avSelector = createAvSelector('av-selector', categoryLayers, currentMap);
@@ -213,6 +228,7 @@ export async function map_t() {
             avSelector.style.display = 'block';
         }
     });
+    
 
     currentMap.on('overlayremove', function(event) {
         if (event.name === "LST Year") {

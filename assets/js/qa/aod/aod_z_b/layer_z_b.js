@@ -7,10 +7,10 @@ export async function preprocessGeoJSON(url, currentMode) {
         if (!response.ok) throw new Error(`Failed to fetch data: ${response.statusText}`);
         const data = await response.json();
         data.features.forEach(feature => {
-            if (feature.properties && feature.properties.OAD !== undefined) {
+            if (feature.properties && feature.properties.AOD_median !== undefined) {
                 feature.properties.color = currentMode === 'yearly' 
-                    ? ToColorYear_z_b(feature.properties.OAD)
-                    : ToColorMonth_z_b(feature.properties.OAD);
+                    ? ToColorYear_z_b(feature.properties.AOD_median)
+                    : ToColorMonth_z_b(feature.properties.AOD_median);
             }
         });
         return data;
@@ -57,13 +57,13 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const OADFormatted = properties.OAD.toFixed(2);
+        const AOD_medianFormatted = properties.AOD_median.toFixed(2);
         new maplibregl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`
                 <strong>Barrio:</strong> ${properties.NOMBRE}<br>
                 <strong>Year:</strong> ${properties.Year}<br>
-                <strong>OAD:</strong> ${OADFormatted}
+                <strong>AOD:</strong> ${AOD_medianFormatted}
             `)
             .addTo(map);
     });
@@ -100,13 +100,13 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const OADFormatted = properties.OAD.toFixed(2);
+        const AOD_medianFormatted = properties.AOD_median.toFixed(2);
         new maplibregl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`
                 <strong>Barrio:</strong> ${properties.NOMBRE}<br>
                 <strong>Month:</strong> ${properties.Month}<br>
-                <strong>OAD:</strong> ${OADFormatted}
+                <strong>AOD:</strong> ${AOD_medianFormatted}
             `)
             .addTo(map);
     });
