@@ -1,3 +1,4 @@
+// loadLayersyear.js
 
 import { map_2014 } from './js_anual/year_2014.js';
 import { map_2015 } from './js_anual/year_2015.js';
@@ -10,7 +11,6 @@ import { map_2021 } from './js_anual/year_2021.js';
 import { map_2022 } from './js_anual/year_2022.js';
 import { map_2023 } from './js_anual/year_2023.js';
 
-
 const Loaders = [
     map_2014,
     map_2015,
@@ -22,19 +22,21 @@ const Loaders = [
     map_2021,
     map_2022,
     map_2023
-    ];
+];
 
 export async function loadLayersyear(map) {
     const years = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
     const Layers = {};
+    const georasters = {};
     try {
-        const layers = await Promise.all(Loaders.map(loader => loader(map)));
-        layers.forEach((layer, index) => {
+        const layersData = await Promise.all(Loaders.map(loader => loader(map)));
+        layersData.forEach((data, index) => {
             const year = years[index];
-            Layers[`LST ${year}`] = layer;
+            Layers[`LST ${year}`] = data.layer;
+            georasters[`LST ${year}`] = data.georaster;
         });
     } catch (error) {
-        console.error("Error loading  layers:", error);
+        console.error("Error loading layers:", error);
     }
-    return Layers;
+    return { layers: Layers, georasters: georasters };
 }

@@ -24,5 +24,4 @@ export async function map_st_09(map) {
     });
 
     // No agregar la capa al mapa aquí, solo retornarla
-    return LST_median_layer;
-}
+    return { layer: LST_median_layer, georaster: georaster };}

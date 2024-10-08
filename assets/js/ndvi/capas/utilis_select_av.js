@@ -1,21 +1,50 @@
+// colores
+function valueToDevColor(value) {
+  
+    const domain = [0, 0.22]; // mínimo y máximo
+    // Paleta de colores invertida que representa los diferentes valores de NDVI
+    const range = ["#008000", "#a19b00", "#da9b00", "#ff8b00", "#ff5f00", "#ff0000"];
+    
+    // Calcular el paso entre cada color en función del dominio
+    const step = (domain[1] - domain[0]) / (range.length - 1);
+    
+    // Asignar los colores basado en el valor
+    if (value < domain[0]) {
+        return range[0]; // Si es menor que el mínimo, devolver el primer color
+    } 
+    if (value > domain[1]) {
+        return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
+    }
+    
+    // Encontrar el color adecuado dentro del rango
+    const index = Math.floor((value - domain[0]) / step);
+    return range[index];
+    }
+    
 // Mapa de nombres de categorías a nombres amigables
 const categoryNames = {
-    "AV_ComunalesPublicas_EsteroQuilpue": "Av. Comunales Publicas Estero Quilpue",
-    "AV_ComunalesPublicas_Quebradas": "Av. Comunales Publicas Quebradas",
+    "AV_ComunalesPúblicas_EsteroQuilpué": "Comunales Públicas Estero Quilpué",
+    "AV_ComunalesPúblicas_Quebradas": "Comunales Públicas Quebradas",
+    "AV_ComunalesPrivadas_Agrestes": "Comunales Privadas Agrestes",
     "AV_Consolidadas": "Consolidadas",
-    "AV_IntComunalesPrivadas_Agrestes": "Av. InterComunales Privadas Agrestes",
-    "AV_IntComunalesPrivadas_Recreativas": "Av. InterComunales Privadas Recreativas",
-    "AV_IntComunalesPrivadas_ResguardoPatrimonial": "Av. InterComunales Privadas Resguardo Patrimonial",
-    "AV_IntComunalesPublicas_ParqueIntercomunal": "AV. IntComunales Publicas Parque Intercomunal",
-    "Av_ComunalesPrivadas_Agrestes": "Av. Comunales Privadas Agrestes",
-    "Av_ParqueUrbano": "Av Parque Urbano",
-    "Mantencion_General": "Mantencion General"
+    "AV_IntComunalesPrivadas_Agrestes": "Intercomunales Privadas Agrestes",
+    "AV_IntComunalesPrivadas_Recreativas": "Intercomunales Privadas Recreativas",
+    "AV_IntComunalesPrivadas_ResguardoPatrimonial": "Intercomunales Privadas Resguardo Patrimonial",
+    "AV_IntComunalesPúblicas_ParqueIntercomunal": "Intercomunales Públicas Parque Intercomunal",
+    "AV_ParqueUrbano": "Parque Urbano",
+    "Mantencion_General": "Mantención General"
 };
+
+
+// Mapa de nombres de categorías a nombres amigables (lo mantienes como está)
 
 // Función para cargar datos GeoJSON y configurar capas
 export async function loadGeoJSONAndSetupLayers(currentMap) {
     try {
-        const response = await fetch('/assets/vec/capas/Areas_Verdes_Oficial.geojson');
+        const response = await fetch('/assets/vec/capas/NDVI_SD_ZonalStats_2022_2024.geojson');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
 
         // Ajustar los límites del mapa según los datos cargados
@@ -34,16 +63,17 @@ export async function loadGeoJSONAndSetupLayers(currentMap) {
 
         // Crear una capa para cada categoría
         categories.forEach(category => {
-            const layerName = categoryNames[category] || category;  
+            const layerName = categoryNames[category] || category;
             categoryLayers[layerName] = L.geoJSON(data, {
                 filter: feature => feature.properties.CATEGORIA === category,
                 style: function (feature) {
+                    const ndvi_sd = feature.properties.NDVI_SD;
                     return {
                         color: '#000000',   // Color del borde
                         weight: 1,          // Grosor del borde
                         opacity: 1,         // Opacidad del borde
-                        fillColor: '#ffffff', // Color de relleno
-                        fillOpacity: 0.3    // Opacidad del relleno
+                        fillColor: valueToDevColor(ndvi_sd), // Color de relleno basado en NDVI_SD
+                        fillOpacity: 100    // Opacidad del relleno
                     };
                 },
                 onEachFeature: function (feature, layer) {
@@ -51,9 +81,12 @@ export async function loadGeoJSONAndSetupLayers(currentMap) {
                     layer.on('mouseover', function (e) {
                         const properties = feature.properties;
                         const area = properties.AREA ? parseFloat(properties.AREA).toFixed(2) : 'No disponible';
+                        const ndvi_sd = properties.NDVI_SD ? parseFloat(properties.NDVI_SD).toFixed(3) : 'No disponible';
+
                         const tooltipContent = `
                             <strong>Categoría:</strong> ${categoryNames[properties.CATEGORIA] || properties.CATEGORIA}<br>
-                            <strong>Área:</strong> ${area} m²
+                            <strong>Área:</strong> ${area} m²<br>
+                            <strong>Desviación Estándar :</strong> ${ndvi_sd}
                         `;
                         layer.bindTooltip(tooltipContent).openTooltip(e.latlng);
                     });
@@ -63,6 +96,9 @@ export async function loadGeoJSONAndSetupLayers(currentMap) {
                     });
                 }
             });
+
+            // Añadir la capa al mapa
+            categoryLayers[layerName].addTo(currentMap);
         });
 
         // Devolver las capas para usarlas más tarde
@@ -78,15 +114,14 @@ export async function loadGeoJSONAndSetupLayers(currentMap) {
 export function createAvSelector(id, categoryLayers, currentMap) {
     // Contenedor principal para el cuadro de texto de activación y opciones
     const mainContainer = document.createElement('div');
+    mainContainer.id = id;
     mainContainer.style.position = 'absolute';
     mainContainer.style.zIndex = '1000';
-    mainContainer.style.top = '70px';
-    mainContainer.style.left = '10px';
-    mainContainer.style.fontFamily = 'Arial, sans-serif';
+    // Las posiciones específicas se manejarán en positionAvSelector
 
     // Cuadro de texto inicial que funciona como el activador
     const toggleBox = document.createElement('div');
-    toggleBox.innerText = 'Capas de Áreas Verdes';
+    toggleBox.innerText = 'Categorias de Áreas Verdes';
     toggleBox.style.cursor = 'pointer';
     toggleBox.style.backgroundColor = '#fff';
     toggleBox.style.padding = '8px';
@@ -175,45 +210,48 @@ export function createAvSelector(id, categoryLayers, currentMap) {
         });
     });
 
-    // Mostrar el contenedor de opciones al pasar el mouse sobre el cuadro de texto
-    toggleBox.addEventListener('mouseover', () => {
-        container.style.display = 'block';
+    // Mostrar el contenedor de opciones al hacer clic en el cuadro de texto
+    toggleBox.addEventListener('click', () => {
+        container.style.display = container.style.display === 'none' ? 'block' : 'none';
     });
 
-    // Mantener las opciones visibles mientras el mouse esté dentro del contenedor
-    container.addEventListener('mouseover', () => {
-        container.style.display = 'block';
-    });
-
-    // Ocultar las opciones cuando el mouse salga del contenedor
-    container.addEventListener('mouseleave', () => {
-        container.style.display = 'none';
+    // Ocultar las opciones cuando se hace clic fuera del contenedor
+    document.addEventListener('click', (e) => {
+        if (!mainContainer.contains(e.target)) {
+            container.style.display = 'none';
+        }
     });
 
     // Agregar el cuadro de texto y el contenedor de opciones al contenedor principal
     mainContainer.appendChild(toggleBox);
     mainContainer.appendChild(container);
-    
+
     // Añadir el contenedor principal al mapa
     currentMap.getContainer().appendChild(mainContainer);
 
     return mainContainer; // Devolver el contenedor principal que incluye el toggle y las opciones
 }
 
-// Función para posicionar el selector en la parte superior
+// Función para posicionar el selector en la parte superior derecha
 export function positionAvSelector(container, position) {
-    const mapElement = document.getElementById('p01');
-    
-    if (position === 'top') {
+    // La posición se pasa como string, por ejemplo, 'top-right'
+    if (position === 'top-left') {
         container.style.top = '10px';
-        container.style.left = '50px';
-    } else if (position === 'left') {
+        container.style.left = '10px';
+    } else if (position === 'top-right') {
+        container.style.top = '10px';
+        container.style.right = '10px';
+    } else if (position === 'bottom-left') {
         container.style.bottom = '10px';
-        container.style.left = '50px';
-    } else if (position === 'right') {
+        container.style.left = '10px';
+    } else if (position === 'bottom-right') {
         container.style.bottom = '10px';
-        container.style.right = '50px';
+        container.style.right = '10px';
     }
 
-    mapElement.appendChild(container); // Asegúrate de agregar el contenedor (que incluye el selector) al mapa
+    // Asegúrate de que el contenedor esté dentro del mapa
+    const mapElement = document.getElementById('p67');
+    if (mapElement) {
+        mapElement.appendChild(container); // Asegurarse de agregar el contenedor (que incluye el selector) al mapa
+    }
 }

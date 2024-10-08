@@ -14,9 +14,9 @@ export function createYearLegend() {
   legendContent.style.border = '1px solid #ccc'; // Añadir un borde
   legendContent.style.textAlign = 'left'; // Alinear el contenido a la izquierda
 
-  // Agregar título "AOD ANUAL"
+  // Agregar título "Profundidad Óptica de Aerosoles"
   const title = document.createElement('div');
-  title.textContent = 'AOD ANUAL';
+  title.textContent = 'Profundidad Óptica de Aerosoles';
   title.style.fontSize = '14px';
   title.style.fontWeight = 'bold';
   title.style.marginBottom = '5px';
@@ -24,49 +24,53 @@ export function createYearLegend() {
 
   // Agregar subtítulo
   const subtitle = document.createElement('div');
-  subtitle.textContent = 'Concentración de Aerosoles';
+  subtitle.textContent = 'AOD Anual';
   subtitle.style.fontSize = '12px';
   subtitle.style.color = '#555'; // Color gris para diferenciar del título
   subtitle.style.marginBottom = '10px';
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda
-  const domain = [87.8, 125]; // O rangos
-  const steps = 6; // Dividimos en 6 partes
+  const domain = [73,181]; // O rangos 73	181
+
+  const steps = 7; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
 
-  // Generar los valores para la leyenda
-  const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
+// Colores fijos para cada parte de la leyenda
+const colors = ["#00008B", "#4B0082", "#8A2BE2", "#DA70D6", "#FF69B4", "#FFC0CB"].reverse(); 
 
-  // Crear el contenido de la leyenda en HTML con rangos
-  Values.forEach((value, index) => {
-      if (index === Values.length - 1) return; // No mostrar para el último valor (sin rango)
+// Generar los valores para la leyenda
+const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 
-      const nextValue = Values[index + 1]; // Próximo valor para calcular el rango
-      const color = ToColorYear_z_b(value); // Obtener el color basado en el valor
+// Crear el contenido de la leyenda en HTML con rangos
+Values.forEach((value, index) => {
+    if (index === Values.length - 1) return; // No mostrar para el último valor (sin rango)
 
-      const legendItem = document.createElement('div');
-      legendItem.style.marginBottom = '5px';
-      legendItem.style.display = 'flex'; // Usar flexbox para alinear horizontalmente
-      legendItem.style.alignItems = 'center'; // Alinear verticalmente al centro
+    const nextValue = Values[index + 1]; // Próximo valor para calcular el rango
+    const color = colors[index]; // Obtener el color basado en el índice
 
-      const colorBox = document.createElement('span');
-      colorBox.style.background = color;
-      colorBox.style.width = '20px';
-      colorBox.style.height = '20px';
-      colorBox.style.display = 'inline-block';
-      colorBox.style.marginRight = '10px';
+    const legendItem = document.createElement('div');
+    legendItem.style.marginBottom = '5px';
+    legendItem.style.display = 'flex'; // Usar flexbox para alinear horizontalmente
+    legendItem.style.alignItems = 'center'; // Alinear verticalmente al centro
 
-      const label = document.createElement('span');
-      label.textContent = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`; // Mostrar el rango
+    const colorBox = document.createElement('span');
+    colorBox.style.background = color;
+    colorBox.style.width = '20px';
+    colorBox.style.height = '20px';
+    colorBox.style.display = 'inline-block';
+    colorBox.style.marginRight = '10px';
 
-      legendItem.appendChild(colorBox);
-      legendItem.appendChild(label);
+    const label = document.createElement('span');
+    label.textContent = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`; // Mostrar el rango
 
-      legendContent.appendChild(legendItem);
-  });
+    legendItem.appendChild(colorBox);
+    legendItem.appendChild(label);
 
-  return legendContent;
+    legendContent.appendChild(legendItem);
+});
+
+return legendContent;
 }
 
 export function createMonthLegend() {
@@ -82,9 +86,9 @@ export function createMonthLegend() {
   legendContent.style.border = '1px solid #ccc'; // Añadir un borde
   legendContent.style.textAlign = 'left'; // Alinear el contenido a la izquierda
 
-  // Agregar título "AOD Mensual"
+  // Agregar título "Profundidad Óptica de Aerosoles"
   const title = document.createElement('div');
-  title.textContent = 'AOD Mensual';
+  title.textContent = 'Profundidad Óptica de Aerosoles';
   title.style.fontSize = '14px';
   title.style.fontWeight = 'bold';
   title.style.marginBottom = '5px';
@@ -92,47 +96,52 @@ export function createMonthLegend() {
 
   // Agregar subtítulo
   const subtitle = document.createElement('div');
-  subtitle.textContent = 'Concentración de Aerosoles';
+  subtitle.textContent = 'AOD Mensual';
   subtitle.style.fontSize = '12px';
   subtitle.style.color = '#555'; // Color gris para diferenciar del título
   subtitle.style.marginBottom = '10px';
   legendContent.appendChild(subtitle);
 
-  // Dominio de valores para la leyenda
-  const domain = [73.3, 131.9];
-  const steps = 6; // Dividimos en 6 partes
+  // Dominio de valores para la leyenda  79	199
+
+  const domain = [79,199];
+  const steps = 7; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
 
-  // Generar los valores para la leyenda
-  const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 
-  // Crear el contenido de la leyenda en HTML con rangos
-  Values.forEach((value, index) => {
-      if (index === Values.length - 1) return; // No mostrar para el último valor (sin rango)
+// Colores fijos para cada parte de la leyenda
+const colors = ["#00008B", "#4B0082", "#8A2BE2", "#DA70D6", "#FF69B4", "#FFC0CB"].reverse(); 
 
-      const nextValue = Values[index + 1]; // Próximo valor para calcular el rango
-      const color = ToColorMonth_z_b(value); // Obtener el color basado en el valor
+// Generar los valores para la leyenda
+const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 
-      const legendItem = document.createElement('div');
-      legendItem.style.marginBottom = '5px';
-      legendItem.style.display = 'flex'; // Usar flexbox para alinear horizontalmente
-      legendItem.style.alignItems = 'center'; // Alinear verticalmente al centro
+// Crear el contenido de la leyenda en HTML con rangos
+Values.forEach((value, index) => {
+    if (index === Values.length - 1) return; // No mostrar para el último valor (sin rango)
 
-      const colorBox = document.createElement('span');
-      colorBox.style.background = color;
-      colorBox.style.width = '20px';
-      colorBox.style.height = '20px';
-      colorBox.style.display = 'inline-block';
-      colorBox.style.marginRight = '10px';
+    const nextValue = Values[index + 1]; // Próximo valor para calcular el rango
+    const color = colors[index]; // Obtener el color basado en el índice
 
-      const label = document.createElement('span');
-      label.textContent = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`; // Mostrar el rango
+    const legendItem = document.createElement('div');
+    legendItem.style.marginBottom = '5px';
+    legendItem.style.display = 'flex'; // Usar flexbox para alinear horizontalmente
+    legendItem.style.alignItems = 'center'; // Alinear verticalmente al centro
 
-      legendItem.appendChild(colorBox);
-      legendItem.appendChild(label);
+    const colorBox = document.createElement('span');
+    colorBox.style.background = color;
+    colorBox.style.width = '20px';
+    colorBox.style.height = '20px';
+    colorBox.style.display = 'inline-block';
+    colorBox.style.marginRight = '10px';
 
-      legendContent.appendChild(legendItem);
-  });
+    const label = document.createElement('span');
+    label.textContent = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`; // Mostrar el rango
 
-  return legendContent;
+    legendItem.appendChild(colorBox);
+    legendItem.appendChild(label);
+
+    legendContent.appendChild(legendItem);
+});
+
+return legendContent;
 }

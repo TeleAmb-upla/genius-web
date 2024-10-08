@@ -140,7 +140,7 @@ export async function g_a_so2_b() {
         .append("circle")
         .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
         .attr("cy", d => y(d.SO2_median_fixed))
-        .attr("r", 3) // Larger radius for easier interaction
+        .attr("r", 4) // Larger radius for easier interaction
         .attr("fill", "steelblue")
         .attr("pointer-events", "all") // Ensure these circles capture mouse events
         .on("mouseover", mouseover)

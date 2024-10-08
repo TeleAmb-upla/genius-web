@@ -62,7 +62,7 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
             .setLngLat(e.lngLat)
             .setHTML(`
                 <strong>Barrio:</strong> ${properties.NOMBRE}<br>
-                <strong>Year:</strong> ${properties.Year}<br>
+                <strong>Año:</strong> ${properties.Year}<br>
                 <strong>AOD:</strong> ${AOD_medianFormatted}
             `)
             .addTo(map);
@@ -105,7 +105,7 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
             .setLngLat(e.lngLat)
             .setHTML(`
                 <strong>Barrio:</strong> ${properties.NOMBRE}<br>
-                <strong>Month:</strong> ${properties.Month}<br>
+                <strong>Mes:</strong> ${properties.Month}<br>
                 <strong>AOD:</strong> ${AOD_medianFormatted}
             `)
             .addTo(map);

@@ -1,4 +1,4 @@
-import { map_ndvi_01 } from '../js_ndvi_month/ndvi_01.js';
+import { map_ndvi_01 } from '../js_ndvi_month/ndvi_01.js'; 
 import { map_ndvi_02 } from '../js_ndvi_month/ndvi_02.js';
 import { map_ndvi_03 } from '../js_ndvi_month/ndvi_03.js';
 import { map_ndvi_04 } from '../js_ndvi_month/ndvi_04.js';
@@ -28,13 +28,17 @@ const ndviLoadersmonth = {
 
 export async function loadNdviLayersmonth(map) {
     const ndviLayers = {};
+    const georasters = {};
     try {
-        const layers = await Promise.all(Object.keys(ndviLoadersmonth).map(month => ndviLoadersmonth[month](map)));
-        Object.keys(ndviLoadersmonth).forEach((month, index) => {
-            ndviLayers[`NDVI ${month}`] = layers[index];
+        const months = Object.keys(ndviLoadersmonth);
+        const layersData = await Promise.all(months.map(month => ndviLoadersmonth[month](map)));
+        layersData.forEach((data, index) => {
+            const month = months[index];
+            ndviLayers[`NDVI ${month}`] = data.layer;
+            georasters[`NDVI ${month}`] = data.georaster;
         });
     } catch (error) {
         console.error("Error loading NDVI layers:", error);
     }
-    return ndviLayers;
+    return { layers: ndviLayers, georasters: georasters };
 }

@@ -14,7 +14,7 @@ export function createYearSelector(id) {
 
     const selector = document.createElement('select');
     selector.id = id;
-    for (let year = 2017; year <= 2023; year++) {
+    for (let year = 2014; year <= 2023; year++) {
         const option = document.createElement('option');
         option.value = year;
         option.text = year;

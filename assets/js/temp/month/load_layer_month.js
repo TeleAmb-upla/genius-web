@@ -1,3 +1,5 @@
+// loadLayersmonth.js
+
 import { map_st_01 } from './js_st_month/month_01.js';
 import { map_st_02 } from './js_st_month/month_02.js';
 import { map_st_03 } from './js_st_month/month_03.js';
@@ -27,14 +29,18 @@ const Loadersmonth = {
 };
 
 export async function loadLayersmonth(map) {
-    const n_Layers = {};
+    const Layers = {};
+    const georasters = {};
     try {
-        const layers = await Promise.all(Object.keys(Loadersmonth).map(month => Loadersmonth[month](map)));
-        Object.keys(Loadersmonth).forEach((month, index) => {
-            n_Layers[`LST ${month}`] = layers[index];
+        const months = Object.keys(Loadersmonth);
+        const layersData = await Promise.all(months.map(month => Loadersmonth[month](map)));
+        layersData.forEach((data, index) => {
+            const month = months[index];
+            Layers[`AOD ${month}`] = data.layer;
+            georasters[`AOD ${month}`] = data.georaster;
         });
     } catch (error) {
         console.error("Error loading layers:", error);
     }
-    return n_Layers;
+    return { layers: Layers, georasters: georasters };
 }

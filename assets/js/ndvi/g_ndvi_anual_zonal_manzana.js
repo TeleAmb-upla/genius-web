@@ -140,7 +140,7 @@ svg.append("g")
   .append("circle")
   .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
   .attr("cy", d => y(d.NDVI_median))
-  .attr("r", 3) // Larger radius for easier interaction
+  .attr("r", 4) // Larger radius for easier interaction
   .attr("fill", "steelblue")
   .attr("pointer-events", "all") // Ensure these circles capture mouse events
   .on("mouseover", mouseover)

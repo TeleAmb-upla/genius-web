@@ -25,5 +25,5 @@ export async function map_02(map) {
     });
 
     // No agregar la capa al mapa aquí, solo retornarla
-    return media_layer;
+    return { layer: media_layer, georaster: georaster };
 }

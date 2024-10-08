@@ -1,8 +1,9 @@
 export function ToColorYear_z_m(value) {
 
     // Definir los colores de la paleta
-    const domain = [4.404461960739052, 5.125319125299692]; // mínimo y máximo
-    const range =   ["#A7F432", "#C3E934", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
+    const domain = [82,332]; // mínimo y máximo 82,332
+
+    const range =  ["#C3E934", "#335B01", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
     
     // Calcular el paso entre cada color en función del dominio
     const step = (domain[1] - domain[0]) / (range.length - 1);

@@ -16,24 +16,27 @@ export function createYearLegend() {
 
   // Agregar título 
   const title = document.createElement('div');
-  title.textContent = 'NO² ANUAL';
+  title.textContent = 'Dióxido de Nitrógeno Anual';
   title.style.fontSize = '14px';
   title.style.fontWeight = 'bold';
   title.style.marginBottom = '5px';
   legendContent.appendChild(title);
 
   // Agregar subtítulo
-  const subtitle = document.createElement('div');
-  subtitle.textContent = 'Valores Escalados (100.000)';
+  const subtitle = document.createElement('div'); 
+  subtitle.textContent = 'NO² (µmol/m²)';
   subtitle.style.fontSize = '12px';
   subtitle.style.color = '#555'; // Color gris para diferenciar del título
   subtitle.style.marginBottom = '10px';
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda
-  const domain =  [1.6960082827681728, 7.4734310895588765]; // O rangos
-  const steps = 6; // Dividimos en 6 partes
+  const domain =  [25.813,40.313]; // O rangos
+  const steps = 7; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
+
+  // Colores fijos para cada parte de la leyenda
+  const colors =  ["#00E5FF", "#66C099", "#FFFF00", "#FF8800", "#FF0000", "#8B0000"];
 
   // Generar los valores para la leyenda
   const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
@@ -43,7 +46,7 @@ export function createYearLegend() {
       if (index === Values.length - 1) return; // No mostrar para el último valor (sin rango)
 
       const nextValue = Values[index + 1]; // Próximo valor para calcular el rango
-      const color = ToColorYear_z_m(value); // Obtener el color basado en el valor
+      const color =  colors[index];  // Obtener el color basado en el valor
 
       const legendItem = document.createElement('div');
       legendItem.style.marginBottom = '5px';
@@ -85,7 +88,7 @@ export function createMonthLegend() {
 
   // Agregar título "AOD Mensual"
   const title = document.createElement('div');
-  title.textContent = 'NO² ANUAL';
+  title.textContent = 'Dióxido de Nitrógeno Mensual';
   title.style.fontSize = '14px';
   title.style.fontWeight = 'bold';
   title.style.marginBottom = '5px';
@@ -93,16 +96,18 @@ export function createMonthLegend() {
 
   // Agregar subtítulo
   const subtitle = document.createElement('div');
-  subtitle.textContent = 'Valores Escalados (100.000)';
+  subtitle.textContent = 'NO² (µmol/m²)';
   subtitle.style.fontSize = '12px';
   subtitle.style.color = '#555'; // Color gris para diferenciar del título
   subtitle.style.marginBottom = '10px';
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda
-  const domain = [0.8201394139059714, 14.455718432422563];
-  const steps = 6; // Dividimos en 6 partes
+  const domain = [16.5,128.5];
+  const steps = 7; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
+  // Colores fijos para cada parte de la leyenda
+  const colors =  ["#00E5FF", "#66C099", "#FFFF00", "#FF8800", "#FF0000", "#8B0000"];
 
   // Generar los valores para la leyenda
   const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
@@ -112,7 +117,7 @@ export function createMonthLegend() {
     if (index === Values.length - 1) return; // No mostrar para el último valor (sin rango)
 
     const nextValue = Values[index + 1]; // Próximo valor para calcular el rango
-    const color = ToColorMonth_z_m(value); // Obtener el color basado en el valor
+    const color = colors[index]; // Obtener el color basado en el valor
 
     const legendItem = document.createElement('div');
     legendItem.style.marginBottom = '5px';

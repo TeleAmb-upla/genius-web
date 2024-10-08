@@ -1,3 +1,4 @@
+
 function valueToSTColor(value) {
     // Rango de colores para el degradado
     const red = [255, 0, 0]; // Rojo para valores negativos
@@ -30,32 +31,37 @@ function valueToSTColor(value) {
     return color;
 }
 
-
-
-
 export async function map_trend(map) {
-  // Leer el archivo  
-  const response = await fetch('/assets/vec/raster/lst_pixel/lst_Trend/LST_Yearly_Trend.tif');
-  const arrayBuffer = await response.arrayBuffer();
+    try {
+        // Leer el archivo  
+        const response = await fetch('/assets/vec/raster/lst_pixel/lst_Trend/LST_Yearly_Trend.tif');
+        const arrayBuffer = await response.arrayBuffer();
 
-  // Parsear el georaster
-  const georaster = await parseGeoraster(arrayBuffer);
+        // Parsear el georaster
+        const georaster = await parseGeoraster(arrayBuffer);
 
-  // Crear la capa de GeoRaster con un color fijo para 2018
-  const Layer = new GeoRasterLayer({
-      georaster: georaster,
-      pixelValuesToColorFn: values => {
-          const Value = values[0];
-          if (isNaN(Value)) {
-              return null; // Retornar null si el valor es NaN
-          }
-          return valueToSTColor(Value); // Rojo fijo para 2018
-      },
-      resolution: 1080
-  });
+        // Crear la capa de GeoRaster
+        const Layer = new GeoRasterLayer({
+            georaster: georaster,
+            pixelValuesToColorFn: values => {
+                const Value = values[0];
+                if (isNaN(Value)) {
+                    return null; // Retornar null si el valor es NaN
+                }
+                return valueToSTColor(Value);
+            },
+            resolution: 1080
+        });
 
-  // No agregar la capa al mapa aquí, solo retornarla
-  return Layer;
+        // Retornar un objeto con la capa y el georaster
+        return {
+            layer: Layer,
+            georaster: georaster
+        };
+    } catch (error) {
+        console.error('Error al cargar el georaster de tendencia:', error);
+        return null;
+    }
 }
 
 export function createSTLegendSVG() {

@@ -26,5 +26,5 @@ export async function map_2021(map) {
     });
 
     // SO agregar la capa al mapa aquí, solo retornarla
-    return Layer;
+    return { layer: Layer, georaster: georaster };
 }

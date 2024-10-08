@@ -17,7 +17,7 @@ import { ndviToColorMonth_z_b } from './ndvi_palette_z_b_m.js';
   
     // Agregar título "AOD ANUAL"
     const title = document.createElement('div');
-    title.textContent = 'NDVI ANUAL';
+    title.textContent = 'Indicador de Áreas Verdes';
     title.style.fontSize = '14px';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '5px';
@@ -25,17 +25,21 @@ import { ndviToColorMonth_z_b } from './ndvi_palette_z_b_m.js';
   
     // Agregar subtítulo
     const subtitle = document.createElement('div');
-    subtitle.textContent = 'Indicador de Áreas Verdes';
+    subtitle.textContent = 'NDVI Anual';
     subtitle.style.fontSize = '12px';
     subtitle.style.color = '#555'; // Color gris para diferenciar del título
     subtitle.style.marginBottom = '10px';
     legendContent.appendChild(subtitle);
   
-    // Dominio de valores para la leyenda
-    const domain = [-0.3359, 0.7422]; // O rangos
+    // Dominio de valores para la leyenda  0.082,0.4219
+
+
+    const domain = [0.082,0.4219]; // O rangos
     const steps = 6; // Dividimos en 6 partes
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
   
+    const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#023B01', '#011301'];
+
     // Generar los valores para la leyenda
     const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
   
@@ -44,7 +48,7 @@ import { ndviToColorMonth_z_b } from './ndvi_palette_z_b_m.js';
         if (index === Values.length - 1) return; // No mostrar para el último valor (sin rango)
   
         const nextValue = Values[index + 1]; // Próximo valor para calcular el rango
-        const color = ndviToColorYear_z_b(value); // Obtener el color basado en el valor
+        const color =  colors[index];
   
         const legendItem = document.createElement('div');
         legendItem.style.marginBottom = '5px';
@@ -85,25 +89,26 @@ import { ndviToColorMonth_z_b } from './ndvi_palette_z_b_m.js';
   
     // Agregar título "AOD Mensual"
     const title = document.createElement('div');
-    title.textContent = 'NDVI Mensual';
+    title.textContent = 'Indicador de Áreas Verdes';
     title.style.fontSize = '14px';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '5px';
     legendContent.appendChild(title);
-  
+
     // Agregar subtítulo
     const subtitle = document.createElement('div');
-    subtitle.textContent = 'Indicador de Áreas Verdes';
+    subtitle.textContent = 'NDVI Mensual';
     subtitle.style.fontSize = '12px';
     subtitle.style.color = '#555'; // Color gris para diferenciar del título
     subtitle.style.marginBottom = '10px';
     legendContent.appendChild(subtitle);
   
     // Dominio de valores para la leyenda
-    const domain = [-0.3359, 0.7422];
+    const domain = [0.0742,0.4141];
     const steps = 6; // Dividimos en 6 partes
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
-  
+    const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#023B01', '#011301'];
+
     // Generar los valores para la leyenda
     const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
   
@@ -112,7 +117,7 @@ import { ndviToColorMonth_z_b } from './ndvi_palette_z_b_m.js';
         if (index === Values.length - 1) return; // No mostrar para el último valor (sin rango)
   
         const nextValue = Values[index + 1]; // Próximo valor para calcular el rango
-        const color = ndviToColorMonth_z_b(value); // Obtener el color basado en el valor
+        const color =  colors[index]; // Obtener el color basado en el valor
   
         const legendItem = document.createElement('div');
         legendItem.style.marginBottom = '5px';

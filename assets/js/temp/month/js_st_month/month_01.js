@@ -2,7 +2,7 @@
 import { ToColorMonth } from '../palette_month.js'; // Ajusta la ruta según sea necesario
 
 export async function map_st_01(map) {
-    // Leer el archivo 
+    // Leer el archivo  '/assets/vec/raster/lst_pixel/lst_Monthly/LST_Monthly_01.tif
     const response = await fetch('/assets/vec/raster/lst_pixel/lst_Monthly/LST_Monthly_01.tif');
     const arrayBuffer = await response.arrayBuffer();
     // Parsear el georaster
@@ -24,5 +24,6 @@ export async function map_st_01(map) {
     });
 
     // No agregar la capa al mapa aquí, solo retornarla
-    return LST_median_layer;
+
+    return { layer: LST_median_layer, georaster: georaster };
 }

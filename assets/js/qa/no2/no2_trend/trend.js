@@ -21,29 +21,38 @@ function valueToSTColor(value) {
 
 
 export async function map_trend(map) {
-  // Leer el archivo  
-  const response = await fetch('/assets/vec/raster/no2_pixel/NO2_Trend/NO2_Yearly_Trend.tif');
-  const arrayBuffer = await response.arrayBuffer();
+    try {
+        // Leer el archivo  
+        const response = await fetch('/assets/vec/raster/no2_pixel/NO2_Trend/NO2_Yearly_Trend.tif');
+        const arrayBuffer = await response.arrayBuffer();
 
-  // Parsear el georaster
-  const georaster = await parseGeoraster(arrayBuffer);
+        // Parsear el georaster
+        const georaster = await parseGeoraster(arrayBuffer);
 
-  // Crear la capa de GeoRaster con un color fijo para 2018
-  const Layer = new GeoRasterLayer({
-      georaster: georaster,
-         pixelValuesToColorFn: values => {
-          const Value = values[0];
-          if (isNaN(Value)) {
-              return null; // Retornar null si el valor es NaN
-          }
-          return valueToSTColor(Value); // Rojo fijo para 2018
-      },
-      resolution: 1080
-  });
+        // Crear la capa de GeoRaster
+        const Layer = new GeoRasterLayer({
+            georaster: georaster,
+            pixelValuesToColorFn: values => {
+                const Value = values[0];
+                if (isNaN(Value)) {
+                    return null; // Retornar null si el valor es NaN
+                }
+                return valueToSTColor(Value);
+            },
+            resolution: 1080
+        });
 
-  // No agregar la capa al mapa aquí, solo retornarla
-  return Layer;
+        // Retornar un objeto con la capa y el georaster
+        return {
+            layer: Layer,
+            georaster: georaster
+        };
+    } catch (error) {
+        console.error('Error al cargar el georaster de tendencia:', error);
+        return null;
+    }
 }
+
 
 export function createSTLegendSVG() {
     const Values = [   -4, -2, 0, 2, 4];

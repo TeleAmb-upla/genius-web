@@ -1,4 +1,3 @@
-
 import { map_ndvi_2017 } from '../js_ndvi_anual/ndvi_2017.js';
 import { map_ndvi_2018 } from '../js_ndvi_anual/ndvi_2018.js';
 import { map_ndvi_2019 } from '../js_ndvi_anual/ndvi_2019.js';
@@ -18,16 +17,19 @@ const ndviLoaders = [
 ];
 
 export async function loadNdviLayersyear(map) {
-    const years = [ 2017, 2018, 2019, 2020, 2021, 2022, 2023];
+    const years = [2017, 2018, 2019, 2020, 2021, 2022, 2023];
     const ndviLayers = {};
+    const georasters = {};
+
     try {
-        const layers = await Promise.all(ndviLoaders.map(loader => loader(map)));
-        layers.forEach((layer, index) => {
+        const layersData = await Promise.all(ndviLoaders.map(loader => loader(map)));
+        layersData.forEach((data, index) => {
             const year = years[index];
-            ndviLayers[`NDVI ${year}`] = layer;
+            ndviLayers[`NDVI ${year}`] = data.layer;
+            georasters[`NDVI ${year}`] = data.georaster;
         });
     } catch (error) {
         console.error("Error loading NDVI layers:", error);
     }
-    return ndviLayers;
+    return { layers: ndviLayers, georasters: georasters };
 }

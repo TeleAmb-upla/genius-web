@@ -140,7 +140,7 @@ var mouseleave = function (event, d) {
         .append("circle")
         .attr("cx", d => x(d.Month))
         .attr("cy", d => y(d.NDVI))
-        .attr("r", 3) // Larger radius for easier interaction
+        .attr("r", 4) // Larger radius for easier interaction
         .attr("fill", "steelblue")
         .attr("pointer-events", "all") // Ensure these circles capture mouse events
         .on("mouseover", mouseover)

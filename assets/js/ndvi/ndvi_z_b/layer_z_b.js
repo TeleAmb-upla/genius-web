@@ -104,7 +104,7 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
             .setLngLat(e.lngLat)
             .setHTML(`
                 <strong>Barrio:</strong> ${properties.NOMBRE}<br>
-                <strong>Month:</strong> ${properties.Month}<br>
+                <strong>Mes:</strong> ${properties.Month}<br>
                 <strong>NDVI:</strong> ${ndviFormatted}
             `)
             .addTo(map);

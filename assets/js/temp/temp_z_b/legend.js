@@ -16,7 +16,7 @@ export function createYearLegend() {
 
   // Título "LST ANUAL"
   const title = document.createElement('div');
-  title.textContent = 'LST ANUAL';
+  title.textContent = 'Temperatura superficial terrestre';
   title.style.fontSize = '14px';
   title.style.fontWeight = 'bold';
   title.style.marginBottom = '5px';
@@ -24,46 +24,53 @@ export function createYearLegend() {
 
   // Subtítulo
   const subtitle = document.createElement('div');
-  subtitle.textContent = 'Temperatura superficial terrestre (°C)';
+  subtitle.textContent = 'LST(°C) Anual';
   subtitle.style.fontSize = '12px';
   subtitle.style.color = '#555'; // Color gris para diferenciar del título
   subtitle.style.marginBottom = '10px';
   legendContent.appendChild(subtitle);
 
-  // Rangos de valores para la leyenda
-  const Ranges = [
-      { min: 16, max: 23 },
-      { min: 23, max: 28 },
-      { min: 28, max: 33 },
-      { min: 33, max: 38 },
-      { min: 38, max: 42 }
-  ];
+// Dominio de valores para la leyenda
+const domain = [25.063,36.313]; // Mínimo y máximo 25.063,36.313
+
+const steps = 7; // Dividimos en 6 partes
+const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
+
+// Colores fijos para cada parte de la leyenda
+const colors =  ["#00008B", "#00BFFF", "#32CD32", "#FFFF00", "#FFA500", "#FF4500"];
+
+// Generar los valores para la leyenda
+const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 
   // Crear el contenido de la leyenda en HTML con rangos
-  Ranges.forEach((range) => {
-      const color = ToColorYear_z_b(range.min); // Obtener el color basado en el valor
+  Values.forEach((value, index) => {
+    if (index === Values.length - 1) return; // No mostrar para el último valor (sin rango)
 
-      const legendItem = document.createElement('div');
-      legendItem.style.marginBottom = '5px';
-      legendItem.style.display = 'flex'; // Usar flexbox para alinear horizontalmente
-      legendItem.style.alignItems = 'center'; // Alinear verticalmente al centro
+    const nextValue = Values[index + 1]; // Próximo valor para calcular el rango
+    const color =  colors[index];  // Obtener el color basado en el valor
 
-      const colorBox = document.createElement('span');
-      colorBox.style.background = color;
-      colorBox.style.width = '20px';
-      colorBox.style.height = '20px';
-      colorBox.style.display = 'inline-block';
-      colorBox.style.marginRight = '10px';
+    const legendItem = document.createElement('div');
+    legendItem.style.marginBottom = '5px';
+    legendItem.style.display = 'flex'; // Usar flexbox para alinear horizontalmente
+    legendItem.style.alignItems = 'center'; // Alinear verticalmente al centro
 
-      const label = document.createElement('span');
-      label.textContent = `${range.min.toFixed(1)}°C - ${range.max.toFixed(1)}°C`; // Mostrar el rango
+    const colorBox = document.createElement('span');
+    colorBox.style.background = color;
+    colorBox.style.width = '20px';
+    colorBox.style.height = '20px';
+    colorBox.style.display = 'inline-block';
+    colorBox.style.marginRight = '10px';
 
-      legendItem.appendChild(colorBox);
-      legendItem.appendChild(label);
-      legendContent.appendChild(legendItem);
-  });
+    const label = document.createElement('span');
+    label.textContent = `${value.toFixed(2)}°C - ${nextValue.toFixed(2)}°C`; // Mostrar el rango
 
-  return legendContent;
+    legendItem.appendChild(colorBox);
+    legendItem.appendChild(label);
+
+    legendContent.appendChild(legendItem);
+});
+
+return legendContent;
 }
 
 // Leyenda Mensual
@@ -82,7 +89,7 @@ export function createMonthLegend() {
 
   // Título "LST MENSUAL"
   const title = document.createElement('div');
-  title.textContent = 'LST MENSUAL';
+  title.textContent = 'Temperatura superficial terrestre';
   title.style.fontSize = '14px';
   title.style.fontWeight = 'bold';
   title.style.marginBottom = '5px';
@@ -90,44 +97,51 @@ export function createMonthLegend() {
 
   // Subtítulo
   const subtitle = document.createElement('div');
-  subtitle.textContent = 'Temperatura superficial terrestre (°C)';
+  subtitle.textContent = 'LST(°C) Mensual';
   subtitle.style.fontSize = '12px';
   subtitle.style.color = '#555'; // Color gris para diferenciar del título
   subtitle.style.marginBottom = '10px';
   legendContent.appendChild(subtitle);
 
-  // Rangos de valores para la leyenda
-  const Ranges = [
-      { min: 7, max: 15 },
-      { min: 15, max: 22 },
-      { min: 22, max: 31 },
-      { min: 31, max: 39 },
-      { min: 39, max: 44 }
-  ];
-
-  // Crear el contenido de la leyenda en HTML con rangos
-  Ranges.forEach((range) => {
-      const color = ToColorMonth_z_b(range.min); // Obtener el color basado en el valor
-
+  // Dominio de valores para la leyenda
+  const domain = [11.13,40.13]; // Mínimo y máximo
+  const steps = 7; // Dividimos en 6 partes
+  const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
+  
+  // Colores fijos para cada parte de la leyenda
+  const colors =  ["#00008B", "#00BFFF", "#32CD32", "#FFFF00", "#FFA500", "#FF4500"];
+  
+  // Generar los valores para la leyenda
+  const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
+  
+    // Crear el contenido de la leyenda en HTML con rangos
+    Values.forEach((value, index) => {
+      if (index === Values.length - 1) return; // No mostrar para el último valor (sin rango)
+  
+      const nextValue = Values[index + 1]; // Próximo valor para calcular el rango
+      const color =  colors[index];  // Obtener el color basado en el valor
+  
       const legendItem = document.createElement('div');
       legendItem.style.marginBottom = '5px';
       legendItem.style.display = 'flex'; // Usar flexbox para alinear horizontalmente
       legendItem.style.alignItems = 'center'; // Alinear verticalmente al centro
-
+  
       const colorBox = document.createElement('span');
       colorBox.style.background = color;
       colorBox.style.width = '20px';
       colorBox.style.height = '20px';
       colorBox.style.display = 'inline-block';
       colorBox.style.marginRight = '10px';
-
+  
       const label = document.createElement('span');
-      label.textContent = `${range.min.toFixed(1)}°C - ${range.max.toFixed(1)}°C`; // Mostrar el rango
-
+      label.textContent = `${value.toFixed(2)}°C - ${nextValue.toFixed(2)}°C`; // Mostrar el rango
+  
       legendItem.appendChild(colorBox);
       legendItem.appendChild(label);
+  
       legendContent.appendChild(legendItem);
   });
-
+  
   return legendContent;
-}
+  }
+  

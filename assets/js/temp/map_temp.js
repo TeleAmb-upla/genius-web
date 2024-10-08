@@ -1,9 +1,11 @@
+// map_temp.js
+
+// Importaciones necesarias
 import { loadLayersyear } from './year/load_layer_year.js';
 import { createYearSelector, positionYearSelector } from './year/utils_year.js';
 import { loadLayersmonth } from './month/load_layer_month.js';
 import { createMonthSelector, positionMonthSelector } from './month/utils_month.js';
-import { createmonthLegendSVG, createyearLegendSVG } from './map_utilities_p.js';
-import { loadGeoJSONAndSetupLayers, createAvSelector, positionAvSelector } from './capas/utilis_select_av.js';
+import { createmonthLegendSVG, createyearLegendSVG, addCenteredTitle } from './map_utilities_p.js';
 import { map_trend, createSTLegendSVG } from './lst_trend/trend.js';
 
 // Variables globales
@@ -11,31 +13,20 @@ let currentMap = null;
 let leftLayer = null;
 let rightLayer = null;
 let sideBySideControl = null;
-let avSelector = null;
-let categoryLayers = {};
-let mapTitleDiv = null; // Almacenará las capas de categorías de áreas verdes
+
 let legendDiv = null; // Variable global para la leyenda
 
-function updateCenteredTitle(map, titleText) {
-    if (!mapTitleDiv) {
-        mapTitleDiv = document.createElement('div');
-        mapTitleDiv.id = 'map-title';
-        mapTitleDiv.style.position = 'absolute';
-        mapTitleDiv.style.top = '10px';
-        mapTitleDiv.style.left = '50%';
-        mapTitleDiv.style.transform = 'translate(-50%, 0)';
-        mapTitleDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-        mapTitleDiv.style.padding = '10px';
-        mapTitleDiv.style.borderRadius = '8px';
-        mapTitleDiv.style.zIndex = '1000';
-        mapTitleDiv.style.pointerEvents = 'none';
-        mapTitleDiv.style.fontFamily = 'Arial';
-        mapTitleDiv.style.fontSize = '14px';
-        mapTitleDiv.style.fontWeight = 'bold';
-        map.getContainer().appendChild(mapTitleDiv);
-    }
-    mapTitleDiv.innerHTML = titleText;
-}
+let leftGeoraster = null;
+let rightGeoraster = null;
+let trendGeoraster = null;
+
+let currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
+
+let currentLeftYear = "2014";
+let currentRightYear = "2023";
+
+let currentLeftMonth = "01";
+let currentRightMonth = "12";
 
 export async function map_t() {
     // Elimina el mapa y la leyenda si ya están inicializados
@@ -45,11 +36,11 @@ export async function map_t() {
         leftLayer = null;
         rightLayer = null;
         sideBySideControl = null;
-        
+
         // Eliminar el título del mapa
+        let mapTitleDiv = document.getElementById('map-title');
         if (mapTitleDiv) {
             mapTitleDiv.remove();
-            mapTitleDiv = null;
         }
 
         // Eliminar la leyenda si existe
@@ -65,22 +56,25 @@ export async function map_t() {
     const CartoDB_Positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
         minZoom: 0,
         maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(currentMap);
 
     L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
 
-    // Cargar y configurar las capas GeoJSON sin crear el selector
-    categoryLayers = await loadGeoJSONAndSetupLayers(currentMap);
 
     // Actualizar el título del mapa
-    updateCenteredTitle(currentMap, "LST Pixel Distrito Urbano");
+    addCenteredTitle(currentMap, "LST Pixel Distrito Urbano");
 
-    const Layersmonth = await loadLayersmonth(currentMap);
-    const LayersYearth = await loadLayersyear(currentMap);
-    const baseLayers = { "CDP": CartoDB_Positron };
-    const areasVerdesLayer = L.layerGroup(Object.values(categoryLayers)); // Capa combinada de todas las categorías de áreas verdes
+    // Cargar las capas anuales y mensuales
+    const lstDataYear = await loadLayersyear(currentMap);
+    const lstLayersYear = lstDataYear.layers;
+    const lstGeorastersYear = lstDataYear.georasters;
 
+    const lstDataMonth = await loadLayersmonth(currentMap);
+    const lstLayersMonth = lstDataMonth.layers;
+    const lstGeorastersMonth = lstDataMonth.georasters;
+
+    // Crear selectores de año y mes
     const yearLeftSelector = createYearSelector('yearLeft');
     const yearRightSelector = createYearSelector('yearRight');
     const monthLeftSelector = createMonthSelector('monthLeft');
@@ -96,86 +90,130 @@ export async function map_t() {
     monthLeftSelector.style.display = 'none';
     monthRightSelector.style.display = 'none';
 
-    // Inicialización de las capas de meses
-    let leftMonthLayer = Layersmonth["LST 01"];
-    let rightMonthLayer = Layersmonth["LST 12"];
+    // Definir capas base y superpuestas
+    const lstYearLayer = L.layerGroup(); // Capa vacía para el control de capas
+    const lstMonthLayer = L.layerGroup(); // Capa vacía para el control de capas
+    const trendLayerData = await map_trend(currentMap);
+    const trendLayer = trendLayerData ? trendLayerData.layer : null;
 
-    // Inicialización de las capas de años
-    const initialLeftLayerKey = "LST 2017";
-    const initialRightLayerKey = "LST 2023";
+    // Verificar que las capas no sean undefined
+    const overlayLayers = {};
 
-    if (LayersYearth[initialLeftLayerKey] && LayersYearth[initialRightLayerKey]) {
-        leftLayer = LayersYearth[initialLeftLayerKey];
-        rightLayer = LayersYearth[initialRightLayerKey];
+    if (lstYearLayer) overlayLayers["Anual"] = lstYearLayer;
+    else console.error("lstYearLayer no está definido correctamente.");
+
+    if (lstMonthLayer) overlayLayers["Mensual"] = lstMonthLayer;
+    else console.error("lstMonthLayer no está definido correctamente.");
+
+    if (trendLayer) overlayLayers["Tendencia"] = trendLayer;
+    else console.error("trendLayer no está definido correctamente.");
+
+    // Crear el control de capas solo si hay capas válidas
+    if (Object.keys(overlayLayers).length > 0) {
+        const layerControl = L.control.layers(null, overlayLayers).addTo(currentMap);
+
+        // Obtener el div del control de capas
+        const layerControlDiv = layerControl.getContainer();
+
+        // Obtener la lista de capas
+        const layersList = layerControlDiv.querySelector('.leaflet-control-layers-list');
+
+        // Crear el título LST
+        const title = document.createElement('h4');
+        title.innerHTML = "LST"; // Texto del título
+        title.classList.add('leaflet-control-title');
+
+        // Crear el separador
+        const separator = document.createElement('div');
+        separator.classList.add('leaflet-control-layers-separator');
+
+        // Insertar el título y luego el separador antes de la lista de capas
+        layersList.prepend(separator); // Insertar el separador antes de las capas
+        layersList.prepend(title);     // Insertar el título antes del separador
     } else {
-        return;
+        console.error("No hay capas válidas para agregar al control de capas.");
     }
 
-    sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
+    // Variable para almacenar el tipo de capa actual
+    currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
 
-    // Event listeners para los cambios de capas de año
+    // Listeners para los selectores de año
     document.getElementById('yearLeft').addEventListener('change', function() {
-        const selectedYearLeft = this.value;
-        const newLeftLayer = LayersYearth[`LST ${selectedYearLeft}`];
-        if (newLeftLayer) {
-            if (leftLayer) currentMap.removeLayer(leftLayer);
-            leftLayer = newLeftLayer;
-            currentMap.addLayer(leftLayer);
+        const selectedYear = this.value;
+        currentLeftYear = selectedYear;
+
+        const newLeftLayer = lstLayersYear[`LST ${selectedYear}`];
+        const newLeftGeoraster = lstGeorastersYear[`LST ${selectedYear}`];
+
+        if (leftLayer) currentMap.removeLayer(leftLayer);
+        leftLayer = newLeftLayer;
+        leftGeoraster = newLeftGeoraster;
+        currentMap.addLayer(leftLayer);
+
+        if (sideBySideControl) {
             sideBySideControl.setLeftLayers(leftLayer);
         }
     });
 
     document.getElementById('yearRight').addEventListener('change', function() {
-        const selectedYearRight = this.value;
-        const newRightLayer = LayersYearth[`LST ${selectedYearRight}`];
-        if (newRightLayer) {
-            if (rightLayer) currentMap.removeLayer(rightLayer);
-            rightLayer = newRightLayer;
-            currentMap.addLayer(rightLayer);
+        const selectedYear = this.value;
+        currentRightYear = selectedYear;
+
+        const newRightLayer = lstLayersYear[`LST ${selectedYear}`];
+        const newRightGeoraster = lstGeorastersYear[`LST ${selectedYear}`];
+
+        if (rightLayer) currentMap.removeLayer(rightLayer);
+        rightLayer = newRightLayer;
+        rightGeoraster = newRightGeoraster;
+        currentMap.addLayer(rightLayer);
+
+        if (sideBySideControl) {
             sideBySideControl.setRightLayers(rightLayer);
         }
     });
 
-    // Event listeners para los cambios de capas de mes
+    // Listeners para los selectores de mes
     document.getElementById('monthLeft').addEventListener('change', function() {
-        const selectedMonthLeft = this.value;
-        const newLeftLayer = Layersmonth[`LST ${selectedMonthLeft}`];
-        if (newLeftLayer) {
-            if (leftMonthLayer) currentMap.removeLayer(leftMonthLayer);
-            leftMonthLayer = newLeftLayer;
-            currentMap.addLayer(leftMonthLayer);
-            sideBySideControl.setLeftLayers(leftMonthLayer);
+        const selectedMonth = this.value;
+        currentLeftMonth = selectedMonth;
+
+        const newLeftLayer = lstLayersMonth[`LST ${selectedMonth}`];
+        const newLeftGeoraster = lstGeorastersMonth[`LST ${selectedMonth}`];
+
+        if (leftLayer) currentMap.removeLayer(leftLayer);
+        leftLayer = newLeftLayer;
+        leftGeoraster = newLeftGeoraster;
+        currentMap.addLayer(leftLayer);
+
+        if (sideBySideControl) {
+            sideBySideControl.setLeftLayers(leftLayer);
         }
     });
 
     document.getElementById('monthRight').addEventListener('change', function() {
-        const selectedMonthRight = this.value;
-        const newRightLayer = Layersmonth[`LST ${selectedMonthRight}`];
-        if (newRightLayer) {
-            if (rightMonthLayer) currentMap.removeLayer(rightMonthLayer);
-            rightMonthLayer = newRightLayer;
-            currentMap.addLayer(rightMonthLayer);
-            sideBySideControl.setRightLayers(rightMonthLayer);
+        const selectedMonth = this.value;
+        currentRightMonth = selectedMonth;
+
+        const newRightLayer = lstLayersMonth[`LST ${selectedMonth}`];
+        const newRightGeoraster = lstGeorastersMonth[`LST ${selectedMonth}`];
+
+        if (rightLayer) currentMap.removeLayer(rightLayer);
+        rightLayer = newRightLayer;
+        rightGeoraster = newRightGeoraster;
+        currentMap.addLayer(rightLayer);
+
+        if (sideBySideControl) {
+            sideBySideControl.setRightLayers(rightLayer);
         }
     });
 
-    const YearLayer = L.layerGroup();
-    const MonthLayer = L.layerGroup();
-    const overlayLayers = {
-        "LST Year": YearLayer,
-        "LST Month": MonthLayer,
-        "LST Trend": await map_trend(currentMap),
-        //"Áreas Verdes": areasVerdesLayer
-    };
-
-    L.control.layers(baseLayers, overlayLayers).addTo(currentMap);
-
+    // Eventos para mostrar/ocultar capas y selectores
     currentMap.on('overlayadd', function(event) {
         // Eliminar la leyenda previa si existe
         if (legendDiv) {
             legendDiv.remove();
         }
-    
+
         // Crear un nuevo div para la leyenda
         legendDiv = document.createElement('div');
         legendDiv.id = 'legend';
@@ -188,63 +226,188 @@ export async function map_t() {
         legendDiv.style.borderRadius = '8px';
         legendDiv.style.zIndex = '1000';
         currentMap.getContainer().appendChild(legendDiv);
-    
-        // Lógica para mostrar la leyenda según la capa seleccionada
-        if (event.name === "LST Year") {
-            yearLeftSelector.style.display = 'block';
-            yearRightSelector.style.display = 'block';
-            monthLeftSelector.style.display = 'none';
-            monthRightSelector.style.display = 'none';
-            if (leftLayer) currentMap.addLayer(leftLayer);
-            if (rightLayer) currentMap.addLayer(rightLayer);
-            if (avSelector) avSelector.style.display = 'none';
-            legendDiv.innerHTML = createyearLegendSVG();
-    
-        } else if (event.name === "LST Month") {
-            monthLeftSelector.style.display = 'block';
-            monthRightSelector.style.display = 'block';
-            yearLeftSelector.style.display = 'none';
-            yearRightSelector.style.display = 'none';
-            if (leftMonthLayer) currentMap.addLayer(leftMonthLayer);
-            if (rightMonthLayer) currentMap.addLayer(rightMonthLayer);
-            if (avSelector) avSelector.style.display = 'none';
-            legendDiv.innerHTML = createmonthLegendSVG();
-    
-        } else if (event.name === "LST Trend") {
-            // Ocultar selectores que no son necesarios
-            yearLeftSelector.style.display = 'none';
-            yearRightSelector.style.display = 'none';
-            monthLeftSelector.style.display = 'none';
-            monthRightSelector.style.display = 'none';
-            if (avSelector) avSelector.style.display = 'none';
-    
-            // Mostrar la leyenda de LST Trend usando createSTLegendSVG
-            legendDiv.innerHTML = createSTLegendSVG();
-        } else if (event.name === "Áreas Verdes") {
-            if (!avSelector) {
-                avSelector = createAvSelector('av-selector', categoryLayers, currentMap);
-                positionAvSelector(avSelector, 'top');
-            }
-            avSelector.style.display = 'block';
+
+        // Lógica para mostrar la leyenda y las capas según la capa seleccionada
+        switch (event.name) {
+            case "Anual":
+                currentLayerType = 'Anual';
+                yearLeftSelector.style.display = 'block';
+                yearRightSelector.style.display = 'block';
+                monthLeftSelector.style.display = 'none';
+                monthRightSelector.style.display = 'none';
+                legendDiv.innerHTML = createyearLegendSVG();
+
+                // Asignar los georasters correspondientes
+                leftGeoraster = lstGeorastersYear[`LST ${currentLeftYear}`];
+                rightGeoraster = lstGeorastersYear[`LST ${currentRightYear}`];
+
+                // Añadir las capas al mapa
+                leftLayer = lstLayersYear[`LST ${currentLeftYear}`];
+                rightLayer = lstLayersYear[`LST ${currentRightYear}`];
+                currentMap.addLayer(leftLayer);
+                currentMap.addLayer(rightLayer);
+
+                // Agregar el control Side by Side
+                sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
+                break;
+            case "Mensual":
+                currentLayerType = 'Mensual';
+                monthLeftSelector.style.display = 'block';
+                monthRightSelector.style.display = 'block';
+                yearLeftSelector.style.display = 'none';
+                yearRightSelector.style.display = 'none';
+                legendDiv.innerHTML = createmonthLegendSVG();
+
+                // Asignar los georasters correspondientes
+                leftGeoraster = lstGeorastersMonth[`LST ${currentLeftMonth}`];
+                rightGeoraster = lstGeorastersMonth[`LST ${currentRightMonth}`];
+
+                // Añadir las capas al mapa
+                leftLayer = lstLayersMonth[`LST ${currentLeftMonth}`];
+                rightLayer = lstLayersMonth[`LST ${currentRightMonth}`];
+                currentMap.addLayer(leftLayer);
+                currentMap.addLayer(rightLayer);
+
+                // Agregar el control Side by Side
+                sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
+                break;
+            case "Tendencia":
+                currentLayerType = 'Tendencia';
+                // Ocultar selectores que no son necesarios
+                yearLeftSelector.style.display = 'none';
+                yearRightSelector.style.display = 'none';
+                monthLeftSelector.style.display = 'none';
+                monthRightSelector.style.display = 'none';
+
+                legendDiv.innerHTML = createSTLegendSVG();
+                trendGeoraster = trendLayerData.georaster;
+
+                // Añadir la capa de tendencia al mapa si no está ya
+                if (!currentMap.hasLayer(trendLayer)) {
+                    currentMap.addLayer(trendLayer);
+                }
+                break;
+            // Puedes manejar otros casos aquí si es necesario
         }
     });
-    
 
     currentMap.on('overlayremove', function(event) {
-        if (event.name === "LST Year") {
+        if (event.name === "Anual") {
             yearLeftSelector.style.display = 'none';
             yearRightSelector.style.display = 'none';
             if (leftLayer) currentMap.removeLayer(leftLayer);
             if (rightLayer) currentMap.removeLayer(rightLayer);
-        } else if (event.name === "LST Month") {
+            leftLayer = null;
+            rightLayer = null;
+            leftGeoraster = null;
+            rightGeoraster = null;
+            currentLayerType = null;
+
+            if (sideBySideControl) {
+                sideBySideControl.remove();
+                sideBySideControl = null;
+            }
+        } else if (event.name === "Mensual") {
             monthLeftSelector.style.display = 'none';
             monthRightSelector.style.display = 'none';
-            if (leftMonthLayer) currentMap.removeLayer(leftMonthLayer);
-            if (rightMonthLayer) currentMap.removeLayer(rightMonthLayer);
+            if (leftLayer) currentMap.removeLayer(leftLayer);
+            if (rightLayer) currentMap.removeLayer(rightLayer);
+            leftLayer = null;
+            rightLayer = null;
+            leftGeoraster = null;
+            rightGeoraster = null;
+            currentLayerType = null;
+
+            if (sideBySideControl) {
+                sideBySideControl.remove();
+                sideBySideControl = null;
+            }
+        } else if (event.name === "Tendencia") {
+            // Remover la capa de tendencia si está activa
+            if (currentMap.hasLayer(trendLayer)) {
+                currentMap.removeLayer(trendLayer);
+            }
+            trendGeoraster = null;
+            if (currentLayerType === 'Tendencia') {
+                currentLayerType = null;
+            }
         }
 
         if (legendDiv) {
             legendDiv.innerHTML = '';
+        }
+    });
+
+    // Evento de clic en el mapa para mostrar los valores de LST
+    currentMap.on('click', function(event) {
+        const latlng = event.latlng;
+
+        if ((currentLayerType === 'Anual' || currentLayerType === 'Mensual') && leftGeoraster && rightGeoraster) {
+            // Obtener los valores de LST de ambas capas
+            let valueLeft = null;
+            let valueRight = null;
+
+            let valueArray = geoblaze.identify(leftGeoraster, [latlng.lng, latlng.lat]);
+            valueLeft = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
+
+            valueArray = geoblaze.identify(rightGeoraster, [latlng.lng, latlng.lat]);
+            valueRight = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
+
+            // Formatear los valores
+            valueLeft = (valueLeft !== null && !isNaN(valueLeft)) ? valueLeft.toFixed(2) : 'No disponible';
+            valueRight = (valueRight !== null && !isNaN(valueRight)) ? valueRight.toFixed(2) : 'No disponible';
+
+            let labelLeft, labelRight;
+
+            if (currentLayerType === 'Anual') {
+                labelLeft = `Año ${currentLeftYear}`;
+                labelRight = `Año ${currentRightYear}`;
+            } else if (currentLayerType === 'Mensual') {
+                labelLeft = `Mes ${currentLeftMonth}`;
+                labelRight = `Mes ${currentRightMonth}`;
+            } else {
+                labelLeft = 'Izquierda';
+                labelRight = 'Derecha';
+            }
+
+            // Crear contenido del popup
+            const content = `
+                <div style="text-align:center; padding:2px; background-color:#fff; font-size:10px; max-width:120px;">
+                    ${labelLeft}: ${valueLeft}<br>
+                    ${labelRight}: ${valueRight}
+                </div>
+            `;
+
+            L.popup({ className: 'custom-popup' })
+                .setLatLng(latlng)
+                .setContent(content)
+                .openOn(currentMap);
+        } else if (currentLayerType === 'Tendencia' && trendGeoraster) {
+            // Obtener el valor del píxel de tendencia
+            let valueTrend = null;
+            let valueArray = geoblaze.identify(trendGeoraster, [latlng.lng, latlng.lat]);
+            valueTrend = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
+
+            // Redondear el valor si es un número, o marcar como 'No disponible'
+            if (typeof valueTrend === 'number' && !isNaN(valueTrend)) {
+                valueTrend = valueTrend.toFixed(3);
+            } else {
+                valueTrend = 'No disponible';
+            }
+
+            // Crear contenido del popup
+            const content = `
+                <div style="text-align:center; padding:2px; background-color:#fff; font-size:10px; max-width:120px;">
+                    Tendencia LST: ${valueTrend}
+                </div>
+            `;
+
+            L.popup({ className: 'custom-popup' })
+                .setLatLng(latlng)
+                .setContent(content)
+                .openOn(currentMap);
+        } else {
+            currentMap.closePopup();
         }
     });
 }

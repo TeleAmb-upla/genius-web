@@ -22,9 +22,8 @@ export async function map_ndvi_2017(map) {
             return ndviToColor(ndviValue);
         },
         resolution: 1080
-    
     });
 
-    // No agregar la capa al mapa aquí, solo retornarla
-    return ndviLayer;
+    // Retornar tanto la capa como el georaster
+    return { layer: ndviLayer, georaster: georaster };
 }

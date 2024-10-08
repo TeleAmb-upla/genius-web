@@ -24,5 +24,5 @@ export async function map_ndvi_2022(map) {
         resolution: 1080
     });
     // No agregar la capa al mapa aquí, solo retornarla
-    return ndviLayer;
+    return { layer: ndviLayer, georaster: georaster };
 }

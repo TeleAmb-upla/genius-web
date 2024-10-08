@@ -1,6 +1,5 @@
 export function ndviToColorYear_z_b(ndvi) {
-  
-    const domain = [-0.3359, 0.7422]; // mínimo y máximo
+    const domain = [0.082,0.4219]; // mínimo y máximo
     // Paleta de colores invertida que representa los diferentes valores de NDVI
     const range = [    '#ff0000', // Rojo intenso
         '#DF923D', // Naranja

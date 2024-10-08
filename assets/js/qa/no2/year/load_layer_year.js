@@ -20,14 +20,16 @@ export async function loadLayersyear(map) {
     ];
   
     const Layers = {};
+    const georasters = {};
     try {
-        const layers = await Promise.all(Loaders.map(loader => loader(map)));
-        layers.forEach((layer, index) => {
+        const layersData = await Promise.all(Loaders.map(loader => loader(map)));
+        layersData.forEach((data, index) => {
             const year = years[index];
-            Layers[`NO² ${year}`] = layer;
+            Layers[`NO² ${year}`] = data.layer;
+            georasters[`NO² ${year}`] = data.georaster;
         });
     } catch (error) {
-        console.error("Error loading  layers:", error);
+        console.error("Error loading layers:", error);
     }
-    return Layers;
+    return { layers: Layers, georasters: georasters };
 }

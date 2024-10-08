@@ -26,5 +26,5 @@ export async function map_2017(map) {
     });
 
     // No agregar la capa al mapa aquí, solo retornarla
-    return Layer;
+    return { layer: Layer, georaster: georaster };
 }

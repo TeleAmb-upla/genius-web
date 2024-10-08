@@ -1382,10 +1382,17 @@ section {
 # Team Section
 --------------------------------------------------------------*/
 .team .team-member .member-img {
-  border-radius: 8px;
-  overflow: hidden;
+  width: 400px;
+  height: 400px;
+  border-radius: 8px; /* Bordes redondeados */
+  overflow: hidden; /* Oculta el contenido que se sale del contenedor */
 }
 
+.team .team-member .member-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
 
 .team .team-member .social {
@@ -2618,15 +2625,68 @@ section {
   z-index: 999;
 }
 
-.layers-control .layer-control {
-  display: block;
-  padding: 0.2em;
+/* Ajustar el tamaño máximo del control de capas */
+.leaflet-control-layers-expanded {
+  max-width: 250px; /* Ajusta el valor para evitar que sea demasiado pequeño */
+  white-space: normal; /* Permite que el texto largo se ajuste en varias líneas */
 }
 
-.layers-control input[type="radio"]:checked + label {
-  font-weight: bold;
-  color: blue;
+/* Ajuste de la lista de capas sin limitar la altura */
+.leaflet-control-layers-list {
+  max-height: none; /* Eliminar la limitación de altura para evitar el scroll */
+  overflow: visible; /* Asegura que no aparezca el scroll */
+  padding: 5px; /* Espaciado interno del control */
+  font-size: 14px; /* Tamaño de fuente adecuado */
 }
+
+/* Alinear todo el contenido a la izquierda */
+.leaflet-control-layers-overlays label,
+.leaflet-control-layers-base label {
+  text-align: left; /* Alinear el texto a la izquierda */
+  display: block; /* Asegura que las etiquetas ocupen toda la línea */
+  margin-bottom: 4px; /* Ajusta el espaciado entre los elementos */
+  font-size: 14px; /* Tamaño de texto */
+  line-height: 1.4; /* Altura de línea para mantener el contenido organizado */
+}
+
+/* Alinear checkbox y texto con flexbox */
+.leaflet-control-layers-overlays label,
+.leaflet-control-layers-base label {
+  display: flex; /* Flexbox para controlar alineación */
+  align-items: center; /* Alineación vertical centrada */
+  margin-bottom: 5px; /* Espacio entre elementos de la lista */
+}
+
+/* Reducir el espacio entre checkbox y texto */
+.leaflet-control-layers-overlays input[type="checkbox"],
+.leaflet-control-layers-base input[type="radio"] {
+  margin-right: 3px; /* Reduce el espacio entre checkbox y texto */
+}
+
+/* Ajuste del texto */
+.leaflet-control-layers-overlays label span,
+.leaflet-control-layers-base label span {
+  margin-left: 0px; /* Mantiene el texto alineado con el checkbox */
+  font-size: 14px; /* Tamaño de texto */
+  line-height: 1.4; /* Altura de línea */
+}
+
+/* Estilo para el separador */
+.leaflet-control-layers-separator {
+  height: 1px;
+  background-color: #ccc;   /* Color gris claro para el separador */
+  margin: 10px 0;           /* Margen superior e inferior para el separador */
+}
+/* Estilo para el título NDVI */
+.leaflet-control-title {
+  text-align: center;       /* Centrar el texto */
+  color: black;             /* Color negro para el título */
+  font-size: 18px;          /* Tamaño de fuente de 22px */
+  font-family: Arial, sans-serif;  /* Fuente Arial */
+  margin-bottom: 10px;      /* Espacio entre el título y el separador */
+  /* font-weight: bold;  */      /* Negrita para el título */
+}
+
 
 /* Otros estilos de capas y mapas aquí se mantienen sin cambios... */
 
@@ -2778,18 +2838,19 @@ button {
 /* Colores de borde específicos para cada tipo de sub-botón */
 .sub-button-aod:hover,
 .sub-button-aod.selected {
-  border: 2px solid darkgreen; /* Borde verde oscuro al pasar el ratón o al seleccionar */
+  border: 2px solid deepskyblue; /* Borde azul medio al pasar el ratón o al seleccionar */
 }
 
 .sub-button-no2:hover,
 .sub-button-no2.selected {
-  border: 2px solid darkred; /* Borde rojo oscuro al pasar el ratón o al seleccionar */
+  border: 2px solid lightblue; /* Borde azul claro al pasar el ratón o al seleccionar */
 }
 
 .sub-button-so2:hover,
 .sub-button-so2.selected {
   border: 2px solid darkblue; /* Borde azul oscuro al pasar el ratón o al seleccionar */
 }
+
 
 /* Estilos comunes para contenedores de sub-botones */
 .sub-button-container {
@@ -2823,6 +2884,7 @@ button {
 #ndviTable,
 #ndviTableB,
 #ndviTableM,
+#ndviTablestdev,
 #tTable,
 #tTableB,
 #tTableM,
@@ -2845,27 +2907,19 @@ button {
 
 
 
-/* CSS común para todas las tablas */
-#ndviTable,
-#ndviTableB,
-#ndviTableM,
-#tTable,
-#tTableB,
-#tTableM,
-#AODTable,
-#AODTable_B,
-#AODTable_M,
-#NO2Table,
-#NO2Table_B,
-#NO2Table_M,
-#SO2Table,
-#SO2Table_B,
-#SO2Table_M,
-#IluTable,
-#huellatable {
-    width: 80%; /* Ancho de las tablas */
-    margin: 0 auto; /* Centra las tablas horizontalmente */
-    margin-bottom: 20px; /* Espacio entre las tablas */
-    border-collapse: collapse; /* Colapsa los bordes */
-    display: none; /* Oculta todas las tablas por defecto */
+.custom-scale-control {
+  margin-left: 20px; /* Ajusta este valor para moverlo más o menos */
+}
+
+/* styles.css */
+
+.custom-popup .leaflet-popup-content-wrapper {
+  padding: 5px;
+  font-size: 10px;
+  max-width: 100px;
+}
+
+.custom-popup .leaflet-popup-tip {
+  width: 10px;
+  height: 5px;
 }

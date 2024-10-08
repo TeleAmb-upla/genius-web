@@ -85,7 +85,7 @@ function createImage(src) {
 
 // Función para cargar texto específico de NDVI
 export async function text_ndvi() {
-    const ndviContainers = ['p50', 'p51', 'p52']; // Contenedores que mostrarán la misma información
+    const ndviContainers = ['p50', 'p51', 'p52', 'p70']; // Contenedores que mostrarán la misma información
     addContentToContainer(ndviContainers, 
         'Descripción  de NDVI', 
         'El Indicador de Áreas Verdes es una herramienta para medir la cantidad y la salud de la vegetación en una determinada área mediante el análisis de imágenes satelitales. Esta herramienta utiliza el índice NDVI (Normalized Difference Vegetation Index), índice que compara la cantidad de luz roja y la luz en el infrarrojo cercano que reflejan las plantas. Las plantas saludables reflejan más luz en el infrarrojo cercano que en el rojo, resultando en un valor de NDVI más alto. El NDVI es ampliamente utilizado para monitorear la cobertura vegetal en diferentes entornos, incluyendo áreas urbanas, agrícolas y forestales, permitiendo a los expertos evaluar cambios en la vegetación y planificar mejor el uso del suelo.', 

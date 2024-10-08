@@ -25,5 +25,5 @@ export async function map_ndvi_12(map) {
     });
 
     // No agregar la capa al mapa aquí, solo retornarla
-    return ndviLayer;
+    return { layer: ndviLayer, georaster: georaster };
 }
