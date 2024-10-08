@@ -13,13 +13,13 @@ export async function map_01(map) {
         georaster: georaster,
         opacity: 0.7,
         pixelValuesToColorFn: values => {
-            const AOD_median = values[0];
+            const LST_median = values[0];
             // Si el valor es NaN, retorna null para hacerlo transparente
-            if (isNaN(AOD_median)) {
+            if (isNaN(LST_median)) {
                 return null;
             }
             // De lo contrario, utiliza la función ndviToColor
-            return ToColorMonth(AOD_median);
+            return ToColorMonth(LST_median);
         },
         resolution: 1080
     });
