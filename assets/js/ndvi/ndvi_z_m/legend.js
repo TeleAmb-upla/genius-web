@@ -14,9 +14,9 @@ export function createYearLegend() {
   legendContent.style.border = '1px solid #ccc'; // Añadir un borde
   legendContent.style.textAlign = 'left'; // Alinear el contenido a la izquierda
 
-  // Agregar título "AOD ANUAL"
+  // Agregar título " ANUAL"
   const title = document.createElement('div');
-  title.textContent = 'Indicador de Áreas Verdes'; 
+  title.textContent = 'Indicador de Vegetación'; 
   title.style.fontSize = '14px';
   title.style.fontWeight = 'bold';
   title.style.marginBottom = '5px';
@@ -34,7 +34,7 @@ export function createYearLegend() {
   const domain = [0.0059,0.4746]; // O rangos
   const steps = 6; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
-  const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#023B01', '#011301'];
+  const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#2E5D2D', '#194D18'];
 
   // Generar los valores para la leyenda
   const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
@@ -85,7 +85,7 @@ export function createMonthLegend() {
 
   // Agregar título "AOD Mensual"
   const title = document.createElement('div');
-  title.textContent = 'Indicador de Áreas Verdes';
+  title.textContent = 'Indicador de Vegetación';
   title.style.fontSize = '14px';
   title.style.fontWeight = 'bold';
   title.style.marginBottom = '5px';

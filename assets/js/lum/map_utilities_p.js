@@ -23,5 +23,7 @@ export function addCenteredTitle(map) {
     }
 
     // Actualiza el contenido del título
-    mapTitleDiv.innerHTML = `Iluminacion Urbana`;
+    mapTitleDiv.innerHTML = `Luminacion Urbana`;
 }
+
+

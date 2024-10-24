@@ -25,7 +25,7 @@ export async function g_a_aod_b() {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial")
-        .text("AOD Interanual Regional");
+        .text("AOD Interanual Urbano de Quilpué");
 
     // Titles for axes
     svg.append("text")
@@ -46,17 +46,17 @@ export async function g_a_aod_b() {
         .text("AOD");
 
     // Parse the Data
-    const data = await d3.csv("./assets/csv/AOD_Anual.csv");
+    const data = await d3.csv("/assets/csv/AOD_Yearly_Urbano.csv");
 
     // Format the data
     data.forEach(d => {
         d.Year = +d.Year;           // Convert Year to number
-        d.mean = +d.mean;    // Convert mean to number
+        d.AOD_median = +d.AOD_median;    // Convert AOD_median to number
     });
 
-    // Find the minimum and maximum mean values
-    const minNDVI = d3.min(data, d => d.mean);
-    const maxNDVI = d3.max(data, d => d.mean);
+    // Find the minimum and maximum AOD_median values
+    const minNDVI = d3.min(data, d => d.AOD_median);
+    const maxNDVI = d3.max(data, d => d.AOD_median);
 
 
     // Add X axis
@@ -104,7 +104,7 @@ export async function g_a_aod_b() {
 
     var mousemove = function (event, d) {
         tooltip
-            .html("AOD: " + d.mean.toFixed(2) + "<br>Año: " + d.Year)
+            .html("AOD: " + d.AOD_median.toFixed(2) + "<br>Año: " + d.Year)
             .style("left", (event.pageX + 15) + "px")
             .style("top", (event.pageY - 15) + "px");
     }
@@ -119,7 +119,7 @@ export async function g_a_aod_b() {
         // Add the line with smoothing and animation
     var line = d3.line()
     .x(d => x(d.Year) + x.bandwidth() / 2) // Ensure the line passes through the center of the band
-    .y(d => y(d.mean))
+    .y(d => y(d.AOD_median))
     .curve(d3.curveCatmullRom.alpha(0.5)); // Use curveCatmullRom for smoothing
 
     var animation = svg.append("path")
@@ -146,7 +146,7 @@ export async function g_a_aod_b() {
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
-        .attr("cy", d => y(d.mean))
+        .attr("cy", d => y(d.AOD_median))
         .attr("r", 4) // Larger radius for easier interaction
         .attr("fill", "steelblue")
         .attr("pointer-events", "all") // Ensure these circles capture mouse events

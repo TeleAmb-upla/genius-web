@@ -25,7 +25,7 @@ export async function g_m_aod_m () {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial") 
-        .text("AOD IntraAnual Regional");
+        .text("AOD IntraAnual Urbano de Quilpué");
 
    // titulos ejes 
    svg.append("text")
@@ -46,16 +46,16 @@ export async function g_m_aod_m () {
    .text("AOD");
    
     // Parse the Data
-    const data = await d3.csv("/assets/csv/AOD_Mensual.csv");
+    const data = await d3.csv("/assets/csv/AOD_Mensual_Urbano.csv");
 
     // Format the data
     data.forEach(d => {
         d.Month = +d.Month;           // Convert month to number
-        d.mean = +d.mean;    // Convert mean to number
+        d.AOD_median = +d.AOD_median;    // Convert AOD_median to number
     });
-    // Find the minimum and maximum mean values
-    const min = d3.min(data, d => d.mean);
-    const max = d3.max(data, d => d.mean);
+    // Find the minimum and maximum AOD_median values
+    const min = d3.min(data, d => d.AOD_median);
+    const max = d3.max(data, d => d.AOD_median);
     // Add X axis
     var x = d3.scaleLinear()
         .domain([1, 12]) // Ajustar el dominio al rango de meses
@@ -94,7 +94,7 @@ export async function g_m_aod_m () {
 
 var mousemove = function (event, d) {
     tooltip
-        .html("AOD: " + d.mean.toFixed(2) + "<br>Mes: " + d.Month)
+        .html("AOD: " + d.AOD_median.toFixed(2) + "<br>Mes: " + d.Month)
         .style("left", (event.pageX + 15) + "px")
         .style("top", (event.pageY - 15) + "px");
 }
@@ -111,7 +111,7 @@ var mouseleave = function (event, d) {
         // Add the line with smoothing and animation
         var line = d3.line()
         .x(d => x(d.Month)) // Ensure the line passes through the center of the band
-        .y(d => y(d.mean))
+        .y(d => y(d.AOD_median))
         .curve(d3.curveCatmullRom.alpha(0.5)); // Use curveCatmullRom for smoothing
     
         var animation = svg.append("path")
@@ -139,7 +139,7 @@ var mouseleave = function (event, d) {
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Month))
-        .attr("cy", d => y(d.mean))
+        .attr("cy", d => y(d.AOD_median))
         .attr("r", 4) // Larger radius for easier interaction
         .attr("fill", "steelblue")
         .attr("pointer-events", "all") // Ensure these circles capture mouse events

@@ -86,8 +86,8 @@ export function createmonthLegendSVG() {
 }
 
 
-export function addCenteredTitle(map) {
-    // Declarar mapTitleDiv y tratar de obtener el elemento existente
+// Función para añadir o actualizar el título centrado del mapa
+export function addCenteredTitle(map, titleText) {
     let mapTitleDiv = document.getElementById('map-title');
 
     if (!mapTitleDiv) {
@@ -110,5 +110,5 @@ export function addCenteredTitle(map) {
     }
 
     // Actualiza el contenido del título
-    mapTitleDiv.innerHTML = `AOD Pixel Distrito Urbano`;
+    mapTitleDiv.innerHTML = titleText;
 }

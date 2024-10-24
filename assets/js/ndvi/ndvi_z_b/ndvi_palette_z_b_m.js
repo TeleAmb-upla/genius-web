@@ -5,8 +5,8 @@ export function ndviToColorMonth_z_b(ndvi) {
         '#DF923D', // Naranja
         '#FCD163', // Amarillo
         '#74A901', // Verde claro
-        '#023B01', // Verde oscuro
-        '#011301'];  // Casi negro, muy oscuro verde
+        '#2E5D2D', // Verde oscuro
+        '#194D18'];  // Casi negro, muy oscuro verde
 
     // Calcular el paso entre cada color en función del dominio
     const step = (domain[1] - domain[0]) / (range.length - 1);

@@ -15,9 +15,9 @@ import { ndviToColorMonth_z_b } from './ndvi_palette_z_b_m.js';
     legendContent.style.border = '1px solid #ccc'; // Añadir un borde
     legendContent.style.textAlign = 'left'; // Alinear el contenido a la izquierda
   
-    // Agregar título "AOD ANUAL"
+    // Agregar título " ANUAL"
     const title = document.createElement('div');
-    title.textContent = 'Indicador de Áreas Verdes';
+    title.textContent = 'Indicador de Vegetación';
     title.style.fontSize = '14px';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '5px';
@@ -89,7 +89,7 @@ import { ndviToColorMonth_z_b } from './ndvi_palette_z_b_m.js';
   
     // Agregar título "AOD Mensual"
     const title = document.createElement('div');
-    title.textContent = 'Indicador de Áreas Verdes';
+    title.textContent = 'Indicador de Vegetación';
     title.style.fontSize = '14px';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '5px';

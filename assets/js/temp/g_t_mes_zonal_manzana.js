@@ -26,7 +26,7 @@ export async function g_t_m_z_m() {
          .style("font-size", "14px")
          .style("font-weight", "bold")
          .style("font-family", "Arial") 
-         .text("LST Intraanual Distrito Urbano");
+         .text("LST Intraanual Área Urbana");
      
      // titulos ejes 
      svg.append("text")

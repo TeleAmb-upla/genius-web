@@ -1,23 +1,34 @@
+import * as d3 from 'https://cdn.skypack.dev/d3@7';
 function valueToSTColor(value) {
-    // Definir los colores de la paleta
-    const domain = [-0.3, -0.05, -0.002, 0, 0.002, 0.05, 0.3];
-    const range = [
-        "#ff0000", // Rojo intenso para los valores negativos bajos
-        "#ff3d66", // Rojo medio para valores negativos moderados
-        "#ff75ad", // Rojo suave para valores negativos más cercanos a 0
-        "#ffffff", // Blanco para el valor 0
-        "#75aaff", // Azul claro para valores positivos bajos
-        "#4d66ff", // Azul medio para valores positivos moderados
-        "#0313ff"  // Azul intenso para valores positivos altos
-    ];
 
-    for (let i = 0; i < domain.length; i++) {
-        if (value <= domain[i]) {
-            return range[i];
-        }
-    }
-    return range[range.length - 1];
+const domain = [-0.3, 0.3]; // mínimo y máximo
+// Paleta de colores invertida que representa los diferentes valores de NDVI
+const range = [
+    "#ff0000", // Rojo intenso para los valores negativos bajos
+    "#ff3d66", // Rojo medio para valores negativos moderados
+    "#ff75ad", // Rojo suave para valores negativos más cercanos a 0
+    "#ffffff", // Blanco para el valor 0
+    "#75aaff", // Azul claro para valores positivos bajos
+    "#4d66ff", // Azul medio para valores positivos moderados
+    "#0313ff"  // Azul intenso para valores positivos altos
+];
+
+// Calcular el paso entre cada color en función del dominio
+const step = (domain[1] - domain[0]) / (range.length - 1);
+
+// Asignar los colores basado en el valor
+if (value < domain[0]) {
+    return range[0]; // Si es menor que el mínimo, devolver el primer color
+} 
+if (value > domain[1]) {
+    return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
 }
+
+// Encontrar el color adecuado dentro del rango
+const index = Math.floor((value - domain[0]) / step);
+return range[index];
+}
+
 
 export async function map_trend(map) {
     // Leer el archivo  
@@ -44,37 +55,65 @@ export async function map_trend(map) {
     return { layer: Layer, georaster: georaster };
 }
 
-export function createSTLegendSVG() {
-    // Definir los nuevos rangos de valores con colores en formato hexadecimal
-    const ranges = [
-        { min: -0.3, max: -0.05, color: '#ff0000' },
-        { min: -0.05, max: -0.002, color: '#ff3d66' },
-        { min: -0.002, max: 0, color: '#ff75ad' },
-        { min: 0, max: 0.002, color: '#75aaff' },
-        { min: 0.002, max: 0.05, color: '#4d66ff' },
-        { min: 0.05, max: 0.3, color: '#0313ff' }
-    ];
+export function createSTLegendSVG() 
+{
+    const domain = [-0.3, 0.3]; // Mínimo y máximo
+    const steps = 9; // Cantidad de bloques: 4 rojos, 1 blanco, 4 azules
+    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"]; // 4 colores para rojos y azules, blanco en el centro
 
-    // Crear los elementos de la leyenda
-    const legendItems = ranges.map((range, index) => {
-        const color = range.color;
-        const yPosition = 25 + index * 25;
-        const label = `${range.min.toFixed(3)} - ${range.max.toFixed(3)}`;
+    // Crear una escala secuencial con los colores interpolados
+    const colorScale = d3.scaleSequential()
+        .domain([0, steps - 1]) // Definir el dominio
+        .interpolator(d3.interpolateRgbBasis(colorsBase)); // Interpolación entre los colores base
+
+    // Generar la paleta extendida de colores
+    const extendedColors = d3.range(steps).map(i => colorScale(i));
+
+    // Altura total del SVG y tamaño de cada bloque
+    const blockHeight = 20; // Altura de cada bloque de color
+    const totalHeight = blockHeight * steps; // La altura total es basada en los 9 bloques
+
+    // Crear bloques de colores con bordes para diferenciarlos
+    const legendItems = extendedColors.map((color, index) => {
+        let yPosition = 60 + index * blockHeight;
 
         return `
-            <rect x="0" y="${yPosition}" width="20" height="20" style="fill:${color}" />
-            <text x="25" y="${yPosition + 15}" font-size="12" font-family="Arial">${label}</text>
+            <rect x="30" y="${yPosition}" width="20" height="${blockHeight}" style="fill:${color}; stroke:#000; stroke-width:0.5" />
         `;
-    }).join(''); // Unir todos los elementos de la leyenda
+    }).join('');
 
-    // Altura del SVG ajustada al número de rangos más espacio adicional para el texto
-    const svgHeight = 50 + ranges.length * 25;
+    // Crear etiquetas para los valores de cada bloque (escalados entre el dominio)
+    const valueLabels = Array.from({ length: steps }, (_, i) => {
+        const value = (domain[0] + i * (domain[1] - domain[0]) / (steps - 1)).toFixed(2); // Redondear el valor
+        const nextValue = (domain[0] + (i + 1) * (domain[1] - domain[0]) / (steps - 1)).toFixed(2); // Valor siguiente para el rango
+        const yPosition = 60 + i * blockHeight + blockHeight / 2 + 5;
 
-    // Devolver el SVG completo, incluyendo el texto adicional
+        // Mostrar etiquetas con los rangos adecuados
+        if (i === 0) {
+            return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">&lt;${value}</text>`;
+        } else if (i === steps - 1) {
+            return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">&gt;0.30</text>`; // Último bloque para >7.00
+        } else if (i === Math.floor(steps / 2)) {
+            return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">0</text>`;
+        } else {
+            return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">${value} - ${nextValue}</text>`;
+        }
+    }).join('');
+
+    // Crear el SVG completo
     return `
-        <svg width="150" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="15" font-size="11" font-family="Arial" font-weight="bold">Tendencia NDVI</text>
+        <svg width="165" height="${totalHeight + 80}" xmlns="http://www.w3.org/2000/svg">
+            <!-- Título principal alineado a la izquierda -->
+            <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Tendencia NDVI</text>
+
+            <!-- Subtítulo alineado a la izquierda -->
+            <text x="5" y="40" font-size="12" font-family="Arial">2016 - 2023</text>
+
+            <!-- Bloques de colores -->
             ${legendItems}
+
+            <!-- Etiquetas de valores -->
+            ${valueLabels}
         </svg>
     `;
 }

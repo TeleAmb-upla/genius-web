@@ -25,7 +25,7 @@ export async function g_t_a_z_m() {
    .style("font-size", "14px")
    .style("font-weight", "bold")
    .style("font-family", "Arial")
-   .text("LST Interanual Distrito Urbano");
+   .text("LST Interanual Área Urbana");
 
 // Titles for axes
 svg.append("text")

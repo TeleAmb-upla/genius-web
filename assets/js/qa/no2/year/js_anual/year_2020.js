@@ -2,7 +2,7 @@ import { ToColorYear } from '../palette_year.js';
 
 export async function map_2020(map) {
     // Leer el archivo NDVI 2017
-    const response = await fetch('/assets/vec/raster/so2_pixel/SO2_Yearly/SO2_Yearly_2020.tif');
+    const response = await fetch('/assets/vec/raster/no2_pixel/NO2_Yearly/NO2_Yearly_2020.tif');
     const arrayBuffer = await response.arrayBuffer();
 
     // Parsear el georaster

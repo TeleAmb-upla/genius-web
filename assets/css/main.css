@@ -2923,3 +2923,27 @@ button {
   width: 10px;
   height: 5px;
 }
+
+/* Aumentar el z-index del slider del comparador */
+.maplibregl-compare {
+  z-index: 3; /* Ajusta el valor según sea necesario */
+}
+
+
+/* TITUOLO MAPA */
+.map-title {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translate(-50%, 0);
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 10px;
+  border-radius: 8px;
+  z-index: 1000;
+  pointer-events: none;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  color: black;
+}
+

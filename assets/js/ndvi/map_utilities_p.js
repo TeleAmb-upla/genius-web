@@ -1,16 +1,13 @@
 import { ndviToColor } from './ndvi_year/ndvi_palette.js';
 import { ndviToColorMonth } from './ndvi_month/ndvi_palette_month.js';
 
-// Variable global para almacenar el elemento del título del mapa
-let mapTitleDiv = null;
 
 // Función para crear la leyenda SVG para NDVI anual
 export function createyearLegendSVG() {
     const domain = [-0.3359, 0.7422]; // Mínimo y máximo
     const steps = 6; // Cantidad de valores que queremos en la leyenda
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
-    const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#023B01', '#011301'];
-
+    const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#2E5D2D', '#194D18'];
     // Generar los valores de la leyenda
     const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 
@@ -35,7 +32,7 @@ export function createyearLegendSVG() {
     // Retornar el SVG completo con el subtítulo y el texto adicional
     return `
         <svg width="150" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Indicador de Áreas Verdes</text>
+            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
             <text x="0" y="30" font-size="12" font-family="Arial">NDVI Anual</text>
             ${legendItems}
           
@@ -49,8 +46,7 @@ export function createmonthLegendSVG() {
     const domain = [-0.3281, 0.7969]; // Mínimo y máximo
     const steps = 6; // Cantidad de valores que queremos en la leyenda
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
-    const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#023B01', '#011301'];
-
+    const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#2E5D2D', '#194D18'];
     // Generar los valores de la leyenda
     const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 
@@ -73,14 +69,14 @@ export function createmonthLegendSVG() {
 
     return `
         <svg width="150" height="${calculatedHeight}" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Indicador de Áreas Verdes</text>
+            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
             <text x="0" y="30" font-size="12" font-family="Arial">NDVI Mensual</text>
             ${legendItems}
         </svg>
     `;
     
 }
-
+let mapTitleDiv = null;
 
 // Función para añadir o actualizar el título centrado del mapa
 export function addCenteredTitle(map, titleText) {

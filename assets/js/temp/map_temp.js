@@ -7,11 +7,13 @@ import { loadLayersmonth } from './month/load_layer_month.js';
 import { createMonthSelector, positionMonthSelector } from './month/utils_month.js';
 import { createmonthLegendSVG, createyearLegendSVG, addCenteredTitle } from './map_utilities_p.js';
 import { map_trend, createSTLegendSVG } from './lst_trend/trend.js';
+import { createOpacitySlider } from '../slider_opacity.js';
 
 // Variables globales
 let currentMap = null;
 let leftLayer = null;
 let rightLayer = null;
+let trendLayer = null; // Declarar trendLayer aquí
 let sideBySideControl = null;
 
 let legendDiv = null; // Variable global para la leyenda
@@ -28,6 +30,14 @@ let currentRightYear = "2023";
 let currentLeftMonth = "01";
 let currentRightMonth = "12";
 
+let currentLayerTypeRef = { value: null };
+
+let layers = {
+    leftLayer: null,
+    rightLayer: null,
+    trendLayer: null
+};
+
 export async function map_t() {
     // Elimina el mapa y la leyenda si ya están inicializados
     if (currentMap) {
@@ -35,6 +45,7 @@ export async function map_t() {
         currentMap = null;
         leftLayer = null;
         rightLayer = null;
+        trendLayer = null;
         sideBySideControl = null;
 
         // Eliminar el título del mapa
@@ -59,11 +70,15 @@ export async function map_t() {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(currentMap);
 
-    L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
-
+    // Agregar escala métrica en la esquina superior derecha
+    L.control.scale({
+        position: 'topright', // Posición deseada
+        metric: true,
+        imperial: false
+    }).addTo(currentMap);
 
     // Actualizar el título del mapa
-    addCenteredTitle(currentMap, "LST Pixel Distrito Urbano");
+    addCenteredTitle(currentMap, "LST Área Urbana (píxel)");
 
     // Cargar las capas anuales y mensuales
     const lstDataYear = await loadLayersyear(currentMap);
@@ -93,8 +108,11 @@ export async function map_t() {
     // Definir capas base y superpuestas
     const lstYearLayer = L.layerGroup(); // Capa vacía para el control de capas
     const lstMonthLayer = L.layerGroup(); // Capa vacía para el control de capas
+
+    // Cargar la capa de tendencia
     const trendLayerData = await map_trend(currentMap);
-    const trendLayer = trendLayerData ? trendLayerData.layer : null;
+    trendLayer = trendLayerData ? trendLayerData.layer : null;
+    trendGeoraster = trendLayerData ? trendLayerData.georaster : null;
 
     // Verificar que las capas no sean undefined
     const overlayLayers = {};
@@ -134,11 +152,19 @@ export async function map_t() {
         console.error("No hay capas válidas para agregar al control de capas.");
     }
 
+    // Inicializar layers con los valores actuales de las capas
+    layers.leftLayer = leftLayer;
+    layers.rightLayer = rightLayer;
+    layers.trendLayer = trendLayer;
+
+    // Llamar a createOpacitySlider
+    await createOpacitySlider(currentMap, layers, currentLayerTypeRef);
+
     // Variable para almacenar el tipo de capa actual
     currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
 
     // Listeners para los selectores de año
-    document.getElementById('yearLeft').addEventListener('change', function() {
+    document.getElementById('yearLeft').addEventListener('change', function () {
         const selectedYear = this.value;
         currentLeftYear = selectedYear;
 
@@ -148,6 +174,7 @@ export async function map_t() {
         if (leftLayer) currentMap.removeLayer(leftLayer);
         leftLayer = newLeftLayer;
         leftGeoraster = newLeftGeoraster;
+        layers.leftLayer = leftLayer; // Actualizar layers
         currentMap.addLayer(leftLayer);
 
         if (sideBySideControl) {
@@ -155,7 +182,7 @@ export async function map_t() {
         }
     });
 
-    document.getElementById('yearRight').addEventListener('change', function() {
+    document.getElementById('yearRight').addEventListener('change', function () {
         const selectedYear = this.value;
         currentRightYear = selectedYear;
 
@@ -165,6 +192,7 @@ export async function map_t() {
         if (rightLayer) currentMap.removeLayer(rightLayer);
         rightLayer = newRightLayer;
         rightGeoraster = newRightGeoraster;
+        layers.rightLayer = rightLayer; // Actualizar layers
         currentMap.addLayer(rightLayer);
 
         if (sideBySideControl) {
@@ -173,7 +201,7 @@ export async function map_t() {
     });
 
     // Listeners para los selectores de mes
-    document.getElementById('monthLeft').addEventListener('change', function() {
+    document.getElementById('monthLeft').addEventListener('change', function () {
         const selectedMonth = this.value;
         currentLeftMonth = selectedMonth;
 
@@ -183,6 +211,7 @@ export async function map_t() {
         if (leftLayer) currentMap.removeLayer(leftLayer);
         leftLayer = newLeftLayer;
         leftGeoraster = newLeftGeoraster;
+        layers.leftLayer = leftLayer; // Actualizar layers
         currentMap.addLayer(leftLayer);
 
         if (sideBySideControl) {
@@ -190,7 +219,7 @@ export async function map_t() {
         }
     });
 
-    document.getElementById('monthRight').addEventListener('change', function() {
+    document.getElementById('monthRight').addEventListener('change', function () {
         const selectedMonth = this.value;
         currentRightMonth = selectedMonth;
 
@@ -200,6 +229,7 @@ export async function map_t() {
         if (rightLayer) currentMap.removeLayer(rightLayer);
         rightLayer = newRightLayer;
         rightGeoraster = newRightGeoraster;
+        layers.rightLayer = rightLayer; // Actualizar layers
         currentMap.addLayer(rightLayer);
 
         if (sideBySideControl) {
@@ -208,7 +238,7 @@ export async function map_t() {
     });
 
     // Eventos para mostrar/ocultar capas y selectores
-    currentMap.on('overlayadd', function(event) {
+    currentMap.on('overlayadd', function (event) {
         // Eliminar la leyenda previa si existe
         if (legendDiv) {
             legendDiv.remove();
@@ -231,6 +261,7 @@ export async function map_t() {
         switch (event.name) {
             case "Anual":
                 currentLayerType = 'Anual';
+                currentLayerTypeRef.value = 'Anual'; // Actualizar referencia
                 yearLeftSelector.style.display = 'block';
                 yearRightSelector.style.display = 'block';
                 monthLeftSelector.style.display = 'none';
@@ -247,11 +278,15 @@ export async function map_t() {
                 currentMap.addLayer(leftLayer);
                 currentMap.addLayer(rightLayer);
 
+                layers.leftLayer = leftLayer; // Actualizar layers
+                layers.rightLayer = rightLayer;
+
                 // Agregar el control Side by Side
                 sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
                 break;
             case "Mensual":
                 currentLayerType = 'Mensual';
+                currentLayerTypeRef.value = 'Mensual'; // Actualizar referencia
                 monthLeftSelector.style.display = 'block';
                 monthRightSelector.style.display = 'block';
                 yearLeftSelector.style.display = 'none';
@@ -268,11 +303,15 @@ export async function map_t() {
                 currentMap.addLayer(leftLayer);
                 currentMap.addLayer(rightLayer);
 
+                layers.leftLayer = leftLayer; // Actualizar layers
+                layers.rightLayer = rightLayer;
+
                 // Agregar el control Side by Side
                 sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
                 break;
             case "Tendencia":
                 currentLayerType = 'Tendencia';
+                currentLayerTypeRef.value = 'Tendencia'; // Actualizar referencia
                 // Ocultar selectores que no son necesarios
                 yearLeftSelector.style.display = 'none';
                 yearRightSelector.style.display = 'none';
@@ -286,12 +325,15 @@ export async function map_t() {
                 if (!currentMap.hasLayer(trendLayer)) {
                     currentMap.addLayer(trendLayer);
                 }
+
+                layers.trendLayer = trendLayer; // Actualizar layers
+
                 break;
             // Puedes manejar otros casos aquí si es necesario
         }
     });
 
-    currentMap.on('overlayremove', function(event) {
+    currentMap.on('overlayremove', function (event) {
         if (event.name === "Anual") {
             yearLeftSelector.style.display = 'none';
             yearRightSelector.style.display = 'none';
@@ -301,7 +343,10 @@ export async function map_t() {
             rightLayer = null;
             leftGeoraster = null;
             rightGeoraster = null;
+            layers.leftLayer = null;
+            layers.rightLayer = null;
             currentLayerType = null;
+            currentLayerTypeRef.value = null;
 
             if (sideBySideControl) {
                 sideBySideControl.remove();
@@ -316,7 +361,10 @@ export async function map_t() {
             rightLayer = null;
             leftGeoraster = null;
             rightGeoraster = null;
+            layers.leftLayer = null;
+            layers.rightLayer = null;
             currentLayerType = null;
+            currentLayerTypeRef.value = null;
 
             if (sideBySideControl) {
                 sideBySideControl.remove();
@@ -328,8 +376,10 @@ export async function map_t() {
                 currentMap.removeLayer(trendLayer);
             }
             trendGeoraster = null;
+            layers.trendLayer = null;
             if (currentLayerType === 'Tendencia') {
                 currentLayerType = null;
+                currentLayerTypeRef.value = null;
             }
         }
 
@@ -339,7 +389,7 @@ export async function map_t() {
     });
 
     // Evento de clic en el mapa para mostrar los valores de LST
-    currentMap.on('click', function(event) {
+    currentMap.on('click', function (event) {
         const latlng = event.latlng;
 
         if ((currentLayerType === 'Anual' || currentLayerType === 'Mensual') && leftGeoraster && rightGeoraster) {

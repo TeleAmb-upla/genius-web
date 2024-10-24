@@ -4,7 +4,7 @@ import { loadLayersmonth } from './month/load_layer_month.js';
 import { createMonthSelector, positionMonthSelector } from './month/utils_month.js';
 import { map_trend, createSTLegendSVG } from './no2_trend/trend.js';
 import { createmonthLegendSVG, createyearLegendSVG, addCenteredTitle } from './map_utilities_p.js';
-
+import { createOpacitySlider } from '../slider_opacity.js';
 // Variables globales
 let currentMap = null;
 let leftLayer = null;
@@ -25,6 +25,13 @@ let currentRightYear = "2023";
 let currentLeftMonth = "01";
 let currentRightMonth = "12";
 
+let currentLayerTypeRef = { value: null };
+
+let layers = {
+    leftLayer: null,
+    rightLayer: null,
+    trendLayer: null
+};
 export async function map_no2_p() {
     // Elimina el mapa y la leyenda si ya están inicializados
     if (currentMap) {
@@ -58,10 +65,17 @@ export async function map_no2_p() {
     }).addTo(currentMap);
         
 
-    L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
+ // Agregar escala métrica en la esquina superior derecha
+ L.control.scale({
+    position: 'topright', // Posición deseada
+    metric: true,
+    imperial: false
+  }).addTo(currentMap);
+  
+   
 
    // Actualizar el título del mapa
-   addCenteredTitle(currentMap, "NO² Pixel Distrito Urbano");
+   addCenteredTitle(currentMap, "NO² Área Urbana (píxel)");
 
    // Cargar las capas anuales y mensuales
    const DataYear = await loadLayersyear(currentMap);
@@ -131,6 +145,13 @@ export async function map_no2_p() {
    } else {
        console.error("No hay capas válidas para agregar al control de capas.");
    }
+    // Inicializar layers con los valores actuales de las capas
+    layers.leftLayer = leftLayer;
+    layers.rightLayer = rightLayer;
+    layers.trendLayer = trendLayer;
+
+    // Llamar a createOpacitySlider
+    await createOpacitySlider(currentMap, layers, currentLayerTypeRef);
 
    // Variable para almacenar el tipo de capa actual
    currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
@@ -146,6 +167,7 @@ export async function map_no2_p() {
        if (leftLayer) currentMap.removeLayer(leftLayer);
        leftLayer = newLeftLayer;
        leftGeoraster = newLeftGeoraster;
+       layers.leftLayer = leftLayer; // Actualizar layers
        currentMap.addLayer(leftLayer);
 
        if (sideBySideControl) {
@@ -163,6 +185,7 @@ export async function map_no2_p() {
        if (rightLayer) currentMap.removeLayer(rightLayer);
        rightLayer = newRightLayer;
        rightGeoraster = newRightGeoraster;
+       layers.rightLayer = rightLayer; // Actualizar layers
        currentMap.addLayer(rightLayer);
 
        if (sideBySideControl) {
@@ -181,6 +204,7 @@ export async function map_no2_p() {
        if (leftLayer) currentMap.removeLayer(leftLayer);
        leftLayer = newLeftLayer;
        leftGeoraster = newLeftGeoraster;
+       layers.leftLayer = leftLayer; // Actualizar layers
        currentMap.addLayer(leftLayer);
 
        if (sideBySideControl) {
@@ -198,6 +222,7 @@ export async function map_no2_p() {
        if (rightLayer) currentMap.removeLayer(rightLayer);
        rightLayer = newRightLayer;
        rightGeoraster = newRightGeoraster;
+       layers.rightLayer = rightLayer; // Actualizar layers
        currentMap.addLayer(rightLayer);
 
        if (sideBySideControl) {
@@ -229,6 +254,7 @@ export async function map_no2_p() {
        switch (event.name) {
            case "Anual":
                currentLayerType = 'Anual';
+               currentLayerTypeRef.value = 'Anual'; // Actualizar referencia
                yearLeftSelector.style.display = 'block';
                yearRightSelector.style.display = 'block';
                monthLeftSelector.style.display = 'none';
@@ -244,6 +270,9 @@ export async function map_no2_p() {
                rightLayer = LayersYear[`NO² ${currentRightYear}`];
                currentMap.addLayer(leftLayer);
                currentMap.addLayer(rightLayer);
+
+               layers.leftLayer = leftLayer; // Actualizar layers
+               layers.rightLayer = rightLayer;
 
                // Agregar el control Side by Side
                sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
@@ -266,11 +295,15 @@ export async function map_no2_p() {
                currentMap.addLayer(leftLayer);
                currentMap.addLayer(rightLayer);
 
+               layers.leftLayer = leftLayer; // Actualizar layers
+               layers.rightLayer = rightLayer;
+
                // Agregar el control Side by Side
                sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
                break;
            case "Tendencia":
                currentLayerType = 'Tendencia';
+               currentLayerTypeRef.value = 'Tendencia'; // Actualizar referencia
                // Ocultar selectores que no son necesarios
                yearLeftSelector.style.display = 'none';
                yearRightSelector.style.display = 'none';
@@ -284,6 +317,9 @@ export async function map_no2_p() {
                if (!currentMap.hasLayer(trendLayer)) {
                    currentMap.addLayer(trendLayer);
                }
+               
+               layers.trendLayer = trendLayer; // Actualizar layers
+
                break;
            // Puedes manejar otros casos aquí si es necesario
        }
@@ -300,6 +336,7 @@ export async function map_no2_p() {
            leftGeoraster = null;
            rightGeoraster = null;
            currentLayerType = null;
+           currentLayerTypeRef.value = null;
 
            if (sideBySideControl) {
                sideBySideControl.remove();
@@ -315,6 +352,7 @@ export async function map_no2_p() {
            leftGeoraster = null;
            rightGeoraster = null;
            currentLayerType = null;
+           currentLayerTypeRef.value = null;
 
            if (sideBySideControl) {
                sideBySideControl.remove();
@@ -328,6 +366,7 @@ export async function map_no2_p() {
            trendGeoraster = null;
            if (currentLayerType === 'Tendencia') {
                currentLayerType = null;
+               currentLayerTypeRef.value = null;
            }
        }
 

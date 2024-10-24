@@ -2,7 +2,7 @@ import { ToColorYear } from './year/palette_year.js';
 import { ToColorMonth } from './month/palette_month.js';
 // Función para crear la leyenda SVG para anual
 export function createyearLegendSVG() {
-    const domain = [440.4461960739061, 512.531912529971]; // Mínimo y máximo
+    const domain = [0, 500]; // Mínimo y máximo
     const steps = 7; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
 
@@ -19,7 +19,7 @@ export function createyearLegendSVG() {
         const color = colors[index]; // Asignar color basado en el valor
         const yPosition = 45 + index * 30; // Ajustar la posición Y para incluir el subtítulo
 
-        const label = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`;
+        const label = `${value.toFixed(0)} - ${nextValue.toFixed(0)}`;
         return `
             <rect x="0" y="${yPosition}" width="20" height="20" style="fill:${color}" />
             <text x="25" y="${yPosition + 15}" font-size="12" font-family="Arial">${label}</text>
@@ -44,7 +44,7 @@ export function createyearLegendSVG() {
 
 // Función para crear la leyenda SVG para mensual
 export function createmonthLegendSVG() {
-    const domain = [158.7144074633454, 1993.3201294191167]; // Mínimo y máximo
+    const domain = [0, 500]; // Mínimo y máximo
     const steps = 7; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
     
@@ -61,7 +61,7 @@ export function createmonthLegendSVG() {
         const color = colors[index]; // Asignar color basado en el valor
         const yPosition = 45 + index * 30; // Ajustar la posición Y para incluir el subtítulo
 
-        const label = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`;
+        const label = `${value.toFixed(0)} - ${nextValue.toFixed(0)}`;
         return `
             <rect x="0" y="${yPosition}" width="20" height="20" style="fill:${color}" />
             <text x="25" y="${yPosition + 15}" font-size="12" font-family="Arial">${label}</text>
@@ -84,9 +84,7 @@ export function createmonthLegendSVG() {
 }
 
 
-
-export function addCenteredTitle(map) {
-    // Declarar mapTitleDiv y tratar de obtener el elemento existente
+export function addCenteredTitle(map, titleText) {
     let mapTitleDiv = document.getElementById('map-title');
 
     if (!mapTitleDiv) {
@@ -109,5 +107,5 @@ export function addCenteredTitle(map) {
     }
 
     // Actualiza el contenido del título
-    mapTitleDiv.innerHTML = `SO² Pixel Distrito Urbano`;
+    mapTitleDiv.innerHTML = titleText;
 }

@@ -149,7 +149,9 @@
                   <i class=""></i>
                   <h4></h4>
                 </div>
-                <p>La plataforma GENIUS entrega información de indicadores urbano-ambientales espacializada de fácil y rápido acceso para la comuna de Quilpué y la Región de Valparaíso con proyecciones a expandirse a todo el territorio chileno continental. Permite visualizar variables climáticas e indicadores de sequía a distintas escalas administrativas e hidrológicas, así como en estaciones meteorológicas. La plataforma es para uso de distintos actores de la sociedad como tomadores de decisiones, investigadores, y público en general.</p>
+                  <p>Plataforma GENIUS - Monitoreo Satelital para la Gestión y Planificación de Ciudades (ID22I10210)</p>
+                  <p>El proyecto <strong>GENIUS</strong>, desarrollado por la <strong>Universidad de Playa Ancha de Ciencias de la Educación</strong> como beneficiaria principal, con la colaboración de la <strong>Universidad de Chile</strong>, la <strong>Ilustre Municipalidad de Quilpué</strong>, el <strong>Gobierno Regional de Valparaíso</strong> y <strong>Colorado State University</strong>, tiene como objetivo crear una plataforma de monitoreo satelital diseñada específicamente para apoyar la gestión y planificación de ciudades chilenas, enfocándose en la <strong>comuna de Quilpué y la región de Valparaíso.</strong> </p>
+                  <p><strong>GENIUS</strong> proporcionará acceso a datos clave sobre <strong>áreas verdes urbanas, contaminación del aire, huella urbana, luminosidad superficial y temperatura superficial  </strong> , permitiendo a las autoridades locales, como las <strong>municipalidades</strong> y <strong>gobiernos regionales</strong>, tomar decisiones informadas y basadas en información actualizada.</p>
               </div>
               <!-- End Tab 1 Content -->
     
@@ -199,25 +201,17 @@
               <!-- Tab 4 Content: Visualizadores -->
               <div class="tab-pane fade" id="tab4">
 
-      
-                <p>Los mapas interactivos proporcionados por plataformas <strong>Genius</strong> permiten a los usuarios explorar y visualizar datos geoespaciales de manera dinámica.</p>
-                <h5>Características de los mapas interactivos.</h5>
+                <p>La plataforma <strong>GENIUS</strong> ofrece un conjunto de visualizadores avanzados que permiten a los usuarios explorar diversos indicadores ambientales de manera detallada y a diferentes escalas. Estos visualizadores están diseñados para facilitar la toma de decisiones mediante el análisis temporal (anual y mensual) de datos geoespaciales.</p>
+
+                <p><strong>Características generales de los visualizadores:</strong></p>
+                
                 <ul>
-                  <li>Selector de año y mes para cambiar capas de datos temporales.</li>
-                  <li>Slider central para comparar visualmente datos entre dos períodos distintos.</li>
-                  <li>Actualización automática de leyendas para cada capa seleccionada.</li>
-                  <li>Título dinámico que describe el contenido actual del mapa.</li>
-                  <li>Fondo de mapa interactivo con escala ajustable para mayor precisión.</li>
-                </ul>
-                <h5>Características de los Gráficos Interactivos:</h5>
-                <ul>
-                  <li>Eje X temporal: Muestra los datos de manera anual o mensual.</li>
-                  <li>Eje Y numérico: Representa los valores correspondientes (Area Verde Urbana , Temperatura, Calidad de Aire, Huella urbana)</li>
-                  <li>Línea de tendencia: Conecta los datos mostrando la evolución en el tiempo.</li>
-                  <li>Interacción con puntos: Al pasar el cursor, muestra valores y período específico.</li>
+                  <li><strong>Análisis por escala espacial:</strong> Los visualizadores ofrecen información a nivel de ciudad, barrio y manzana, permitiendo observar cambios y tendencias tanto a gran escala como en áreas más localizadas.</li>
+                  <li><strong>Comparación temporal:</strong> Los usuarios pueden explorar la variabilidad anual y mensual de los datos, lo que facilita la identificación de tendencias a largo plazo y fluctuaciones estacionales.</li>
+                  <li><strong>Perspectiva de tendencias y variabilidad:</strong> Los visualizadores permiten analizar no solo los valores actuales, sino también la tendencia a lo largo del tiempo y la desviación estándar, destacando áreas en riesgo o con mejoras significativas.</li>
+                  <li><strong>Herramientas interactivas:</strong> Los visualizadores incluyen herramientas como sliders para comparar diferentes períodos, escalas ajustables, leyendas dinámicas y la posibilidad de interactuar con los datos en gráficos y mapas, proporcionando una experiencia de análisis intuitiva y completa.</li>
                 </ul>
                 
-                <p>Estas herramientas son fundamentales para el análisis urbano, ayudando a los usuarios a tomar decisiones informadas con base en datos espaciales </p>
               </div>
 
               <!-- End Tab 4 Content -->
@@ -240,8 +234,8 @@
             <h2>Visualizadores</h2>
             <!-- Botones principales -->
             <div class="button-container">
-              <img src="./assets/img/Iconos_Genius/GENIUS-NG-10.png" onclick="toggleNDVIButtons()" alt="Áreas Verdes Icono">
-              <img src="./assets/img/Iconos_Genius/GENIUS-NG-11.png" onclick="toggleTButton()" alt="Islas De Calor">
+              <img src="./assets/img/Iconos_Genius/GENIUS-NG-VEG.png" onclick="toggleNDVIButtons()" alt="Áreas Verdes Icono">
+              <img src="./assets/img/Iconos_Genius/GENIUS-NG-TEMP.png" onclick="toggleTButton()" alt="Islas De Calor">
               <img src="./assets/img/Iconos_Genius/GENIUS-NG-12.png" onclick="toggleAireButton()" alt="Calidad De Aire">
               <img src="./assets/img/Iconos_Genius/GENIUS-NG-13.png" onclick="toggleLumus()" alt="Luminosidad">
               <img src="./assets/img/Iconos_Genius/GENIUS-NG-16.png" onclick="togglehu()" alt="Huella Urbana">      
@@ -263,7 +257,7 @@
 
   <div style="display: flex; flex-direction: column; align-items: center;">
       <button id="ndviButton" onclick="toggleTable('ndviTable', 'ndvi');" class="button-green-border" style="background-image: url('./assets/img/butom/pixel.gif'); width: 100px; height: 100px;"></button>
-      <span class="ndvi-text" style="margin-top: 5px; font-size: 14px; text-align: center; display: none;">Pixel</span>
+      <span class="ndvi-text" style="margin-top: 5px; font-size: 14px; text-align: center; display: none;">Píxel</span>
   </div>
   <div style = "display: flex; flex-direction: column; align-items: center;">
     <button id="ndviButtonstdev" onclick="toggleTable('ndviTablestdev', 'ndvi_stdev');" class="button-green-border" style="background-image: url('./assets/img/butom/stdev.gif'); width: 100px; height: 100px;"></button>
@@ -287,7 +281,7 @@
   </div>
   <div style="display: flex; flex-direction: column; align-items: center;">
     <button id="tButtonPixel" onclick="toggleTable('tTable', 't');" class="button-orange-border" style="background-image: url('./assets/img/butom/pixel.gif'); width: 100px; height: 100px;"></button>
-    <span class="t-text" style="margin-top: 5px; font-size: 14px; text-align: center; display: none;">Pixel</span>
+    <span class="t-text" style="margin-top: 5px; font-size: 14px; text-align: center; display: none;">Píxel</span>
 </div>
 
 </div>
@@ -327,7 +321,7 @@
   </div>
   <div style="display: flex; flex-direction: column; align-items: center;">
     <button id="AODButton" class="sub-button-aod" onclick="toggleTable('AODTable', 'AOD_P');" style="background-image: url('./assets/img/butom/pixel.gif'); width: 100px; height: 100px;"></button>
-    <span class="aire-text">Pixel</span>
+    <span class="aire-text">Píxel</span>
   </div>
 </div>
 <!-- Sub-botones para NO2 con imágenes y texto -->
@@ -343,7 +337,7 @@
   </div>
   <div style="display: flex; flex-direction: column; align-items: center;">
     <button id="NO2Button" class="sub-button-no2" onclick="toggleTable('NO2Table', 'NO2_P');" style="background-image: url('./assets/img/butom/pixel.gif'); width: 100px; height: 100px;"></button>
-    <span class="aire-text">Pixel</span>
+    <span class="aire-text">Píxel</span>
   </div>
 </div>
 
@@ -360,7 +354,7 @@
   </div>
   <div style="display: flex; flex-direction: column; align-items: center;">
     <button id="SO2Button" class="sub-button-so2" onclick="toggleTable('SO2Table', 'SO2_P');" style="background-image: url('./assets/img/butom/pixel.gif'); width: 100px; height: 100px;"></button>
-    <span class="aire-text">Pixel</span>
+    <span class="aire-text">Píxel</span>
   </div>
 </div>
 
@@ -719,7 +713,7 @@
               </table>
                                             <!-- Seccion de las tablas Luminosidad -------------------------------->
                   <!-- Tabla Luminosidad -->
-  <!--      <table id="IluTable" >
+  <table id="IluTable" >
                     <tr>
                       <td>
                         <div id="p46" class="map-container" style="width: 1800px; height: 800px;"></div>
@@ -730,7 +724,7 @@
                         <div id="p65" style="width: 100%; height: 500px; margin-top: 20px;"></div> 
                       </td>
                     </tr>
-              </table> -->
+              </table> 
                                             <!-- Seccion de las tablas Huella urbana -------------------------------->
                   <!-- Tabla Huella Urbana -->
                   <table id="huellatable">
@@ -777,11 +771,12 @@
   <script src="./assets/js/lib/leaflet-side-by-side.min.js"></script>
   <script src="./assets/js/lib/leaflet-side-by-side.js"></script>
   <!-- GeoTIFF -->
-<script src="https://unpkg.com/geotiff@2.0.7/dist/geotiff.min.js"></script>
-<script src="https://unpkg.com/geoblaze@0.7.2/dist/geoblaze.min.js"></script>
+  <script src="https://unpkg.com/geotiff@2.0.7/dist/geotiff.min.js"></script>
+  <script src="https://unpkg.com/geoblaze@0.7.2/dist/geoblaze.min.js"></script>
 
-<!-- Leaflet GeoTIFF -->
-<script src="https://unpkg.com/leaflet-geotiff@2.4.0/Leaflet.Geotiff.js"></script>
+  <!-- Leaflet GeoTIFF -->
+  <script src="https://unpkg.com/leaflet-geotiff@2.4.0/Leaflet.Geotiff.js"></script>
+
 
 
          <!-- Función para mostrar/ocultar tablas y cargar módulos -->
@@ -1588,7 +1583,7 @@ function hideAllTables() {
           <div class="member-info">
             <div class="social"></div>
             <h4>Gabriela Muñoz</h4>
-            <span>Tesista enfocánda en "Evaluación de la calidad y distribución de áreas verdes consolidadas en la comuna de Quilpué, mediante el uso de teledetección óptica".</span>
+            <span>Tesista enfocada en "Evaluación de la calidad y distribución de áreas verdes consolidadas en la comuna de Quilpué, mediante el uso de teledetección óptica".</span>
           </div>
         </div>
       </div><!-- End Team Member -->
@@ -1600,8 +1595,8 @@ function hideAllTables() {
           </div>
           <div class="member-info">
             <div class="social"></div>
-            <h4>Fabian Gonzales</h4>
-            <span>Tesista enfocándo en"Propuesta de Regeneración de la Vegetación Nativa del Jardín Botánico Afectada por el Incendio Forestal de la Región Valparaíso de Febrero del 2024".</span>
+            <h4>Fabián González</h4>
+            <span>Tesista enfocado en"Propuesta de Regeneración de la Vegetación Nativa del Jardín Botánico Afectada por el Incendio Forestal de la Región Valparaíso de Febrero del 2024".</span>
           </div>
         </div>
       </div><!-- End Team Member -->
@@ -1614,7 +1609,7 @@ function hideAllTables() {
           <div class="member-info">
             <div class="social"></div>
             <h4>Pablo Caroca</h4>
-            <span>Pasante de la Universidad de Chile, Su colaborion en proyectos de tesia nombrado "Utilizando sensores remotos como herramienta de análisis de islas de calor. Evolución espacio-temporal de temperaturas superficiales en la ciudad de Quilpué." </span>
+            <span>Tesista enfocado en "Sensores remotos como herramienta de análisis de islas de calor. Evolución espacio-temporal de temperaturas superficiales en la ciudad de Quilpué." </span>
           </div>
         </div>
       </div><!-- End Team Member -->

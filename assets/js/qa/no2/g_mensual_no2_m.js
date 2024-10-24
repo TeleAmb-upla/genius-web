@@ -25,7 +25,7 @@ export async function g_m_no2_m () {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial") 
-        .text("NO² IntraAnual Regional");
+        .text("NO² IntraAnual Urbano de Quilpué");
 
    // titulos ejes 
    svg.append("text")
@@ -46,7 +46,7 @@ export async function g_m_no2_m () {
    .text("NO²");
    
     // Parse the Data
-    const data = await d3.csv("/assets/csv/NO2_Mensual.csv");
+    const data = await d3.csv("/assets/csv/NO2_Mensual_Comunal.csv");
 
     // Format the data
     data.forEach(d => {

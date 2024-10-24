@@ -1,7 +1,7 @@
 export function ToColorMonth(value) {
         
         // Definir los colores de la paleta
-        const domain = [158.7144074633454, 1993.3201294191167]; // mínimo y máximo
+        const domain = [0, 500]; // mínimo y máximo
         const range =  ["#C3E934", "#335B01", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
         
         // Calcular el paso entre cada color en función del dominio

@@ -25,7 +25,7 @@ export async function g_a_ndvi_stdev() {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial")
-        .text("NDVI Interanual Distrito Urbano");
+        .text("NDVI Interanual Área Urbana");
 
     // Titles for axes
     svg.append("text")

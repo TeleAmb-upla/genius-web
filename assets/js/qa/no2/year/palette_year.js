@@ -1,22 +1,46 @@
-export function ToColorYear(value) {
-        // Definir los colores de la paleta
-        const domain = [16.960082827681727, 74.73431089558876]; // mínimo y máximo
-        const range =   ["#00E5FF", "#66C099", "#FFFF00", "#FF8800", "#FF0000", "#8B0000"];
-        
-        // Calcular el paso entre cada color en función del dominio
-        const step = (domain[1] - domain[0]) / (range.length - 1);
-    
-        // Asignar los colores basado en el valor
-        if (value < domain[0]) {
-            return range[0]; // Si es menor que el mínimo, devolver el primer color
-        } 
-        if (value > domain[1]) {
-            return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
-        }
-    
-        // Encontrar el color adecuado dentro del rango
-        const index = Math.floor((value - domain[0]) / step);
-        return range[index];
-    }
-    
+import * as d3 from 'https://cdn.skypack.dev/d3@7'; 
 
+const domain = [4.5, 55.5]; // Valores mínimo y máximo de tu dataset
+
+const baseColors = [
+    '#000000', // black
+    '#0000FF', // blue
+    '#800080', // purple
+    '#00FFFF', // cyan
+    '#008000', // green
+    '#FFFF00', // yellow
+    '#FF0000'  // red
+];
+export function ToColorYear(value) {
+    // Número de intervalos entre cada par de colores base
+    const numIntervalsBetweenColors = 2;
+    const totalColors = (baseColors.length - 1) * numIntervalsBetweenColors + 1;
+
+    // Crear un array para almacenar los colores interpolados
+    const interpolatedColors = [];
+
+    for (let i = 0; i < baseColors.length - 1; i++) {
+        // Creamos un interpolador de colores entre dos colores base
+        const colorInterpolator = d3.interpolateRgb(baseColors[i], baseColors[i + 1]);
+        for (let j = 0; j < numIntervalsBetweenColors; j++) {
+            const t = j / numIntervalsBetweenColors;
+            // Agregamos los colores interpolados al array
+            interpolatedColors.push(colorInterpolator(t));
+        }
+    }
+    // Agregar el último color de la paleta base
+    interpolatedColors.push(baseColors[baseColors.length - 1]);
+
+    // Crear la escala de colores
+    const colorScale = d3.scaleLinear()
+        .domain(d3.range(
+            domain[0],
+            domain[1] + (domain[1] - domain[0]) / (totalColors - 1),
+            (domain[1] - domain[0]) / (totalColors - 1)
+        ))
+        .range(interpolatedColors)
+        .clamp(true); // Limitar los valores fuera del dominio
+
+    // Obtener el color correspondiente al valor dado
+    return colorScale(value);
+}

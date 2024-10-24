@@ -11,7 +11,7 @@ export async function map_2021(map) {
     // Crear la capa de GeoRaster
     const Layer = new GeoRasterLayer({
         georaster: georaster,
-        opacity: 0.7,
+
         pixelValuesToColorFn: values => {
             const Value = values[0];
             // Si el valor es NaN, retorna null para hacerlo transparente

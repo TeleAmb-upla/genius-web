@@ -1,24 +1,18 @@
-
 import { loadNdviLayersyear } from './ndvi_year/funtion_ndvi/load_layer_year.js';
 import { createYearSelector, positionYearSelector } from './ndvi_year/funtion_ndvi/utils_year.js';
 import { loadNdviLayersmonth } from './ndvi_month/funtion_ndvi_moth/load_layer_month.js';
 import { createMonthSelector, positionMonthSelector } from './ndvi_month/funtion_ndvi_moth/utils_month.js';
 import { createyearLegendSVG, createmonthLegendSVG, addCenteredTitle } from './map_utilities_p.js';
-import { loadGeoJSONAndSetupLayers, createAvSelector, positionAvSelector } from './capas/utilis_select_av.js';
-import { map_stdev, createDevLegendSVG } from './ndvi_trend_dev/stddev.js';
 import { map_trend, createSTLegendSVG } from './ndvi_trend_dev/trend.js';
-import { geojm_censales } from './capas/vec_manz_cen.js';
+import { createOpacitySlider } from '../slider_opacity.js';
+//import { loadinf_critica } from '../inf_critica.js';
 
 // Variables globales para almacenar el estado del mapa y las capas
 let currentMap = null;
 let leftLayer = null;
 let rightLayer = null;
 let sideBySideControl = null;
-let avSelector = null;
-let categoryLayers = {};
-let mapTitleDiv = null; // Almacenará el título del mapa
 let legendDiv = null; // Variable global para la leyenda
-
 // Variables para los georasters actuales
 let leftGeoraster = null;
 let rightGeoraster = null;
@@ -33,6 +27,14 @@ let currentRightYear = "2023";
 let currentLeftMonth = "01";
 let currentRightMonth = "12";
 
+let currentLayerTypeRef = { value: null };
+
+let layers = {
+    leftLayer: null,
+    rightLayer: null,
+    trendLayer: null
+};
+
 export async function map_ndvi() {
     // Elimina el mapa y la leyenda si ya están inicializados
     if (currentMap) {
@@ -46,6 +48,7 @@ export async function map_ndvi() {
         let mapTitleDiv = document.getElementById('map-title');
         if (mapTitleDiv) {
             mapTitleDiv.remove();
+            mapTitleDiv = null;
         }
 
         // Eliminar la leyenda si existe
@@ -54,6 +57,7 @@ export async function map_ndvi() {
             legendDiv = null;
         }
     }
+
     // Inicializar el mapa
     currentMap = L.map("p01").setView([-33.04752000, -71.44249000], 12.6);
 
@@ -64,85 +68,107 @@ export async function map_ndvi() {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(currentMap);
 
-    // Agregar escala métrica
-    L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
+    // Agregar escala métrica en la esquina superior derecha
+    L.control.scale({
+        position: 'topright', // Posición deseada
+        metric: true,
+        imperial: false
+    }).addTo(currentMap);
 
-   
     // Actualizar el título del mapa
-    addCenteredTitle(currentMap, "NDVI Pixel Distrito Urbano");
+    addCenteredTitle(currentMap, "NDVI Área Urbana (píxel)");
+/*
+    // Cargar capa de infraestructura crítica
+    const infCriticaData = await loadinf_critica(currentMap);
 
-        // Cargar las capas anuales y mensuales
-        const DataYear = await loadNdviLayersyear(currentMap);
-        const LayersYear = DataYear.layers;
-        const GeorastersYear = DataYear.georasters;
-    
-        const DataMonth = await loadNdviLayersmonth(currentMap);
-        const LayersMonth = DataMonth.layers;
-        const GeorastersMonth = DataMonth.georasters;
-    
-        // Crear selectores de año y mes
-        const yearLeftSelector = createYearSelector('yearLeft');
-        const yearRightSelector = createYearSelector('yearRight');
-        const monthLeftSelector = createMonthSelector('monthLeft');
-        const monthRightSelector = createMonthSelector('monthRight');
-    
-        positionYearSelector(yearLeftSelector, 'left');
-        positionYearSelector(yearRightSelector, 'right');
-        positionMonthSelector(monthLeftSelector, 'left');
-        positionMonthSelector(monthRightSelector, 'right');
-    
-        yearLeftSelector.style.display = 'none';
-        yearRightSelector.style.display = 'none';
-        monthLeftSelector.style.display = 'none';
-        monthRightSelector.style.display = 'none';
-    
-        // Definir capas base y superpuestas
-        const YearLayer = L.layerGroup(); // Capa vacía para el control de capas
-        const MonthLayer = L.layerGroup(); // Capa vacía para el control de capas
-        const trendLayerData = await map_trend(currentMap);
-        const trendLayer = trendLayerData ? trendLayerData.layer : null;
-    
-        // Verificar que las capas no sean undefined
-        const overlayLayers = {};
-    
-        if (YearLayer) overlayLayers["Anual"] = YearLayer;
-        else console.error("YearLayer no está definido correctamente.");
-    
-        if (MonthLayer) overlayLayers["Mensual"] = MonthLayer;
-        else console.error("MonthLayer no está definido correctamente.");
-    
-        if (trendLayer) overlayLayers["Tendencia"] = trendLayer;
-        else console.error("trendLayer no está definido correctamente.");
-    
-        // Crear el control de capas solo si hay capas válidas
-        if (Object.keys(overlayLayers).length > 0) {
-            const layerControl = L.control.layers(null, overlayLayers).addTo(currentMap);
-    
-            // Obtener el div del control de capas
-            const layerControlDiv = layerControl.getContainer();
-    
-            // Obtener la lista de capas
-            const layersList = layerControlDiv.querySelector('.leaflet-control-layers-list');
-    
-            // Crear el título 
-            const title = document.createElement('h4');
-            title.innerHTML = "NDVI"; // Texto del título
-            title.classList.add('leaflet-control-title');
-    
-            // Crear el separador
-            const separator = document.createElement('div');
-            separator.classList.add('leaflet-control-layers-separator');
-    
-            // Insertar el título y luego el separador antes de la lista de capas
-            layersList.prepend(separator); // Insertar el separador antes de las capas
-            layersList.prepend(title);     // Insertar el título antes del separador
-        } else {
-            console.error("No hay capas válidas para agregar al control de capas.");
-        }
-    
+    // Crear un `layerGroup` para agrupar todas las capas de infraestructura crítica
+    let infCriticaLayer = null;
+    if (infCriticaData && typeof infCriticaData === 'object') {
+        const layersArray = Object.values(infCriticaData); // Obtener todas las capas
+        infCriticaLayer = L.layerGroup(layersArray); // Crear el layerGroup con todas las capas
+    } else {
+        console.error("La capa de infraestructura crítica no es válida:", infCriticaData);
+    }
+*/
+    // Cargar las capas anuales y mensuales
+    const DataYear = await loadNdviLayersyear(currentMap);
+    const LayersYear = DataYear.layers;
+    const GeorastersYear = DataYear.georasters;
+
+    const DataMonth = await loadNdviLayersmonth(currentMap);
+    const LayersMonth = DataMonth.layers;
+    const GeorastersMonth = DataMonth.georasters;
+
+    // Crear selectores de año y mes
+    const yearLeftSelector = createYearSelector('yearLeft');
+    const yearRightSelector = createYearSelector('yearRight');
+    const monthLeftSelector = createMonthSelector('monthLeft');
+    const monthRightSelector = createMonthSelector('monthRight');
+
+    positionYearSelector(yearLeftSelector, 'left');
+    positionYearSelector(yearRightSelector, 'right');
+    positionMonthSelector(monthLeftSelector, 'left');
+    positionMonthSelector(monthRightSelector, 'right');
+
+    yearLeftSelector.style.display = 'none';
+    yearRightSelector.style.display = 'none';
+    monthLeftSelector.style.display = 'none';
+    monthRightSelector.style.display = 'none';
+
+    // Definir capas base y superpuestas
+    const YearLayer = L.layerGroup(); // Capa vacía para el control de capas
+    const MonthLayer = L.layerGroup(); // Capa vacía para el control de capas
+    const trendLayerData = await map_trend(currentMap);
+    const trendLayer = trendLayerData ? trendLayerData.layer : null;
+
+    // Verificar que las capas no sean undefined
+    const overlayLayers = {};
+
+    if (YearLayer) overlayLayers["Anual"] = YearLayer;
+    else console.error("YearLayer no está definido correctamente.");
+
+    if (MonthLayer) overlayLayers["Mensual"] = MonthLayer;
+    else console.error("MonthLayer no está definido correctamente.");
+
+    if (trendLayer) overlayLayers["Tendencia"] = trendLayer;
+    else console.error("trendLayer no está definido correctamente.");
+/*
+    // Agregar la capa de infraestructura crítica al control de capas si está bien definida
+    if (infCriticaLayer) {
+        overlayLayers["Infraestructura Crítica"] = infCriticaLayer;
+       
+    }
+    */
+    // Crear el control de capas solo si hay capas válidas
+    if (Object.keys(overlayLayers).length > 0) {
+        const layerControl = L.control.layers(null, overlayLayers).addTo(currentMap);
+
+        // Personalización del control de capas
+        const layerControlDiv = layerControl.getContainer();
+        const layersList = layerControlDiv.querySelector('.leaflet-control-layers-list');
+        const title = document.createElement('h4');
+        title.innerHTML = "NDVI";
+        title.classList.add('leaflet-control-title');
+        const separator = document.createElement('div');
+        separator.classList.add('leaflet-control-layers-separator');
+        layersList.prepend(separator);
+        layersList.prepend(title);
+    } else {
+        console.error("No hay capas válidas para agregar al control de capas.");
+    }
+
+    // Inicializar layers con los valores actuales de las capas
+    layers.leftLayer = leftLayer;
+    layers.rightLayer = rightLayer;
+    layers.trendLayer = trendLayer;
+
+    // Llamar a createOpacitySlider
+    await createOpacitySlider(currentMap, layers, currentLayerTypeRef);
+
         // Variable para almacenar el tipo de capa actual
         currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
-    
+   
+
         // Listeners para los selectores de año
         document.getElementById('yearLeft').addEventListener('change', function() {
             const selectedYear = this.value;
@@ -154,6 +180,7 @@ export async function map_ndvi() {
             if (leftLayer) currentMap.removeLayer(leftLayer);
             leftLayer = newLeftLayer;
             leftGeoraster = newLeftGeoraster;
+            layers.leftLayer = leftLayer; // Actualizar layers
             currentMap.addLayer(leftLayer);
     
             if (sideBySideControl) {
@@ -171,6 +198,7 @@ export async function map_ndvi() {
             if (rightLayer) currentMap.removeLayer(rightLayer);
             rightLayer = newRightLayer;
             rightGeoraster = newRightGeoraster;
+            layers.rightLayer = rightLayer; // Actualizar layers
             currentMap.addLayer(rightLayer);
     
             if (sideBySideControl) {
@@ -189,6 +217,7 @@ export async function map_ndvi() {
             if (leftLayer) currentMap.removeLayer(leftLayer);
             leftLayer = newLeftLayer;
             leftGeoraster = newLeftGeoraster;
+            layers.leftLayer = leftLayer; // Actualizar layers
             currentMap.addLayer(leftLayer);
     
             if (sideBySideControl) {
@@ -206,6 +235,7 @@ export async function map_ndvi() {
             if (rightLayer) currentMap.removeLayer(rightLayer);
             rightLayer = newRightLayer;
             rightGeoraster = newRightGeoraster;
+            layers.rightLayer = rightLayer; // Actualizar layers
             currentMap.addLayer(rightLayer);
     
             if (sideBySideControl) {
@@ -252,7 +282,10 @@ export async function map_ndvi() {
                     rightLayer = LayersYear[`NDVI ${currentRightYear}`];
                     currentMap.addLayer(leftLayer);
                     currentMap.addLayer(rightLayer);
-    
+
+                    layers.leftLayer = leftLayer; // Actualizar layers
+                layers.rightLayer = rightLayer;
+
                     // Agregar el control Side by Side
                     sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
                     break;
@@ -274,6 +307,10 @@ export async function map_ndvi() {
                     currentMap.addLayer(leftLayer);
                     currentMap.addLayer(rightLayer);
     
+                    
+                layers.leftLayer = leftLayer; // Actualizar layers
+                layers.rightLayer = rightLayer;
+
                     // Agregar el control Side by Side
                     sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
                     break;
@@ -292,6 +329,8 @@ export async function map_ndvi() {
                     if (!currentMap.hasLayer(trendLayer)) {
                         currentMap.addLayer(trendLayer);
                     }
+                    
+                layers.trendLayer = trendLayer; // Actualizar layers
                     break;
                 // Puedes manejar otros casos aquí si es necesario
             }
@@ -308,6 +347,7 @@ export async function map_ndvi() {
                 leftGeoraster = null;
                 rightGeoraster = null;
                 currentLayerType = null;
+                currentLayerTypeRef.value = null;
     
                 if (sideBySideControl) {
                     sideBySideControl.remove();
@@ -323,6 +363,7 @@ export async function map_ndvi() {
                 leftGeoraster = null;
                 rightGeoraster = null;
                 currentLayerType = null;
+                currentLayerTypeRef.value = null;
     
                 if (sideBySideControl) {
                     sideBySideControl.remove();
@@ -336,6 +377,7 @@ export async function map_ndvi() {
                 trendGeoraster = null;
                 if (currentLayerType === 'Tendencia') {
                     currentLayerType = null;
+                    currentLayerTypeRef.value = null;
                 }
             }
     

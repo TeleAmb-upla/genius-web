@@ -46,7 +46,7 @@ export async function g_m_no2 () {
    .text("NO²");
    
     // Parse the Data
-    const data = await d3.csv("/assets/csv/NO2_Mensual.csv");
+    const data = await d3.csv("/assets/csv/NO2_Mensual_Regional.csv");
 
     // Format the data
     data.forEach(d => {

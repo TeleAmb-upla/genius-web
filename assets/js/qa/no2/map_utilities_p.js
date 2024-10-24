@@ -3,11 +3,19 @@ import { ToColorMonth } from './month/palette_month.js';
 
 // Función para crear la leyenda SVG para anual
 export function createyearLegendSVG() {
-    const domain =  [16.960082827681727, 74.73431089558876]; // Mínimo y máximo
-    const steps = 7; // Cantidad de valores que queremos en la leyenda (6)
+    const domain =  [4.5, 55.5]; // Mínimo y máximo
+    const steps = 8; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
     
-    const colors =  ["#00E5FF", "#66C099", "#FFFF00", "#FF8800", "#FF0000", "#8B0000"];
+    const colors = [ '#333333', // black
+        '#0000FF', // blue
+        '#800080', // purple
+        '#00FFFF', // cyan
+        '#008000', // green
+        '#FFFF00', // yellow
+        '#FF0000'  // red
+      ];
+
 
 
     // Generar los valores de la leyenda
@@ -43,11 +51,18 @@ export function createyearLegendSVG() {
 
 // Función para crear la leyenda SVG para mensual
 export function createmonthLegendSVG() {
-    const domain =  [8.201394139059714, 144.55718432422563]; // Mínimo y máximo
-    const steps = 7; // Cantidad de valores que queremos en la leyenda (6)
+    const domain =   [2, 149]; // Mínimo y máximo
+    const steps = 8; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
     // Colores fijos para la leyenda
-    const colors =  ["#00E5FF", "#66C099", "#FFFF00", "#FF8800", "#FF0000", "#8B0000"];
+    const colors = [ '#333333', // black
+        '#0000FF', // blue
+        '#800080', // purple
+        '#00FFFF', // cyan
+        '#008000', // green
+        '#FFFF00', // yellow
+        '#FF0000'  // red
+      ];
 
 
     // Generar los valores de la leyenda
@@ -84,8 +99,7 @@ export function createmonthLegendSVG() {
 
 
 
-export function addCenteredTitle(map) {
-    // Declarar mapTitleDiv y tratar de obtener el elemento existente
+export function addCenteredTitle(map, titleText) {
     let mapTitleDiv = document.getElementById('map-title');
 
     if (!mapTitleDiv) {
@@ -108,5 +122,5 @@ export function addCenteredTitle(map) {
     }
 
     // Actualiza el contenido del título
-    mapTitleDiv.innerHTML = `AOD Pixel Distrito Urbano`;
+    mapTitleDiv.innerHTML = titleText;
 }

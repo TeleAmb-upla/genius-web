@@ -46,7 +46,7 @@ export async function g_m_so2 () {
    .text("SO²");
    
     // Parse the Data
-    const data = await d3.csv("/assets/csv/SO2_Mensual.csv");
+    const data = await d3.csv("/assets/csv/SO2_Mensual_Regional.csv");
 
     // Format the data
     data.forEach(d => {
