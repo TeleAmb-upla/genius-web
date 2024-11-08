@@ -3,7 +3,7 @@ import * as d3 from 'https://cdn.skypack.dev/d3@7';
 export function ToColorMonth_z_m(value) {
 
         // Definir los colores de la paleta
-        const domain = [9.75,42.25]; // mínimo y máximo 9.75	42.25
+        const domain = [11.5,43.5]; // mínimo y máximo 9.75	42.25
 
     // Definir los colores de la paleta
     const range = ["#00008B", "#00BFFF", "#32CD32", "#FFFF00", "#FFA500", "#FF4500"];

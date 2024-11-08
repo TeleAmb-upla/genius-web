@@ -11,7 +11,12 @@ export class LayersControl {
     }
 
     _createModeSwitchButtons() {
+        // Estilo para alinear los botones a la izquierda
+        const alignLeftStyle = "text-align: left;";
+
+        // Botón de Años
         const yearDiv = document.createElement("div");
+        yearDiv.style = alignLeftStyle;
         const yearButton = document.createElement("input");
         yearButton.type = "radio";
         yearButton.name = "mode";
@@ -26,7 +31,9 @@ export class LayersControl {
         yearDiv.appendChild(yearButton);
         yearDiv.appendChild(yearLabel);
 
+        // Botón de Meses
         const monthDiv = document.createElement("div");
+        monthDiv.style = alignLeftStyle;
         const monthButton = document.createElement("input");
         monthButton.type = "radio";
         monthButton.name = "mode";
@@ -41,8 +48,45 @@ export class LayersControl {
         monthDiv.appendChild(monthButton);
         monthDiv.appendChild(monthLabel);
 
+        // Botón de Tendencia
+        const trendDiv = document.createElement("div");
+        trendDiv.style = alignLeftStyle;
+        const trendButton = document.createElement("input");
+        trendButton.type = "radio";
+        trendButton.name = "mode";
+        trendButton.id = "trend";
+        trendButton.addEventListener("change", () => {
+            if (trendButton.checked) this._onModeChange('trend');
+        });
+
+        const trendLabel = document.createElement("label");
+        trendLabel.htmlFor = "trend";
+        trendLabel.textContent = "Tendencia";
+        trendDiv.appendChild(trendButton);
+        trendDiv.appendChild(trendLabel);
+
+        // Botón de Infraestructura Urbana
+        const infraDiv = document.createElement("div");
+        infraDiv.style = alignLeftStyle;
+        const infraButton = document.createElement("input");
+        infraButton.type = "radio";
+        infraButton.name = "mode";
+        infraButton.id = "infraestructura";
+        infraButton.addEventListener("change", () => {
+            if (infraButton.checked) this._onModeChange('infraestructura');
+        });
+
+        const infraLabel = document.createElement("label");
+        infraLabel.htmlFor = "infraestructura";
+        infraLabel.textContent = "Infraestructura Urbana";
+        infraDiv.appendChild(infraButton);
+        infraDiv.appendChild(infraLabel);
+
+        // Añadir todos los botones al contenedor principal
         this._container.appendChild(yearDiv);
         this._container.appendChild(monthDiv);
+        this._container.appendChild(trendDiv);
+        this._container.appendChild(infraDiv);
     }
 
     onAdd(map) {

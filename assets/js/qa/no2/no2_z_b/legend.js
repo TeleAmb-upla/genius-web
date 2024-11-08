@@ -31,7 +31,7 @@ export function createYearLegend() {
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda
-  const domain =  [26.625,40.188]; // O rangos
+  const domain =  [12.267,13.676]; // O rangos
   const steps = 7; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
 
@@ -109,7 +109,7 @@ export function createMonthLegend() {
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda
-  const domain = [17,129];
+  const domain = [11.25,23.63];
   const steps = 7; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
 

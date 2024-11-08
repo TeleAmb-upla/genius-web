@@ -1,6 +1,7 @@
 // Importar funciones desde otros módulos
 import { loadGeoJSONAndSetupLayers, createAvSelector, positionAvSelector } from './capas/utilis_select_av.js';
 import { map_stdev, createDevLegendSVG } from './ndvi_trend_dev/stddev.js'; // Ajusta la ruta según tu estructura de carpetas
+import { loadinf_critica } from '../inf_critica_leaflet.js';
 
 // Variables globales para almacenar el estado del mapa y las capas
 let currentMap = null;
@@ -51,6 +52,18 @@ export async function map_ndvi_stdev() {
         imperial: false
     }).addTo(currentMap);
 
+    // Cargar capa de infraestructura crítica
+    const infCriticaData = await loadinf_critica(currentMap);
+
+    // Crear un `layerGroup` para agrupar todas las capas de infraestructura crítica
+    let infCriticaLayer = null;
+    if (infCriticaData && typeof infCriticaData === 'object') {
+        const layersArray = Object.values(infCriticaData); // Obtener todas las capas
+        infCriticaLayer = L.layerGroup(layersArray); // Crear el layerGroup con todas las capas
+    } else {
+        console.error("La capa de infraestructura crítica no es válida:", infCriticaData);
+    }
+
     // Cargar y configurar las capas GeoJSON
     categoryLayers = await loadGeoJSONAndSetupLayers(currentMap);
 
@@ -77,7 +90,8 @@ export async function map_ndvi_stdev() {
 
     // Crear un control de capas y añadir la capa raster como overlay
     const overlayMaps = {
-        "Desviación Estándar": rasterLayer
+        "Desviación Estándar": rasterLayer,
+        "Infraestructura Crítica": infCriticaLayer
     };
     L.control.layers(null, overlayMaps, { position: 'topright' }).addTo(currentMap);
 
@@ -106,6 +120,9 @@ export async function map_ndvi_stdev() {
 
     // Implementación del slider de opacidad único
     createOpacitySlider(currentMap, rasterLayer, categoryLayersArray);
+
+    // Llamar a la función para agregar el SVG en la parte inferior centrada del mapa
+    addBottomCenteredSVG(currentMap);
 }
 
 // Función para crear y posicionar una leyenda personalizada en centro-izquierda
@@ -342,4 +359,42 @@ function createOpacitySlider(map, rasterLayer, categoryLayersArray) {
     // Inicializar la línea y opacidad
     updateLine(0);
     updateOpacity(0);
+}
+
+// Función para agregar un SVG/cuadro de texto en la parte inferior centrada del mapa
+function addBottomCenteredSVG(map) {
+    // Crear un div para contener el SVG/cuadro de texto
+    const svgContainer = L.DomUtil.create('div', 'bottom-centered-svg');
+
+    // Contenido del SVG o cuadro de texto
+    svgContainer.innerHTML = `
+        <svg width="350" height="60" xmlns="http://www.w3.org/2000/svg">
+            <rect width="350" height="60" style="fill:rgba(255, 255, 255, 0.5);stroke:black;stroke-width:2;"/>
+            <text x="50%" y="25" dominant-baseline="middle" text-anchor="middle" font-size="11" fill="black" style="word-spacing: 1px;">
+                Para áreas vegetadas, los valores más altos de "DE" indican mayor
+            </text>
+            <text x="50%" y="35" dominant-baseline="middle" text-anchor="middle" font-size="11" fill="black" style="word-spacing: 1px;">
+                variabilidad en el verdor, lo que puede estar asociado a la
+            </text>
+            <text x="50%" y="45" dominant-baseline="middle" text-anchor="middle" font-size="11" fill="black" style="word-spacing: 1px;">
+                presencia de hierbas estacionales o vegetación caducifolia
+            </text>
+        </svg>
+    `;
+
+    // Agregar el div al contenedor del mapa
+    map.getContainer().appendChild(svgContainer);
+
+    // Estilos CSS para posicionar el div en la parte inferior centrada
+    Object.assign(svgContainer.style, {
+        position: 'absolute',
+        bottom: '10px', // Espacio desde el borde inferior
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: '1000', // Asegura que esté visible por encima de otros elementos
+        background: 'rgba(255, 255, 255, 0.8)',
+        padding: '5px',
+        borderRadius: '8px',
+        boxShadow: '0 0 10px rgba(0, 0, 0, 0.3)'
+    });
 }

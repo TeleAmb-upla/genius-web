@@ -9,10 +9,10 @@ export async function preprocessGeoJSON(url, currentMode) {
         const data = await response.json();
         console.log('GeoJSON data:', data);  // Log para depurar
         data.features.forEach(feature => {
-            if (feature.properties && feature.properties.NO2 !== undefined) {
+            if (feature.properties && feature.properties.NO2_median !== undefined) {
                 feature.properties.color = currentMode === 'yearly' 
-                    ? ToColorYear_z_m(feature.properties.NO2)
-                    : ToColorMonth_z_m(feature.properties.NO2);
+                    ? ToColorYear_z_m(feature.properties.NO2_median)
+                    : ToColorMonth_z_m(feature.properties.NO2_median);
             }
         });
         return data;
@@ -58,7 +58,7 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const NO2Formatted = properties.NO2.toFixed(2);
+        const NO2Formatted = properties.NO2_median.toFixed(2);
         new maplibregl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`
@@ -100,7 +100,7 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const NO2Formatted = properties.NO2.toFixed(2);
+        const NO2Formatted = properties.NO2_median.toFixed(2);
         new maplibregl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`

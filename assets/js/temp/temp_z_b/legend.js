@@ -31,21 +31,22 @@ export function createYearLegend() {
   subtitle.style.marginBottom = '5px'; // Reducir espacio
   legendContent.appendChild(subtitle);
 
-  // Dominio de valores para la leyenda (valores de temperatura)
-  const values = [
-    "<16°", "18° - 19°", "19° - 21°", "21° - 22°", "22° - 24°", 
-    "24° - 25°", "25° - 27°", "27° - 28°", "28° - 30°", "30° - 31°", 
-    "31° - 33°", "33° - 34°", "34° - 36°", "36° - 37°", "37° - 39°", 
-    "39° - 40°", "40° - 42°", ">42°"
-  ];
+// Dominio de valores para la leyenda (valores de temperatura)
+const values = [
+  "<19°", "19° - 20°", "20° - 21°", "21° - 22°", "22° - 23°",
+  "23° - 24°", "24° - 25°", "25° - 26°", "26° - 27°", "27° - 28°",
+  "28° - 29°", "29° - 30°", "30° - 31°", "31° - 32°", "32° - 33°",
+  "33° - 34°", "34° - 35°", ">35°"
+];
 
-  // Colores correspondientes para cada valor
-  const colors = [
-    "#00008B", "#0000FF", "#1E90FF", "#00BFFF", "#00FFFF",
-    "#7FFF00", "#32CD32", "#ADFF2F", "#FFFF00", "#FFD700",
-    "#FFA500", "#FF8C00", "#FF4500", "#FF0000", "#DC143C", 
-    "#B22222", "#8B0000", "#800000"
-  ];
+// Colores correspondientes para cada valor (18 colores)
+const colors = [
+  "#00008B", "#0000FF", "#1E90FF", "#00BFFF", "#00FFFF",
+  "#7FFF00", "#32CD32", "#ADFF2F", "#FFFF00", "#FFD700",
+  "#FFA500", "#FF8C00", "#FF4500", "#FF0000", "#DC143C",
+  "#B22222", "#8B0000", "#800000"
+];
+
 
   // Crear el contenido de la leyenda en HTML con rangos
   values.forEach((value, index) => {
@@ -109,7 +110,7 @@ export function createMonthLegend() {
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda (valores de temperatura)
-  const domain = [11.13, 40.13]; // Min y Max
+  const domain = [13, 42]; // Min y Max
   const steps = 18; // Número de rangos (mismo que en la leyenda anual)
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular los intervalos
 

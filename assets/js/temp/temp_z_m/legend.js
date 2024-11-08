@@ -32,7 +32,7 @@ export function createYearLegend() {
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda (valores de temperatura)
-  const domain = [22.875, 37.375]; // Min y Max
+  const domain = [17,40];  // Min y Max
   const steps = 18; // Número de rangos (mismo que en la leyenda anterior)
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular los intervalos
 
@@ -119,7 +119,7 @@ export function createMonthLegend() {
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda (valores de temperatura)
-  const domain = [9.75, 42.25]; // Min y Max
+  const domain = [11.5,43.5];// Min y Max
   const steps = 18; // Número de rangos (mismo que en la leyenda anual)
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular los intervalos
 

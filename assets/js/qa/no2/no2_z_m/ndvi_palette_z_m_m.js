@@ -1,6 +1,6 @@
 export function ToColorMonth_z_m(value) {
         // Definir los colores de la paleta
-        const domain = [16.5,128.5]; // mínimo y máximo 16.5,128.5
+        const domain = [11.125,24.5]; // mínimo y máximo 16.5,128.5
 
         const range =   [ '#333333', // black
             '#0000FF', // blue

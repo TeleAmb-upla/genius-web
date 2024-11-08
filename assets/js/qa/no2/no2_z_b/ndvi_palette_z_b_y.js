@@ -1,6 +1,6 @@
 export function ToColorYear_z_b(value) {
         // Definir los colores de la paleta
-        const domain = [26.625,40.188]; // mínimo y máximo
+        const domain = [12.267,13.676]  ; // mínimo y máximo
         const range =  [ '#333333', // black
             '#0000FF', // blue
             '#800080', // purple

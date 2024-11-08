@@ -5,7 +5,7 @@ import * as d3 from 'https://cdn.skypack.dev/d3@7';
 // Función para crear la leyenda SVG para LST anual
 // Función para crear la leyenda SVG para LST anual
 export function createyearLegendSVG() {
-    const domain = [16, 42]; // Mínimo y máximo de temperatura
+    const domain = [18, 42]; // Mínimo y máximo de temperatura
     const steps = 18; // Cantidad de colores
     const colorsBase = ["#00008B", "#00BFFF", "#32CD32", "#FFFF00", "#FFA500", "#FF4500"]; // Colores base
 
@@ -67,7 +67,7 @@ export function createyearLegendSVG() {
 
 // Función para crear la leyenda SVG para mensual
 export function createmonthLegendSVG() {
-    const domain =  [7, 44]; // Mínimo y máximo
+    const domain =  [8, 44]; // Mínimo y máximo
    const steps = 18; // Cantidad de colores
     const colorsBase = ["#00008B", "#00BFFF", "#32CD32", "#FFFF00", "#FFA500", "#FF4500"]; // Colores base
 

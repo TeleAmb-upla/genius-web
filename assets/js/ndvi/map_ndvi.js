@@ -5,7 +5,7 @@ import { createMonthSelector, positionMonthSelector } from './ndvi_month/funtion
 import { createyearLegendSVG, createmonthLegendSVG, addCenteredTitle } from './map_utilities_p.js';
 import { map_trend, createSTLegendSVG } from './ndvi_trend_dev/trend.js';
 import { createOpacitySlider } from '../slider_opacity.js';
-//import { loadinf_critica } from '../inf_critica.js';
+import { loadinf_critica } from '../inf_critica_leaflet.js';
 
 // Variables globales para almacenar el estado del mapa y las capas
 let currentMap = null;
@@ -77,7 +77,7 @@ export async function map_ndvi() {
 
     // Actualizar el título del mapa
     addCenteredTitle(currentMap, "NDVI Área Urbana (píxel)");
-/*
+
     // Cargar capa de infraestructura crítica
     const infCriticaData = await loadinf_critica(currentMap);
 
@@ -89,7 +89,7 @@ export async function map_ndvi() {
     } else {
         console.error("La capa de infraestructura crítica no es válida:", infCriticaData);
     }
-*/
+
     // Cargar las capas anuales y mensuales
     const DataYear = await loadNdviLayersyear(currentMap);
     const LayersYear = DataYear.layers;
@@ -132,13 +132,13 @@ export async function map_ndvi() {
 
     if (trendLayer) overlayLayers["Tendencia"] = trendLayer;
     else console.error("trendLayer no está definido correctamente.");
-/*
+
     // Agregar la capa de infraestructura crítica al control de capas si está bien definida
     if (infCriticaLayer) {
         overlayLayers["Infraestructura Crítica"] = infCriticaLayer;
        
     }
-    */
+
     // Crear el control de capas solo si hay capas válidas
     if (Object.keys(overlayLayers).length > 0) {
         const layerControl = L.control.layers(null, overlayLayers).addTo(currentMap);

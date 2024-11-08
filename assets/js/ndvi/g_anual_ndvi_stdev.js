@@ -25,7 +25,40 @@ export async function g_a_ndvi_stdev() {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial")
-        .text("NDVI Interanual Área Urbana");
+        .text("NDVI Interanual Áreas Verdes Promedio");
+
+    // Add legend below the title
+    const legendData = [
+        { label: "NDVI Urbano", color: "steelblue" },
+        { label: "NDVI Gestión", color: "green" },
+        { label: "NDVI Planificación", color: "orange" }
+    ];
+
+    // Calculate total width of the legend to center it
+    const legendWidth = legendData.length * 120 - 20; // 120 px per item, adjust for spacing
+
+    const legend = svg.append("g")
+        .attr("transform", `translate(${(width - legendWidth) / 2}, ${-margin.top / 2 + 20})`);
+
+    legend.selectAll("rect")
+        .data(legendData)
+        .enter()
+        .append("rect")
+        .attr("x", (d, i) => i * 120)
+        .attr("y", 0)
+        .attr("width", 15)
+        .attr("height", 15)
+        .attr("fill", d => d.color);
+
+    legend.selectAll("text")
+        .data(legendData)
+        .enter()
+        .append("text")
+        .attr("x", (d, i) => i * 120 + 20)
+        .attr("y", 12)
+        .style("font-size", "12px")
+        .style("font-family", "Arial")
+        .text(d => d.label);
 
     // Titles for axes
     svg.append("text")
@@ -45,36 +78,67 @@ export async function g_a_ndvi_stdev() {
         .style("font-size", "12px")
         .text("NDVI");
 
-    // Parse the Data
-    const data = await d3.csv("/assets/csv/NDVI_Anual.csv");
+    // Parse the data
+    const data = await d3.csv("/assets/csv/NDVI_Anual_AV.csv");
 
     // Format the data
     data.forEach(d => {
-        d.Year = +d.Year;           // Convert Year to number
-        d.NDVI_median = +d.NDVI_median;    // Convert NDVI_median to number
+        d.Year = +d.Year;
+        d.NDVI_Urbano = +d.NDVI_Urbano;
+        d.NDVI_Gestion = +d.NDVI_Gestion;
+        d.NDVI_Planificacion = +d.NDVI_Planificacion;
     });
 
-    // Find the minimum and maximum NDVI_median values
-    const minNDVI = d3.min(data, d => d.NDVI_median);
-    const maxNDVI = d3.max(data, d => d.NDVI_median);
+    // Find the minimum and maximum NDVI values across all columns
+    const minNDVI = d3.min(data, d => Math.min(d.NDVI_Urbano, d.NDVI_Gestion, d.NDVI_Planificacion));
+    const maxNDVI = d3.max(data, d => Math.max(d.NDVI_Urbano, d.NDVI_Gestion, d.NDVI_Planificacion));
 
     // Add X axis
     var x = d3.scaleBand()
         .domain(data.map(d => d.Year))
-        .range([0, width])
-        
+        .range([0, width]);
+
     svg.append("g")
         .attr("transform", "translate(0," + height + ")")
         .call(d3.axisBottom(x).tickFormat(d3.format("d")));
 
     // Add Y axis
     var y = d3.scaleLinear()
-        .domain([minNDVI - 0.01, maxNDVI + 0.01]) // Adjust the domain to add a margin below and above
+        .domain([minNDVI - 0.01, maxNDVI + 0.01])
         .range([height, 0]);
+
     svg.append("g")
         .call(d3.axisLeft(y));
 
-    // Create a tooltip
+    // Line generator function
+    var line = d3.line()
+        .x(d => x(d.Year) + x.bandwidth() / 2)
+        .y(d => y(d.NDVI_Urbano))
+        .curve(d3.curveCatmullRom.alpha(0.5));
+
+    // Define colors for each line
+    const colors = {
+        NDVI_Urbano: "steelblue",
+        NDVI_Gestion: "green",
+        NDVI_Planificacion: "orange"
+    };
+
+    // Draw the lines
+    Object.keys(colors).forEach(key => {
+        var lineGen = d3.line()
+            .x(d => x(d.Year) + x.bandwidth() / 2)
+            .y(d => y(d[key]))
+            .curve(d3.curveCatmullRom.alpha(0.5));
+
+        svg.append("path")
+            .datum(data)
+            .attr("fill", "none")
+            .attr("stroke", colors[key])
+            .attr("stroke-width", 1.5)
+            .attr("d", lineGen);
+    });
+
+    // Create tooltips
     const tooltip = d3.select("#p68")
         .append("div")
         .style("opacity", 0)
@@ -86,65 +150,40 @@ export async function g_a_ndvi_stdev() {
         .style("padding", "5px")
         .style("position", "absolute");
 
-    // Mouseover, mousemove, and mouseleave functions
+    // Mouse events for tooltips
     var mouseover = function (event, d) {
-        tooltip
-            .style("opacity", 1);
-        d3.select(this)
-            .style("stroke", "black")
-            .style("opacity", 1);
-    }
+        tooltip.style("opacity", 1);
+    };
 
     var mousemove = function (event, d) {
-        tooltip
-            .html("NDVI: " + d.NDVI_median.toFixed(2) + "<br>Año: " + d.Year)
+        tooltip.html(
+            "Año: " + d.Year +
+            "<br>NDVI Urbano: " + d.NDVI_Urbano.toFixed(2) +
+            "<br>NDVI Gestión: " + d.NDVI_Gestion.toFixed(2) +
+            "<br>NDVI Planificación: " + d.NDVI_Planificacion.toFixed(2)
+        )
             .style("left", (event.pageX + 15) + "px")
             .style("top", (event.pageY - 15) + "px");
-    }
+    };
 
     var mouseleave = function (event, d) {
-        tooltip
-            .style("opacity", 0);
-        d3.select(this)
-            .style("stroke", "none");
-            
-        }
-        // Add the line with smoothing and animation
-    var line = d3.line()
-    .x(d => x(d.Year) + x.bandwidth() / 2) // Ensure the line passes through the center of the band
-    .y(d => y(d.NDVI_median))
-    .curve(d3.curveCatmullRom.alpha(0.5)); // Use curveCatmullRom for smoothing
+        tooltip.style("opacity", 0);
+    };
 
-    var animation = svg.append("path")
-    .datum(data)
-    .attr("fill", "none")
-    .attr("stroke", "steelblue")
-    .attr("stroke-width", 1.5)
-    .attr("d", line);
-
-    var totalLength = animation.node().getTotalLength();
-
-    animation
-    .attr("stroke-dasharray", totalLength + " " + totalLength)
-    .attr("stroke-dashoffset", totalLength)
-    .transition()
-    .duration(5000)
-    .ease(d3.easeLinear)
-    .attr("stroke-dashoffset", 0);
-
-    // Add larger, invisible circles for better mouse interaction
-    svg.append("g")
-        .selectAll("circle")
-        .data(data)
-        .enter()
-        .append("circle")
-        .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
-        .attr("cy", d => y(d.NDVI_median))
-        .attr("r", 4) // Larger radius for easier interaction
-        .attr("fill", "steelblue")
-        .attr("pointer-events", "all") // Ensure these circles capture mouse events
-        .on("mouseover", mouseover)
-        .on("mousemove", mousemove)
-        .on("mouseleave", mouseleave);
-
+    // Add circles for each data point
+    ["NDVI_Urbano", "NDVI_Gestion", "NDVI_Planificacion"].forEach(key => {
+        svg.append("g")
+            .selectAll("circle")
+            .data(data)
+            .enter()
+            .append("circle")
+            .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
+            .attr("cy", d => y(d[key]))
+            .attr("r", 4)
+            .attr("fill", colors[key])
+            .attr("pointer-events", "all")
+            .on("mouseover", mouseover)
+            .on("mousemove", mousemove)
+            .on("mouseleave", mouseleave);
+    });
 }

@@ -1,6 +1,6 @@
 import * as d3 from 'https://cdn.skypack.dev/d3@7'; 
 
-const domain = [4.5, 55.5]; // Valores mínimo y máximo de tu dataset
+const domain = [9.844, 15.313]; // Valores mínimo y máximo de tu dataset
 
 const baseColors = [
     '#000000', // black

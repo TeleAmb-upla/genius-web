@@ -5,13 +5,10 @@ import { map_2021 } from './funtion/year_2021.js';
 import { map_2022 } from './funtion/year_2022.js';
 import { map_2023 } from './funtion/year_2023.js';
 import { addCenteredTitle, createLegendSVG } from './funtion/map_utilities_p.js';
+import { loadinf_critica } from '../inf_critica_leaflet.js';
 
 // Variables globales
 let currentMap = null;
-let leftLayer = null;
-let rightLayer = null;
-let sideBySideControl = null;
-let mapTitleDiv = null;
 let currentLayers = {}; // Objeto para almacenar las capas cargadas
 let legendDiv = null; // Variable global para la leyenda
 
@@ -44,12 +41,14 @@ export async function map_hu() {
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
     }).addTo(currentMap);
-        
 
     // Agregar la escala
     L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
 
-    // Cargar las capas en orden inverso 
+    // Inicializar `overlayMaps` antes de usarlo
+    const overlayMaps = {};
+
+    // Cargar las capas en orden inverso
     currentLayers["Huella Urbana 2023"] = await map_2023(currentMap);
     currentLayers["Huella Urbana 2022"] = await map_2022(currentMap);
     currentLayers["Huella Urbana 2021"] = await map_2021(currentMap);
@@ -57,16 +56,31 @@ export async function map_hu() {
     currentLayers["Huella Urbana 2019"] = await map_2019(currentMap);
     currentLayers["Huella Urbana 2018"] = await map_2018(currentMap);
 
-    // Crear un control de capas
-    const overlayMaps = {
-        "Huella Urbana 2023": currentLayers["Huella Urbana 2023"],
-        "Huella Urbana 2022": currentLayers["Huella Urbana 2022"],
-        "Huella Urbana 2021": currentLayers["Huella Urbana 2021"],
-        "Huella Urbana 2020": currentLayers["Huella Urbana 2020"],
-        "Huella Urbana 2019": currentLayers["Huella Urbana 2019"],
-        "Huella Urbana 2018": currentLayers["Huella Urbana 2018"]
-    };
+    // Agregar las capas cargadas al objeto `overlayMaps`
+    overlayMaps["Huella Urbana 2023"] = currentLayers["Huella Urbana 2023"];
+    overlayMaps["Huella Urbana 2022"] = currentLayers["Huella Urbana 2022"];
+    overlayMaps["Huella Urbana 2021"] = currentLayers["Huella Urbana 2021"];
+    overlayMaps["Huella Urbana 2020"] = currentLayers["Huella Urbana 2020"];
+    overlayMaps["Huella Urbana 2019"] = currentLayers["Huella Urbana 2019"];
+    overlayMaps["Huella Urbana 2018"] = currentLayers["Huella Urbana 2018"];
 
+    // Cargar la capa de infraestructura crítica
+    const infCriticaLayer = await loadinf_critica(currentMap);
+    if (infCriticaLayer && typeof infCriticaLayer === 'object') {
+        // Convertir las subcapas en un `L.layerGroup`
+        const layersArray = Object.values(infCriticaLayer);
+        const infCriticaGroup = L.layerGroup(layersArray);
+
+        // Agregar la capa de infraestructura crítica al control de capas
+        overlayMaps["Infraestructura Crítica"] = infCriticaGroup;
+
+        // Opcional: agregar la capa al mapa directamente al inicio
+        infCriticaGroup.addTo(currentMap);
+    } else {
+        console.error("La capa de infraestructura crítica no es un objeto de capa de Leaflet válido:", infCriticaLayer);
+    }
+
+    // Crear el control de capas y agregarlo al mapa
     L.control.layers(null, overlayMaps).addTo(currentMap);
 
     // Cargar y agregar el archivo GeoJSON al mapa

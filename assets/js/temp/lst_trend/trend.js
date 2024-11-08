@@ -1,6 +1,6 @@
 import * as d3 from 'https://cdn.skypack.dev/d3@7';
 function valueToSTColor(value) {
-    const domain = [-1, 1]; // mínimo y máximo
+    const domain = [0, 0.44]; // mínimo y máximo
     // Paleta de colores invertida que representa los diferentes valores de NDVI
     const range = [
         "#ff0000", // Rojo intenso para los valores negativos bajos
@@ -62,7 +62,7 @@ export async function map_trend(map) {
 }
 
 export function createSTLegendSVG() {
-    const domain = [-1, 1]; // Mínimo y máximo
+    const domain = [0, 0.44]; // Mínimo y máximo
     const steps = 9; // Cantidad de bloques: 4 rojos, 1 blanco, 4 azules
     const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"]; // 4 colores para rojos y azules, blanco en el centro
 

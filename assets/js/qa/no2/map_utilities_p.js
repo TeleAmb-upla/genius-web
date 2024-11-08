@@ -3,7 +3,7 @@ import { ToColorMonth } from './month/palette_month.js';
 
 // Función para crear la leyenda SVG para anual
 export function createyearLegendSVG() {
-    const domain =  [4.5, 55.5]; // Mínimo y máximo
+    const domain =  [9.844, 15.313]; // Mínimo y máximo
     const steps = 8; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
     
@@ -51,7 +51,7 @@ export function createyearLegendSVG() {
 
 // Función para crear la leyenda SVG para mensual
 export function createmonthLegendSVG() {
-    const domain =   [2, 149]; // Mínimo y máximo
+    const domain =   [9.625, 26.75]; // Mínimo y máximo
     const steps = 8; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
     // Colores fijos para la leyenda

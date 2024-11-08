@@ -2,7 +2,7 @@ import * as d3 from 'https://cdn.skypack.dev/d3@7';
 
 
 function valueToSTColor(value) {    
-    const domain = [-7, 7]; // mínimo y máximo
+    const domain = [-0.9297, 0.4297]; // mínimo y máximo
 
     // Paleta de colores que representa los diferentes valores de la tendencia
     const range = [
@@ -20,11 +20,11 @@ function valueToSTColor(value) {
 
     // Asignar los colores basado en el valor
 
-    // Si el valor está entre -1 y 1, devolver transparente
+    /*// Si el valor está entre -1 y 1, devolver transparente
     if (value >= -1 && value <= 1) {
         return "transparent"; // Transparente para los valores entre -1 y 1, incluyendo 0
     }
-
+*/
     // Si el valor es menor que el mínimo, devolver el primer color (rojo intenso)
     if (value < domain[0]) {
         return range[0];

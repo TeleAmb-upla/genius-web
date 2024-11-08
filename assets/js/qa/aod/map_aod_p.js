@@ -5,6 +5,9 @@ import { createMonthSelector, positionMonthSelector } from './month/utils_month.
 import { createmonthLegendSVG, createyearLegendSVG, addCenteredTitle } from './map_utilities_p.js';
 import { map_trend, createSTLegendSVG } from './aod_trend/trend.js';
 import { createOpacitySlider } from '../slider_opacity.js';
+import { loadinf_critica } from '../inf_critica_leaflet.js';
+
+
 // Variables globales
 let currentMap = null;
 let leftLayer = null;
@@ -77,6 +80,23 @@ export async function map_aod_p() {
     // Actualizar el título del mapa
     addCenteredTitle(currentMap, "AOD Área Urbana (píxel)");
 
+    // Cargar capa de infraestructura crítica
+    const infCriticaData = await loadinf_critica(currentMap);
+
+    // Crear un `layerGroup` para agrupar todas las capas de infraestructura crítica
+    let infCriticaLayer = null;
+    if (infCriticaData && typeof infCriticaData === 'object') {
+        const layersArray = Object.values(infCriticaData); // Obtener todas las capas
+        infCriticaLayer = L.layerGroup(layersArray); // Crear el layerGroup con todas las capas
+    } else {
+        console.error("La capa de infraestructura crítica no es válida:", infCriticaData);
+    }
+
+
+
+
+
+
         // Cargar las capas anuales y mensuales
         const DataYear = await loadLayersyear(currentMap);
         const LayersYear = DataYear.layers;
@@ -119,7 +139,14 @@ export async function map_aod_p() {
     
         if (trendLayer) overlayLayers["Tendencia"] = trendLayer;
         else console.error("trendLayer no está definido correctamente.");
-    
+
+            // Agregar la capa de infraestructura crítica al control de capas si está bien definida
+    if (infCriticaLayer) {
+        overlayLayers["Infraestructura Crítica"] = infCriticaLayer;
+       
+    }
+
+
         // Crear el control de capas solo si hay capas válidas
         if (Object.keys(overlayLayers).length > 0) {
             const layerControl = L.control.layers(null, overlayLayers).addTo(currentMap);

@@ -3,7 +3,7 @@ import * as d3 from 'https://cdn.skypack.dev/d3@7';
 
 export function ToColorYear(value) {
         // Definir los colores de la paleta
-        const domain = [16, 42]; // mínimo y máximo
+        const domain = [18, 42]; // mínimo y máximo
     // Definir los colores de la paleta
     const range = ["#00008B", "#00BFFF", "#32CD32", "#FFFF00", "#FFA500", "#FF4500"];
     

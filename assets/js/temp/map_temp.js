@@ -8,7 +8,7 @@ import { createMonthSelector, positionMonthSelector } from './month/utils_month.
 import { createmonthLegendSVG, createyearLegendSVG, addCenteredTitle } from './map_utilities_p.js';
 import { map_trend, createSTLegendSVG } from './lst_trend/trend.js';
 import { createOpacitySlider } from '../slider_opacity.js';
-
+import { loadinf_critica } from '../inf_critica_leaflet.js';
 // Variables globales
 let currentMap = null;
 let leftLayer = null;
@@ -24,7 +24,7 @@ let trendGeoraster = null;
 
 let currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
 
-let currentLeftYear = "2014";
+let currentLeftYear = "1995";
 let currentRightYear = "2023";
 
 let currentLeftMonth = "01";
@@ -79,6 +79,17 @@ export async function map_t() {
 
     // Actualizar el título del mapa
     addCenteredTitle(currentMap, "LST Área Urbana (píxel)");
+    // Cargar capa de infraestructura crítica
+    const infCriticaData = await loadinf_critica(currentMap);
+
+    // Crear un `layerGroup` para agrupar todas las capas de infraestructura crítica
+    let infCriticaLayer = null;
+    if (infCriticaData && typeof infCriticaData === 'object') {
+        const layersArray = Object.values(infCriticaData); // Obtener todas las capas
+        infCriticaLayer = L.layerGroup(layersArray); // Crear el layerGroup con todas las capas
+    } else {
+        console.error("La capa de infraestructura crítica no es válida:", infCriticaData);
+    }
 
     // Cargar las capas anuales y mensuales
     const lstDataYear = await loadLayersyear(currentMap);
@@ -125,6 +136,12 @@ export async function map_t() {
 
     if (trendLayer) overlayLayers["Tendencia"] = trendLayer;
     else console.error("trendLayer no está definido correctamente.");
+   // Agregar la capa de infraestructura crítica al control de capas si está bien definida
+   if (infCriticaLayer) {
+      overlayLayers["Infraestructura Crítica"] = infCriticaLayer;
+          
+     }
+
 
     // Crear el control de capas solo si hay capas válidas
     if (Object.keys(overlayLayers).length > 0) {
@@ -388,76 +405,82 @@ export async function map_t() {
         }
     });
 
-    // Evento de clic en el mapa para mostrar los valores de LST
-    currentMap.on('click', function (event) {
-        const latlng = event.latlng;
+// Evento de clic en el mapa para mostrar los valores de LST
+currentMap.on('click', function (event) {
+    const latlng = event.latlng;
 
-        if ((currentLayerType === 'Anual' || currentLayerType === 'Mensual') && leftGeoraster && rightGeoraster) {
-            // Obtener los valores de LST de ambas capas
-            let valueLeft = null;
-            let valueRight = null;
+    if ((currentLayerType === 'Anual' || currentLayerType === 'Mensual') && leftGeoraster && rightGeoraster) {
+        // Obtener los valores de LST de ambas capas
+        let valueLeft = null;
+        let valueRight = null;
 
-            let valueArray = geoblaze.identify(leftGeoraster, [latlng.lng, latlng.lat]);
-            valueLeft = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
+        // Identificar el valor de la capa de la izquierda
+        let valueArray = geoblaze.identify(leftGeoraster, [latlng.lng, latlng.lat]);
+        console.log('Valor identificado en la capa izquierda:', valueArray); // Agregar console.log para depurar
+        valueLeft = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
 
-            valueArray = geoblaze.identify(rightGeoraster, [latlng.lng, latlng.lat]);
-            valueRight = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
+        // Identificar el valor de la capa de la derecha
+        valueArray = geoblaze.identify(rightGeoraster, [latlng.lng, latlng.lat]);
+        console.log('Valor identificado en la capa derecha:', valueArray); // Agregar console.log para depurar
+        valueRight = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
 
-            // Formatear los valores
-            valueLeft = (valueLeft !== null && !isNaN(valueLeft)) ? valueLeft.toFixed(2) : 'No disponible';
-            valueRight = (valueRight !== null && !isNaN(valueRight)) ? valueRight.toFixed(2) : 'No disponible';
+        // Formatear los valores
+        valueLeft = (valueLeft !== null && !isNaN(valueLeft)) ? valueLeft.toFixed(2) : 'No disponible';
+        valueRight = (valueRight !== null && !isNaN(valueRight)) ? valueRight.toFixed(2) : 'No disponible';
 
-            let labelLeft, labelRight;
+        let labelLeft, labelRight;
 
-            if (currentLayerType === 'Anual') {
-                labelLeft = `Año ${currentLeftYear}`;
-                labelRight = `Año ${currentRightYear}`;
-            } else if (currentLayerType === 'Mensual') {
-                labelLeft = `Mes ${currentLeftMonth}`;
-                labelRight = `Mes ${currentRightMonth}`;
-            } else {
-                labelLeft = 'Izquierda';
-                labelRight = 'Derecha';
-            }
-
-            // Crear contenido del popup
-            const content = `
-                <div style="text-align:center; padding:2px; background-color:#fff; font-size:10px; max-width:120px;">
-                    ${labelLeft}: ${valueLeft}<br>
-                    ${labelRight}: ${valueRight}
-                </div>
-            `;
-
-            L.popup({ className: 'custom-popup' })
-                .setLatLng(latlng)
-                .setContent(content)
-                .openOn(currentMap);
-        } else if (currentLayerType === 'Tendencia' && trendGeoraster) {
-            // Obtener el valor del píxel de tendencia
-            let valueTrend = null;
-            let valueArray = geoblaze.identify(trendGeoraster, [latlng.lng, latlng.lat]);
-            valueTrend = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
-
-            // Redondear el valor si es un número, o marcar como 'No disponible'
-            if (typeof valueTrend === 'number' && !isNaN(valueTrend)) {
-                valueTrend = valueTrend.toFixed(3);
-            } else {
-                valueTrend = 'No disponible';
-            }
-
-            // Crear contenido del popup
-            const content = `
-                <div style="text-align:center; padding:2px; background-color:#fff; font-size:10px; max-width:120px;">
-                    Tendencia LST: ${valueTrend}
-                </div>
-            `;
-
-            L.popup({ className: 'custom-popup' })
-                .setLatLng(latlng)
-                .setContent(content)
-                .openOn(currentMap);
+        if (currentLayerType === 'Anual') {
+            labelLeft = `Año ${currentLeftYear}`;
+            labelRight = `Año ${currentRightYear}`;
+        } else if (currentLayerType === 'Mensual') {
+            labelLeft = `Mes ${currentLeftMonth}`;
+            labelRight = `Mes ${currentRightMonth}`;
         } else {
-            currentMap.closePopup();
+            labelLeft = 'Izquierda';
+            labelRight = 'Derecha';
         }
-    });
+
+        // Crear contenido del popup
+        const content = `
+            <div style="text-align:center; padding:2px; background-color:#fff; font-size:10px; max-width:120px;">
+                ${labelLeft}: ${valueLeft}<br>
+                ${labelRight}: ${valueRight}
+            </div>
+        `;
+
+        L.popup({ className: 'custom-popup' })
+            .setLatLng(latlng)
+            .setContent(content)
+            .openOn(currentMap);
+    } else if (currentLayerType === 'Tendencia' && trendGeoraster) {
+        // Obtener el valor del píxel de tendencia
+        let valueTrend = null;
+        let valueArray = geoblaze.identify(trendGeoraster, [latlng.lng, latlng.lat]);
+        console.log('Valor identificado en la capa de tendencia:', valueArray); // Agregar console.log para depurar
+        valueTrend = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
+
+        // Redondear el valor si es un número, o marcar como 'No disponible'
+        if (typeof valueTrend === 'number' && !isNaN(valueTrend)) {
+            valueTrend = valueTrend.toFixed(3);
+        } else {
+            valueTrend = 'No disponible';
+        }
+
+        // Crear contenido del popup
+        const content = `
+            <div style="text-align:center; padding:2px; background-color:#fff; font-size:10px; max-width:120px;">
+                Tendencia LST: ${valueTrend}
+            </div>
+        `;
+
+        L.popup({ className: 'custom-popup' })
+            .setLatLng(latlng)
+            .setContent(content)
+            .openOn(currentMap);
+    } else {
+        currentMap.closePopup();
+    }
+});
 }
+

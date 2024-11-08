@@ -8,10 +8,10 @@ export async function preprocessGeoJSON(url, currentMode) {
         if (!response.ok) throw new Error(`Failed to fetch data: ${response.statusText}`);
         const data = await response.json();
         data.features.forEach(feature => {
-            if (feature.properties && feature.properties.LST !== undefined) {
+            if (feature.properties && feature.properties.LST_mean !== undefined) {
                 feature.properties.color = currentMode === 'yearly' 
-                    ? ToColorYear_z_m(feature.properties.LST)
-                    : ToColorMonth_z_m(feature.properties.LST);
+                    ? ToColorYear_z_m(feature.properties.LST_mean)
+                    : ToColorMonth_z_m(feature.properties.LST_mean);
             }
         });
         return data;
@@ -58,7 +58,7 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const LSTFormatted = properties.LST.toFixed(2);
+        const LSTFormatted = properties.LST_mean.toFixed(2);
         new maplibregl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`
@@ -100,7 +100,7 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const LSTFormatted = properties.LST.toFixed(2);
+        const LSTFormatted = properties.LST_mean.toFixed(2);
         new maplibregl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`

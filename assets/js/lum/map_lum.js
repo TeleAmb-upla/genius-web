@@ -1,24 +1,22 @@
 import { addCenteredTitle } from './map_utilities_p.js';
-
+import { loadinf_critica } from '../inf_critica_leaflet.js';
+// Variables globales para almacenar el estado del mapa, las capas y el título
 // Variables globales para almacenar el estado del mapa, las capas y el título
 let currentMap = null;
 let currentLayer = null;
 let mapTitleDiv = null;
 let geojsonLayer = null; // Mover la declaración de geojsonLayer al ámbito global
 let rasterLayer = null;  // Variable para la capa raster si existe
+let infCriticaLayer = null; // Variable para la capa de infraestructura crítica
 
-// Función para inicializar el mapa y cargar el GeoJSON
+let currentLayers = {}; // Objeto para almacenar las capas cargadas
+
 export async function map_lum() {
-    // Comprueba si el mapa ya está inicializado y elimínalo si es necesario
+    // Elimina el mapa si ya está inicializado
     if (currentMap) {
         currentMap.remove();
         currentMap = null;
-        currentLayer = null;
-
-        if (mapTitleDiv) {
-            mapTitleDiv.remove();
-            mapTitleDiv = null;
-        }
+        currentLayers = {};  // Restablecer las capas cargadas
     }
 
     // Crear el mapa
@@ -31,29 +29,19 @@ export async function map_lum() {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
     }).addTo(currentMap);
 
-    // Si tienes una capa raster adicional, cárgala aquí
-    // Ejemplo:
-    // rasterLayer = L.tileLayer('URL_DE_TU_CAPA_RASTER', {
-    //     opacity: 1
-    // }).addTo(currentMap);
+    // Agregar la escala
+    L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
 
-    // Agregar escala métrica en la esquina superior derecha
-    L.control.scale({
-        position: 'topright', // Posición deseada
-        metric: true,
-        imperial: false
-    }).addTo(currentMap);
+    // Inicializar `overlayMaps` antes de usarlo
+    const overlayMaps = {};
 
-    // Agregar el título centrado al mapa
-    addCenteredTitle(currentMap);
-
-    // Cargar el archivo GeoJSON
+    // Cargar la capa GeoJSON
     try {
         const response = await fetch('/assets/vec/capas/3M_Class_Vector.geojson');
         const data = await response.json();
 
-        // Crear la capa GeoJSON y agregarla al mapa
-        geojsonLayer = L.geoJSON(data, {
+        // Crear la capa GeoJSON
+        const geojsonLayer = L.geoJSON(data, {
             style: function (feature) {
                 let gridcode = feature.properties.gridcode;
                 let fillColor;
@@ -86,8 +74,31 @@ export async function map_lum() {
             }
         }).addTo(currentMap);
 
-        // Ajustar los límites del mapa según los datos GeoJSON cargados
-        currentMap.fitBounds(geojsonLayer.getBounds());
+        // Agregar la capa al `overlayMaps`
+        overlayMaps["Luminosiad"] = geojsonLayer;
+    } catch (error) {
+        console.error('Error al cargar el archivo GeoJSON:', error);
+    }
+
+    // Cargar la capa de infraestructura crítica
+    let infCriticaLayer = await loadinf_critica();
+    if (infCriticaLayer) {
+        // Verificar si `infCriticaLayer` es un `L.Layer` o un objeto que contiene subcapas
+        if (infCriticaLayer instanceof L.Layer) {
+            overlayMaps["Infraestructura Crítica"] = infCriticaLayer;
+            infCriticaLayer.addTo(currentMap); // Opcional: agregarla al inicio
+        } else if (Array.isArray(infCriticaLayer) || typeof infCriticaLayer === 'object') {
+            // Envolver subcapas en un `L.layerGroup`
+            infCriticaLayer = L.layerGroup(Object.values(infCriticaLayer));
+            overlayMaps["Infraestructura Crítica"] = infCriticaLayer;
+            infCriticaLayer.addTo(currentMap);
+        } else {
+            console.error("La capa de infraestructura crítica no es un objeto de capa de Leaflet válido:", infCriticaLayer);
+        }
+    }
+
+    // Crear el control de capas y agregarlo al mapa
+    L.control.layers(null, overlayMaps).addTo(currentMap);
 
         // Llamar a la función para crear el slider de opacidad
         createOpacitySlider();
@@ -95,9 +106,7 @@ export async function map_lum() {
         // Agregar la leyenda al mapa
         addLegend();
 
-    } catch (error) {
-        console.error('Error al cargar el archivo GeoJSON:', error);
-    }
+
 
     // Función para crear el slider de opacidad y su funcionalidad
     function createOpacitySlider() {

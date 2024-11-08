@@ -7,10 +7,11 @@ export async function preprocessGeoJSON(url, currentMode) {
         if (!response.ok) throw new Error(`Failed to fetch data: ${response.statusText}`);
         const data = await response.json();
         data.features.forEach(feature => {
-            if (feature.properties && feature.properties.NO2 !== undefined) {
-                feature.properties.color = currentMode === 'yearly' 
-                    ? ToColorYear_z_b(feature.properties.NO2)
-                    : ToColorMonth_z_b(feature.properties.NO2);
+            if (feature.properties && feature.properties.NO2_median !== undefined) {
+                feature.properties.color = currentMode === 'yearly',
+                feature.properties.color = currentMode === 'monthly'  
+                    ? ToColorYear_z_b(feature.properties.NO2_median)
+                    : ToColorMonth_z_b(feature.properties.NO2_median);
             }
         });
         return data;
@@ -57,7 +58,7 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const NO2Formatted = properties.NO2.toFixed(2);
+        const NO2Formatted = properties.NO2_median.toFixed(2);
         new maplibregl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`
@@ -99,7 +100,7 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const NO2Formatted = properties.NO2.toFixed(2);
+        const NO2Formatted = properties.NO2_median.toFixed(2);
         new maplibregl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`

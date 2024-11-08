@@ -83,7 +83,7 @@ export function createDevLegendSVG() {
     return `
         <svg width="180" height="${calculatedHeight}" xmlns="http://www.w3.org/2000/svg">
             <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Indicador de deshierbe</text>
-            <text x="0" y="30" font-size="12" font-family="Arial">Desviación Estándar</text>
+            <text x="0" y="30" font-size="12" font-family="Arial">Desviación Estándar (DE)</text>
             ${legendItems}
         </svg>
     `;

@@ -194,7 +194,7 @@
     
               <!-- Tab 3 Content: Proyecciones -->
               <div class="tab-pane fade" id="tab3">
-                <p>La propuesta de escalamiento del producto final, como <strong>Plataforma de monitoreo satelital para la gestión y planificación de ciudades</strong>, se proyecta más allá del actual proyecto IDeA i+d, abarcando la expansión geográfica a todas las ciudades de la región de Valparaíso y a nivel nacional. Esto implica el acceso a información crucial y actualizada de indicadores urbano-ambientales recopilados a través de EO, respaldando la toma de decisiones estratégicas para promover la eficiencia y sostenibilidad urbana.</p>
+                <p>La propuesta de escalamiento del producto final, como <strong>Plataforma de monitoreo satelital para la gestión y planificación de ciudades</strong>, se proyecta más allá del actual proyecto IDeA i+d, abarcando la expansión geográfica a todas las ciudades de la región de Valparaíso y a nivel nacional. Esto implica el acceso a información crucial y actualizada de indicadores urbano-ambientales recopilados a través de EO  (Observaciòn de la Tierra), respaldando la toma de decisiones estratégicas para promover la eficiencia y sostenibilidad urbana.</p>
               </div>
               <!-- End Tab 3 Content -->
     
@@ -261,7 +261,7 @@
   </div>
   <div style = "display: flex; flex-direction: column; align-items: center;">
     <button id="ndviButtonstdev" onclick="toggleTable('ndviTablestdev', 'ndvi_stdev');" class="button-green-border" style="background-image: url('./assets/img/butom/stdev.gif'); width: 100px; height: 100px;"></button>
-    <span class = "ndvi-text" style="margin-top: 5px; font-size: 14px; text-align: center; display: none;">Areas Verdes</span>
+    <span class = "ndvi-text" style="margin-top: 5px; font-size: 14px; text-align: center; display: none;">Áreas Verdes</span>
   </div>
 
 </div>
@@ -1627,6 +1627,13 @@ function hideAllTables() {
 
         <div class="section-header">
           <h2>Contacto</h2>
+          <h4><p>
+            Subida Leopoldo Carvallo 270,<br>
+            2360004 Playa Ancha <br>
+            Valparaíso, Chile<br><br>
+            <strong>Email:</strong> plataforma.genius@upla.cl<br>
+            <strong>Phone:</strong> +56 32 220 5528<br>
+          </p></h4>
           
         </div>
 
@@ -1636,9 +1643,7 @@ function hideAllTables() {
         <div id="map-container" style="display: flex; justify-content: center; align-items: center;">
           <div id="map" style="width: 800px; height: 300px;"></div>
         </div>
-        
-
-        <!-- Script para inicializar el mapa -->
+                <!-- Script para inicializar el mapa -->
         <script>
           // Inicializar el mapa en las coordenadas específicas
           const map = L.map('map').setView([-33.0211815, -71.6416752], 16);
@@ -1654,6 +1659,7 @@ function hideAllTables() {
             .bindPopup('<b>TeleAmb</b><br />Universidad de Playa Ancha').openPopup();
         </script>
     </section><!-- End Contact Section -->
+
     <!-- ======= Clients Section ======= -->
     <section id="clients" class="clients">
       <div class="container" >

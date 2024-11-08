@@ -3,7 +3,8 @@ import { createMonthSelector, positionMonthSelector } from './no2_z_m/utils_z_m_
 import { LayersControl } from '../control.js';
 import { updateMapLayerYear, updateMapLayerMonth } from './no2_z_m/layer_z_m.js';
 import { createYearLegend, createMonthLegend } from './no2_z_m/legend.js';
-
+import {map_trend, createTrendLegend} from './no2_z_m/trend_m.js';
+import{ loadInfCriticaMapLibre } from '../inf_critica_map_libre.js';
 
 export async function map_no2_m() {
 
@@ -112,13 +113,18 @@ export async function map_no2_m() {
      monthSelectors.appendChild(afterMonthSelector);
      container.appendChild(monthSelectors);
    
-     const yearLegend = createYearLegend();
-     const monthLegend = createMonthLegend();
-     yearLegend.style.display = 'none';
-     monthLegend.style.display = 'none';
-     container.appendChild(yearLegend);
-     container.appendChild(monthLegend);
-   
+ // LEYENDAS
+ const yearLegend = createYearLegend();
+ const monthLegend = createMonthLegend();
+ const trendLegend = createTrendLegend(); // Nueva leyenda de tendencia
+ 
+ yearLegend.style.display = 'none';
+ monthLegend.style.display = 'none';
+ trendLegend.style.display = 'none';
+ 
+ container.appendChild(yearLegend);
+ container.appendChild(monthLegend);
+ container.appendChild(trendLegend);
      // Función para crear el slider de opacidad y su funcionalidad
      function createOpacitySlider() {
        // Crear el contenedor del slider de opacidad
@@ -394,23 +400,76 @@ export async function map_no2_m() {
        });
      }
    
-     function setMode(mode) {
-       // Remover todas las capas y fuentes del modo anterior
-       removeAllLayers(beforeMap);
-       removeAllLayers(afterMap);
-   
-       // Mostrar/ocultar los selectores y leyendas según el modo
-       yearSelectors.style.display = mode === 'yearly' ? 'block' : 'none';
-       monthSelectors.style.display = mode === 'yearly' ? 'none' : 'block';
-       yearLegend.style.display = mode === 'yearly' ? 'block' : 'none';
-       monthLegend.style.display = mode === 'yearly' ? 'none' : 'block';
-   
-       // Reiniciar los selectores para evitar selecciones inconsistentes
-       beforeYearSelector.value = '';
-       afterYearSelector.value = '';
-       beforeMonthSelector.value = '';
-       afterMonthSelector.value = '';
-     }
+     async function setMode(mode) {
+      // Remover todas las capas y fuentes del modo anterior
+      removeAllLayers(beforeMap);
+      removeAllLayers(afterMap);
+  
+      // Remover capa de tendencia si existe
+      if (beforeMap.getLayer('generic-trend-layer')) {
+          beforeMap.removeLayer('generic-trend-layer');
+          beforeMap.removeSource('generic-trend');
+      }
+      if (afterMap.getLayer('generic-trend-layer')) {
+          afterMap.removeLayer('generic-trend-layer');
+          afterMap.removeSource('generic-trend');
+      }
+  
+      // Mostrar/ocultar los selectores y leyendas según el modo
+      if (mode === 'yearly') {
+          yearSelectors.style.display = 'block';
+          monthSelectors.style.display = 'none';
+          yearLegend.style.display = 'block';
+          monthLegend.style.display = 'none';
+          trendLegend.style.display = 'none';
+      } else if (mode === 'monthly') {
+          yearSelectors.style.display = 'none';
+          monthSelectors.style.display = 'block';
+          yearLegend.style.display = 'none';
+          monthLegend.style.display = 'block';
+          trendLegend.style.display = 'none';
+      } else if (mode === 'trend') {
+          // Cargar capa de tendencia en ambos mapas
+          await map_trend(beforeMap);
+          await map_trend(afterMap);
+  
+          // Mostrar solo la leyenda de tendencia y ocultar otros selectores
+          yearSelectors.style.display = 'none';
+          monthSelectors.style.display = 'none';
+          yearLegend.style.display = 'none';
+          monthLegend.style.display = 'none';
+          trendLegend.style.display = 'block';
+  
+          // Ocultar el slider para dar la ilusión de un solo mapa
+          if (window.compareInstance && window.compareInstance.slider) {
+              window.compareInstance.slider.style.display = 'none';
+          }
+      } else if (mode === 'infraestructura') {
+          // Cargar la capa de infraestructura crítica en ambos mapas
+          try {
+              const infraLayerBefore = await loadInfCriticaMapLibre(beforeMap);
+              const infraLayerAfter = await loadInfCriticaMapLibre(afterMap);
+  
+              if (infraLayerBefore && infraLayerAfter) {
+              }
+  
+              // Mostrar/ocultar leyendas y selectores si es necesario
+              yearSelectors.style.display = 'none';
+              monthSelectors.style.display = 'none';
+              yearLegend.style.display = 'none';
+              monthLegend.style.display = 'none';
+              trendLegend.style.display = 'none';
+          } catch (error) {
+              console.error('Error al cargar la capa de infraestructura crítica:', error);
+          }
+      }
+  
+      // Reiniciar los selectores para evitar selecciones inconsistentes
+      beforeYearSelector.value = '';
+      afterYearSelector.value = '';
+      beforeMonthSelector.value = '';
+      afterMonthSelector.value = '';
+  }
    
      const controls = new LayersControl(setMode);
    
