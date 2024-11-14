@@ -80,8 +80,9 @@
           <li><a class="nav-link scrollto" href="index.html#about">Proyecto</a></li>
           <li><a class="nav-link scrollto" href="index.html#features">Visualizadores</a></li>
           <li><a class="nav-link scrollto" href="index.html#team">Equipo</a></li>
-          <li><a class="nav-link scrollto" href="index.html#clients">Instituciones</a></li>
           <li><a class="nav-link scrollto" href="index.html#contact">Contacto</a></li>
+          <li><a class="nav-link scrollto" href="index.html#clients">Instituciones</a></li>
+
        
         </nav><!-- .navbar -->
 
@@ -199,20 +200,28 @@
               <!-- End Tab 3 Content -->
     
               <!-- Tab 4 Content: Visualizadores -->
-              <div class="tab-pane fade" id="tab4">
+<!-- Tab 4 Content: Visualizadores -->
+<div class="tab-pane fade" id="tab4">
 
-                <p>La plataforma <strong>GENIUS</strong> ofrece un conjunto de visualizadores avanzados que permiten a los usuarios explorar diversos indicadores ambientales de manera detallada y a diferentes escalas. Estos visualizadores están diseñados para facilitar la toma de decisiones mediante el análisis temporal (anual y mensual) de datos geoespaciales.</p>
+  <!-- Enlaces para descargar PDFs -->
+  <p>
+    <a href="/assets/pdf/Manual.pdf" download>Manual De Usuario</a> |
+    <a href="/assets/pdf/Metodologia.pdf" download>Metodología</a>
+  </p>
 
-                <p><strong>Características generales de los visualizadores:</strong></p>
-                
-                <ul>
-                  <li><strong>Análisis por escala espacial:</strong> Los visualizadores ofrecen información a nivel de ciudad, barrio y manzana, permitiendo observar cambios y tendencias tanto a gran escala como en áreas más localizadas.</li>
-                  <li><strong>Comparación temporal:</strong> Los usuarios pueden explorar la variabilidad anual y mensual de los datos, lo que facilita la identificación de tendencias a largo plazo y fluctuaciones estacionales.</li>
-                  <li><strong>Perspectiva de tendencias y variabilidad:</strong> Los visualizadores permiten analizar no solo los valores actuales, sino también la tendencia a lo largo del tiempo y la desviación estándar, destacando áreas en riesgo o con mejoras significativas.</li>
-                  <li><strong>Herramientas interactivas:</strong> Los visualizadores incluyen herramientas como sliders para comparar diferentes períodos, escalas ajustables, leyendas dinámicas y la posibilidad de interactuar con los datos en gráficos y mapas, proporcionando una experiencia de análisis intuitiva y completa.</li>
-                </ul>
-                
-              </div>
+  <p>La plataforma <strong>GENIUS</strong> ofrece un conjunto de visualizadores avanzados que permiten a los usuarios explorar diversos indicadores ambientales de manera detallada y a diferentes escalas. Estos visualizadores están diseñados para facilitar la toma de decisiones mediante el análisis temporal (anual y mensual) de datos geoespaciales.</p>
+
+  <p><strong>Características generales de los visualizadores:</strong></p>
+  
+  <ul>
+    <li><strong>Análisis por escala espacial:</strong> Los visualizadores ofrecen información a nivel de ciudad, barrio y manzana, permitiendo observar cambios y tendencias tanto a gran escala como en áreas más localizadas.</li>
+    <li><strong>Comparación temporal:</strong> Los usuarios pueden explorar la variabilidad anual y mensual de los datos, lo que facilita la identificación de tendencias a largo plazo y fluctuaciones estacionales.</li>
+    <li><strong>Perspectiva de tendencias y variabilidad:</strong> Los visualizadores permiten analizar no solo los valores actuales, sino también la tendencia a lo largo del tiempo y la desviación estándar, destacando áreas en riesgo o con mejoras significativas.</li>
+    <li><strong>Herramientas interactivas:</strong> Los visualizadores incluyen herramientas como sliders para comparar diferentes períodos, escalas ajustables, leyendas dinámicas y la posibilidad de interactuar con los datos en gráficos y mapas, proporcionando una experiencia de análisis intuitiva y completa.</li>
+  </ul>
+  
+</div>
+
 
               <!-- End Tab 4 Content -->
     
@@ -238,7 +247,8 @@
               <img src="./assets/img/Iconos_Genius/GENIUS-NG-TEMP.png" onclick="toggleTButton()" alt="Islas De Calor">
               <img src="./assets/img/Iconos_Genius/GENIUS-NG-12.png" onclick="toggleAireButton()" alt="Calidad De Aire">
               <img src="./assets/img/Iconos_Genius/GENIUS-NG-13.png" onclick="toggleLumus()" alt="Luminosidad">
-              <img src="./assets/img/Iconos_Genius/GENIUS-NG-16.png" onclick="togglehu()" alt="Huella Urbana">      
+              <img src="./assets/img/Iconos_Genius/GENIUS-NG-16.png" onclick="togglehu()" alt="Huella Urbana"> 
+              <img src ="assets/img/Iconos_Genius/Multi_Capa.png" onclick="toggleMultiLayer()" alt="Multi Layer">     
             </div> 
 
             <!-- Botones NDVI -->
@@ -283,6 +293,11 @@
     <button id="tButtonPixel" onclick="toggleTable('tTable', 't');" class="button-orange-border" style="background-image: url('./assets/img/butom/pixel.gif'); width: 100px; height: 100px;"></button>
     <span class="t-text" style="margin-top: 5px; font-size: 14px; text-align: center; display: none;">Píxel</span>
 </div>
+
+<!-- <div style="display: flex; flex-direction: column; align-items: center;">
+  <button id="tButtonIslas" onclick="toggleTable('tTableIslas', 't_islas');" class="button-orange-border" style="background-image: url('./assets/img/butom/manzanas.gif'); width: 100px; height: 100px;"></button>
+  <span class="t-text" style="margin-top: 5px; font-size: 14px; text-align: center; display: none;">Isla De Calor</span>
+--> </div>
 
 </div>
 
@@ -512,6 +527,29 @@
                   </td>
                 </tr>
               </table>
+                <table id="tTableIslas">
+                  <tr>
+                    <td rowspan="2">
+                      <div id="p71" class="map-container" style="width: 1200px; height: 800px;"></div>
+                    </td>
+                    <td>
+                      <div id="p72" style="width: 550px; height: 400px;"></div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div id="p73" style="width: 550px; height: 400px;"></div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="2">
+                      <div id="p74" style="width: 100%; height: 500px; margin-top: 20px;"></div>
+                    </td> 
+                  </tr>
+                </table>
+
+
+
                                  <!-- Seccion de las tablas Calidad de aire -------------------------------->
                 <!-- seccion de tabla para AOD -->
                 <!-- Tabla AOD Pixel -->
@@ -713,7 +751,7 @@
               </table>
                                             <!-- Seccion de las tablas Luminosidad -------------------------------->
                   <!-- Tabla Luminosidad -->
-  <table id="IluTable" >
+                <table id="IluTable" >
                     <tr>
                       <td>
                         <div id="p46" class="map-container" style="width: 1800px; height: 800px;"></div>
@@ -776,6 +814,9 @@
 
   <!-- Leaflet GeoTIFF -->
   <script src="https://unpkg.com/leaflet-geotiff@2.4.0/Leaflet.Geotiff.js"></script>
+    <!-- ZIP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+
 
 
 
@@ -809,6 +850,11 @@
         import { map_t_zonal_m } from './assets/js/temp/map_t_z_m.js';
         import { g_t_a_z_m } from './assets/js/temp/g_t_anual_zonal_manzana.js';
         import { g_t_m_z_m } from './assets/js/temp/g_t_mes_zonal_manzana.js';
+        import { map_t_islas } from './assets/js/temp/map_t_islas.js';
+        import { g_a_t_islas } from './assets/js/temp/g_anual_t_islas.js';
+        import { g_m_t_islas } from './assets/js/temp/g_mensual_t_islas.js';
+        
+
       // archivos js para calidad de aire (AOD)
         import { map_aod_p } from './assets/js/qa/aod/map_aod_p.js';
         import { g_a_aod } from './assets/js/qa/aod/g_anual_aod.js';
@@ -884,6 +930,9 @@
           window.map_t_zonal_m = map_t_zonal_m;
           window.g_t_a_z_m = g_t_a_z_m;
           window.g_t_m_z_m = g_t_m_z_m;
+          window.map_t_islas = map_t_islas;
+          window.g_a_t_islas = g_a_t_islas;
+          window.g_m_t_islas = g_m_t_islas;
 
           // Funciones de AOD
           window.map_aod_p = map_aod_p;
@@ -1204,6 +1253,15 @@ function hideAllTables() {
                     window.g_t_a_z_m('p17');
                     window.g_t_m_z_m('p18');
                     window.text_lst('p55');
+                } else if (type === 't_islas') {
+                    document.getElementById('p71').innerHTML = '';
+                    document.getElementById('p72').innerHTML = '';
+                    document.getElementById('p73').innerHTML = '';
+                    document.getElementById('p74').innerHTML = '';
+                    window.mapInstance = map_t_islas('p71');
+                    window.g_a_t_islas('p72');
+                    window.g_m_t_islas('p73');
+                    window.text_lst('p74');
                 }
             } else if (type.startsWith('AOD')) {
                 if (type === 'AOD_P') {

@@ -11,7 +11,7 @@ function valueToSTColor(value) {
         "#75aaff", // Azul claro para valores positivos bajos
         "#4d66ff", // Azul medio para valores positivos moderados
         "#0313ff"  // Azul intenso para valores positivos altos
-    ];
+    ].reverse();
 
     // Calcular el índice con más precisión
     const step = (domain[1] - domain[0]) / (range.length - 1);
@@ -119,7 +119,7 @@ export function createTrendLegend() {
 
     // Título de la leyenda
     const title = document.createElement('div');
-    title.textContent = 'Tendencia LST Barrios';
+    title.textContent = 'Tendencia LST(°C) Barrios';
     title.style.fontSize = '12px';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '3px';
@@ -127,7 +127,7 @@ export function createTrendLegend() {
 
     // Subtítulo de la leyenda
     const subtitle = document.createElement('div');
-    subtitle.textContent = '2016 - 2023';
+    subtitle.textContent = '1995 - 2023';
     subtitle.style.fontSize = '10px';
     subtitle.style.color = '#555';
     subtitle.style.marginBottom = '5px';
@@ -136,7 +136,7 @@ export function createTrendLegend() {
     // Configuración de dominio y colores de la leyenda
     const domain = [0.013, 0.206];
     const steps = 7; // Solo 7 rangos
-    const colors = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"];
+    const colors = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse();
     const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 

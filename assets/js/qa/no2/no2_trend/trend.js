@@ -13,7 +13,7 @@ function valueToSTColor(value) {
         "#75aaff", // Azul claro para valores positivos bajos
         "#4d66ff", // Azul medio para valores positivos moderados
         "#0313ff"  // Azul intenso para valores positivos altos
-    ];
+    ].reverse();
 
     // Calcular el paso entre cada color en función del dominio
     const step = (domain[1] - domain[0]) / (range.length - 1);
@@ -78,7 +78,7 @@ export async function map_trend(map) {
 export function createSTLegendSVG() {
     const domain = [-7, 7]; // Mínimo y máximo para tendencia NO²
     const steps = 9; // Cantidad de bloques: 4 rojos, 1 blanco, 4 azules
-    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"]; // 4 colores para rojos y azules, blanco en el centro
+    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse(); // 4 colores para rojos y azules, blanco en el centro
 
     // Crear una escala secuencial con los colores interpolados
     const colorScale = d3.scaleSequential()
@@ -121,12 +121,12 @@ export function createSTLegendSVG() {
 
     // Crear el SVG completo
     return `
-        <svg width="165" height="${totalHeight + 80}" xmlns="http://www.w3.org/2000/svg">
+        <svg width="190" height="${totalHeight + 80}" xmlns="http://www.w3.org/2000/svg">
             <!-- Título principal alineado a la izquierda -->
-            <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Tendencia NO²</text>
+            <text x="0" y="20" font-size="12" font-family="Arial" font-weight="bold">Dióxido de Nitrógeno Tendencia</text>
 
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="5" y="40" font-size="12" font-family="Arial">2019 - 2023</text>
+            <text x="0" y="40" font-size="10" font-family="Arial">NO²(µmol/m²) 2019-2023</text>
 
             <!-- Bloques de colores -->
             ${legendItems}

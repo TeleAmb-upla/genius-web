@@ -31,7 +31,7 @@ export async function g_t_a_z_m() {
 svg.append("text")
    .attr("text-anchor", "end")
    .attr("x", width / 2 + margin.left - 60)
-   .attr("y", height + margin.top - 40)
+   .attr("y", height + margin.top - 35)
    .style("font-family", "Arial")
    .style("font-size", "12px")
    .text("Años");
@@ -43,7 +43,7 @@ svg.append("text")
    .attr("x", -margin.top - 30)
    .style("font-family", "Arial")
    .style("font-size", "12px")
-   .text("LST");
+   .text("LST  (C°)");
 
 // Parse the Data
 const data = await d3.csv("./assets/csv/LST_Anual.csv");
@@ -51,21 +51,25 @@ const data = await d3.csv("./assets/csv/LST_Anual.csv");
 // Format the data
 data.forEach(d => {
    d.Year = +d.Year;           // Convert Year to number
-   d.LST_median = +d.LST_median;    // Convert LST_median to number
+   d.LST_mean = +d.LST_mean;    // Convert LST_mean to number
 });
 
-// Find the minimum and maximum LST_median values
-const minNDVI = d3.min(data, d => d.LST_median);
-const maxNDVI = d3.max(data, d => d.LST_median);
+// Find the minimum and maximum LST_mean values
+const minNDVI = d3.min(data, d => d.LST_mean);
+const maxNDVI = d3.max(data, d => d.LST_mean);
 
-// Add X axis
 var x = d3.scaleBand()
-   .domain(data.map(d => d.Year))
-   .range([0, width])
-   
+    .domain(data.map(d => d.Year))
+    .range([0, width]);
+
 svg.append("g")
-   .attr("transform", "translate(0," + height + ")")
-   .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x).tickFormat(d3.format("d")))
+    .selectAll("text")
+    .style("text-anchor", "end") // Cambiar el anclaje del texto
+    .attr("dx", "-.8em")         // Desplazar ligeramente a la izquierda
+    .attr("dy", ".15em")         // Desplazar ligeramente hacia abajo
+    .attr("transform", "rotate(-75)"); // Rotar -75 grados
 
 // Add Y axis
 var y = d3.scaleLinear()
@@ -97,7 +101,7 @@ var mouseover = function (event, d) {
 
 var mousemove = function (event, d) {
    tooltip
-       .html("LST: " + d.LST_median.toFixed(2) + "<br>Año: " + d.Year)
+       .html("LST: " + d.LST_mean.toFixed(2) + "<br>Año: " + d.Year)
        .style("left", (event.pageX + 15) + "px")
        .style("top", (event.pageY - 15) + "px");
 }
@@ -112,7 +116,7 @@ var mouseleave = function (event, d) {
    // Add the line with smoothing and animation
 var line = d3.line()
 .x(d => x(d.Year) + x.bandwidth() / 2) // Ensure the line passes through the center of the band
-.y(d => y(d.LST_median))
+.y(d => y(d.LST_mean))
 .curve(d3.curveCatmullRom.alpha(0.5)); // Use curveCatmullRom for smoothing
 
 var animation = svg.append("path")
@@ -139,7 +143,7 @@ svg.append("g")
    .enter()
    .append("circle")
    .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
-   .attr("cy", d => y(d.LST_median))
+   .attr("cy", d => y(d.LST_mean))
    .attr("r", 4) // Larger radius for easier interaction
    .attr("fill", "steelblue")
    .attr("pointer-events", "all") // Ensure these circles capture mouse events

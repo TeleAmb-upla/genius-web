@@ -110,10 +110,18 @@ export function createMonthLegend() {
 
   // Dominio de valores para la leyenda
   const domain = [11.125,24.5];
-  const steps = 7; // Dividimos en 6 partes
+  const steps = 8; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
   // Colores fijos para cada parte de la leyenda
-  const colors =  ["#00E5FF", "#66C099", "#FFFF00", "#FF8800", "#FF0000", "#8B0000"];
+  // Colores fijos para cada parte de la leyenda
+  const colors =    [ '#333333', // black
+    '#0000FF', // blue
+    '#800080', // purple
+    '#00FFFF', // cyan
+    '#008000', // green
+    '#FFFF00', // yellow
+    '#FF0000'  // red
+  ];
 
   // Generar los valores para la leyenda
   const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);

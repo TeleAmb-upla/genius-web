@@ -68,7 +68,7 @@ export async function g_a_aod() {
         .attr("transform", "translate(0," + height + ")")
         .call(d3.axisBottom(x).tickFormat(d3.format("d")))
         .selectAll("text")  // Select all the text labels for the X axis
-        .attr("transform", "rotate(-90)")  // Rotate the labels
+        .attr("transform", "rotate(-75)")  // Rotate the labels
         .style("text-anchor", "end")  // Anchor text to the end
         .attr("dx", "-0.5em")  // Adjust the horizontal position
         .attr("dy", "-0.5em");  // Adjust the vertical position

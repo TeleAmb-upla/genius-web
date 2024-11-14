@@ -245,7 +245,22 @@ export async function map_ndvi() {
     
         // Eventos para mostrar/ocultar capas y selectores
         currentMap.on('overlayadd', function(event) {
-            // Eliminar la leyenda previa si existe
+            // Si existe un sideBySideControl previo, eliminarlo
+    if (sideBySideControl) {
+        sideBySideControl.remove();
+        sideBySideControl = null;
+    }
+
+    // Remover capas previas si existen
+    if (leftLayer) {
+        currentMap.removeLayer(leftLayer);
+        leftLayer = null;
+    }
+    if (rightLayer) {
+        currentMap.removeLayer(rightLayer);
+        rightLayer = null;
+    }
+// Eliminar la leyenda previa si existe
             if (legendDiv) {
                 legendDiv.remove();
             }
@@ -264,76 +279,83 @@ export async function map_ndvi() {
             currentMap.getContainer().appendChild(legendDiv);
     
             // Lógica para mostrar la leyenda y las capas según la capa seleccionada
-            switch (event.name) {
-                case "Anual":
-                    currentLayerType = 'Anual';
-                    yearLeftSelector.style.display = 'block';
-                    yearRightSelector.style.display = 'block';
-                    monthLeftSelector.style.display = 'none';
-                    monthRightSelector.style.display = 'none';
-                    legendDiv.innerHTML = createyearLegendSVG();
-    
-                    // Asignar los georasters correspondientes
-                    leftGeoraster = GeorastersYear[`NDVI ${currentLeftYear}`];
-                    rightGeoraster = GeorastersYear[`NDVI ${currentRightYear}`];
-    
-                    // Añadir las capas al mapa
-                    leftLayer = LayersYear[`NDVI ${currentLeftYear}`];
-                    rightLayer = LayersYear[`NDVI ${currentRightYear}`];
-                    currentMap.addLayer(leftLayer);
-                    currentMap.addLayer(rightLayer);
+// Dentro del evento overlayadd
+switch (event.name) {
+    case "Anual":
+        currentLayerType = 'Anual';
+        currentLayerTypeRef.value = 'Anual'; 
+        yearLeftSelector.style.display = 'block';
+        yearRightSelector.style.display = 'block';
+        monthLeftSelector.style.display = 'none';
+        monthRightSelector.style.display = 'none';
+        legendDiv.innerHTML = createyearLegendSVG();
 
-                    layers.leftLayer = leftLayer; // Actualizar layers
-                layers.rightLayer = rightLayer;
+        // Asignar los georasters correspondientes
+        leftGeoraster = GeorastersYear[`NDVI ${currentLeftYear}`];
+        rightGeoraster = GeorastersYear[`NDVI ${currentRightYear}`];
 
-                    // Agregar el control Side by Side
-                    sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
-                    break;
-                case "Mensual":
-                    currentLayerType = 'Mensual';
-                    monthLeftSelector.style.display = 'block';
-                    monthRightSelector.style.display = 'block';
-                    yearLeftSelector.style.display = 'none';
-                    yearRightSelector.style.display = 'none';
-                    legendDiv.innerHTML = createmonthLegendSVG();
-    
-                    // Asignar los georasters correspondientes
-                    leftGeoraster = GeorastersMonth[`NDVI ${currentLeftMonth}`];
-                    rightGeoraster = GeorastersMonth[`NDVI ${currentRightMonth}`];
-    
-                    // Añadir las capas al mapa
-                    leftLayer = LayersMonth[`NDVI ${currentLeftMonth}`];
-                    rightLayer = LayersMonth[`NDVI ${currentRightMonth}`];
-                    currentMap.addLayer(leftLayer);
-                    currentMap.addLayer(rightLayer);
-    
-                    
-                layers.leftLayer = leftLayer; // Actualizar layers
-                layers.rightLayer = rightLayer;
+        // Añadir las capas al mapa
+        leftLayer = LayersYear[`NDVI ${currentLeftYear}`];
+        rightLayer = LayersYear[`NDVI ${currentRightYear}`];
+        currentMap.addLayer(leftLayer);
+        currentMap.addLayer(rightLayer);
 
-                    // Agregar el control Side by Side
-                    sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
-                    break;
-                case "Tendencia":
-                    currentLayerType = 'Tendencia';
-                    // Ocultar selectores que no son necesarios
-                    yearLeftSelector.style.display = 'none';
-                    yearRightSelector.style.display = 'none';
-                    monthLeftSelector.style.display = 'none';
-                    monthRightSelector.style.display = 'none';
-    
-                    legendDiv.innerHTML = createSTLegendSVG();
-                    trendGeoraster = trendLayerData.georaster;
-    
-                    // Añadir la capa de tendencia al mapa si no está ya
-                    if (!currentMap.hasLayer(trendLayer)) {
-                        currentMap.addLayer(trendLayer);
-                    }
-                    
-                layers.trendLayer = trendLayer; // Actualizar layers
-                    break;
-                // Puedes manejar otros casos aquí si es necesario
-            }
+        layers.leftLayer = leftLayer; // Actualizar layers
+        layers.rightLayer = rightLayer;
+
+        // Crear y agregar el nuevo control Side by Side
+        sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
+        break;
+
+    case "Mensual":
+        currentLayerType = 'Mensual';
+        currentLayerTypeRef.value = 'Mensual';
+        monthLeftSelector.style.display = 'block';
+        monthRightSelector.style.display = 'block';
+        yearLeftSelector.style.display = 'none';
+        yearRightSelector.style.display = 'none';
+        legendDiv.innerHTML = createmonthLegendSVG();
+
+        // Asignar los georasters correspondientes
+        leftGeoraster = GeorastersMonth[`NDVI ${currentLeftMonth}`];
+        rightGeoraster = GeorastersMonth[`NDVI ${currentRightMonth}`];
+
+        // Añadir las capas al mapa
+        leftLayer = LayersMonth[`NDVI ${currentLeftMonth}`];
+        rightLayer = LayersMonth[`NDVI ${currentRightMonth}`];
+        currentMap.addLayer(leftLayer);
+        currentMap.addLayer(rightLayer);
+
+        layers.leftLayer = leftLayer; // Actualizar layers
+        layers.rightLayer = rightLayer;
+
+        // Crear y agregar el nuevo control Side by Side
+        sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
+        break;
+
+    case "Tendencia":
+        currentLayerType = 'Tendencia';
+        currentLayerTypeRef.value = 'Tendencia';
+        // Ocultar selectores que no son necesarios
+        yearLeftSelector.style.display = 'none';
+        yearRightSelector.style.display = 'none';
+        monthLeftSelector.style.display = 'none';
+        monthRightSelector.style.display = 'none';
+
+        legendDiv.innerHTML = createSTLegendSVG();
+        trendGeoraster = trendLayerData.georaster;
+
+        // Añadir la capa de tendencia al mapa si no está ya
+        if (!currentMap.hasLayer(trendLayer)) {
+            currentMap.addLayer(trendLayer);
+        }
+
+        layers.trendLayer = trendLayer; // Actualizar layers
+        break;
+
+    // Puedes manejar otros casos aquí si es necesario
+}
+
         });
     
         currentMap.on('overlayremove', function(event) {

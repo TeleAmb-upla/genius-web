@@ -165,24 +165,32 @@ export async function createOpacitySlider(map, layers, currentLayerTypeRef) {
       line.style.clip = 'rect(' + clipValue + ')';
     }
 
-    // Función para actualizar la opacidad y el indicador de porcentaje
     function updateOpacity(position) {
       // Calcular la opacidad basada en la posición del botón
       let opacity = 1 - (position / dragMax);
-      // Asegurarse de que la opacidad esté entre 0 y 1
       opacity = Math.max(0, Math.min(opacity, 1));
-
-      // Actualizar la opacidad de las capas
-      if (layers.leftLayer) {
-        layers.leftLayer.setOpacity(opacity);
-      }
-      if (layers.rightLayer) {
-        layers.rightLayer.setOpacity(opacity);
-      }
+  
+  
+      // Actualizar la opacidad de las capas según el tipo de capa actual
+      if (currentLayerTypeRef.value === 'Anual' || currentLayerTypeRef.value === 'Mensual') {
+          if (layers.leftLayer) {
+              layers.leftLayer.setOpacity(opacity);
+          }
+          if (layers.rightLayer) {
+              layers.rightLayer.setOpacity(opacity);
+          }
+      } else if (currentLayerTypeRef.value === 'Tendencia') {
+          if (layers.trendLayer) {
+              layers.trendLayer.setOpacity(opacity);
+          }
+  
       // Actualizar el indicador de porcentaje
       const percentageValue = Math.round(opacity * 100);
       percentageDisplay.textContent = `${percentageValue}%`;
-    }
+  }
+}
+  
+    
 
     // Eventos para los botones de más y menos
     plusButton.addEventListener('click', function() {

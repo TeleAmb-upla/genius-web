@@ -328,34 +328,33 @@ export async function map_so2_m() {
          percentageDisplay.textContent = `${percentageValue}%`;
        }
    
-       // Función para establecer la opacidad de las capas del mapa
+ 
        function setMapLayersOpacity(map, opacity) {
-         // Verificar si el estilo del mapa está cargado
-         if (!map.getStyle() || !map.getStyle().layers) return;
-   
-         const layers = map.getStyle().layers;
-   
-         layers.forEach((layer) => {
-           if (layer.id.startsWith('vectorLayer')) {
-             const layerType = map.getLayer(layer.id).type;
-             // Para capas de relleno (fill)
-             if (layerType === 'fill') {
-               map.setPaintProperty(layer.id, 'fill-opacity', opacity);
-             }
-             // Para capas de línea (line)
-             if (layerType === 'line') {
-               map.setPaintProperty(layer.id, 'line-opacity', opacity);
-             }
-             // Para capas de símbolos (symbol)
-             if (layerType === 'symbol') {
-               map.setPaintProperty(layer.id, 'icon-opacity', opacity);
-               map.setPaintProperty(layer.id, 'text-opacity', opacity);
-             }
-             // Agrega otros tipos de capas si es necesario
-           }
-         });
-       }
-   
+        // Verificar si el estilo del mapa está cargado
+        if (!map.getStyle() || !map.getStyle().layers) return;
+    
+        const layers = map.getStyle().layers;
+    
+        layers.forEach((layer) => {
+            // Ajustar la opacidad para capas relevantes
+            if (layer.id.startsWith('vectorLayer') || layer.id === 'generic-trend-layer') {
+                const layerType = map.getLayer(layer.id).type;
+    
+                // Ajustar opacidad según el tipo de capa
+                if (layerType === 'fill') {
+                    map.setPaintProperty(layer.id, 'fill-opacity', opacity);
+                } else if (layerType === 'line') {
+                    map.setPaintProperty(layer.id, 'line-opacity', opacity);
+                } else if (layerType === 'symbol') {
+                    map.setPaintProperty(layer.id, 'icon-opacity', opacity);
+                    map.setPaintProperty(layer.id, 'text-opacity', opacity);
+                } else if (layerType === 'raster') {
+                    map.setPaintProperty(layer.id, 'raster-opacity', opacity);
+                }
+                // Agrega otros tipos de capas si es necesario
+            }
+        });
+    }
        // Eventos para los botones de más y menos
        plusButton.addEventListener('click', function() {
          let currentTop = parseInt(draggableButton.style.top || '0', 10);

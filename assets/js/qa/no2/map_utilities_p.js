@@ -37,11 +37,11 @@ export function createyearLegendSVG() {
 
     // Retornar el SVG completo
     return `
-        <svg width="200" height="${55 + steps * 30}" xmlns="http://www.w3.org/2000/svg">
+        <svg width="300" height="${55 + steps * 30}" xmlns="http://www.w3.org/2000/svg">
             <!-- Título principal -->
-            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Dióxido de Nitrógeno Anual</text>
+            <text x="5" y="15" font-size="14" font-family="Arial" font-weight="bold">Dióxido de Nitrógeno Anual</text>
             <!-- Subtítulo -->
-            <text x="0" y="35" font-size="12" font-family="Arial" fill="#555">NO² (µmol/m²)</text>
+            <text x="5" y="35" font-size="12" font-family="Arial" fill="#555">NO² (µmol/m²)</text>
             <!-- Elementos de la leyenda -->
             ${legendItems}
         </svg>

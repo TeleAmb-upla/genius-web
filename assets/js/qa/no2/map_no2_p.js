@@ -255,11 +255,27 @@ export async function map_no2_p() {
 
    // Eventos para mostrar/ocultar capas y selectores
    currentMap.on('overlayadd', function(event) {
-       // Eliminar la leyenda previa si existe
-       if (legendDiv) {
-           legendDiv.remove();
-       }
-
+            // Si existe un sideBySideControl previo, eliminarlo
+            if (sideBySideControl) {
+                sideBySideControl.remove();
+                sideBySideControl = null;
+            }
+        
+            // Remover capas previas si existen
+            if (leftLayer) {
+                currentMap.removeLayer(leftLayer);
+                leftLayer = null;
+            }
+            if (rightLayer) {
+                currentMap.removeLayer(rightLayer);
+                rightLayer = null;
+            }
+        
+            // Eliminar la leyenda previa si existe
+            if (legendDiv) {
+                legendDiv.remove();
+                legendDiv = null;
+            }
        // Crear un nuevo div para la leyenda
        legendDiv = document.createElement('div');
        legendDiv.id = 'legend';
@@ -277,7 +293,7 @@ export async function map_no2_p() {
        switch (event.name) {
            case "Anual":
                currentLayerType = 'Anual';
-               currentLayerTypeRef.value = 'Anual'; // Actualizar referencia
+               currentLayerTypeRef.value = 'Anual'; 
                yearLeftSelector.style.display = 'block';
                yearRightSelector.style.display = 'block';
                monthLeftSelector.style.display = 'none';
@@ -302,6 +318,7 @@ export async function map_no2_p() {
                break;
            case "Mensual":
                currentLayerType = 'Mensual';
+                currentLayerTypeRef.value = 'Mensual';
                monthLeftSelector.style.display = 'block';
                monthRightSelector.style.display = 'block';
                yearLeftSelector.style.display = 'none';
@@ -326,7 +343,7 @@ export async function map_no2_p() {
                break;
            case "Tendencia":
                currentLayerType = 'Tendencia';
-               currentLayerTypeRef.value = 'Tendencia'; // Actualizar referencia
+                currentLayerTypeRef.value = 'Tendencia';
                // Ocultar selectores que no son necesarios
                yearLeftSelector.style.display = 'none';
                yearRightSelector.style.display = 'none';

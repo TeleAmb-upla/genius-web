@@ -43,7 +43,7 @@ export async function g_m_t() {
    .attr("x", -margin.top - 30)
    .style("font-family", "Arial")
    .style("font-size", "12px") 
-   .text("LST");
+   .text("LST (C°)");
    
     // Parse the Data
     const data = await d3.csv("/assets/csv/LST_Mensual.csv");

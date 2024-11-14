@@ -1,5 +1,7 @@
 import { addCenteredTitle } from './map_utilities_p.js';
 import { loadinf_critica } from '../inf_critica_leaflet.js';
+
+
 // Variables globales para almacenar el estado del mapa, las capas y el título
 // Variables globales para almacenar el estado del mapa, las capas y el título
 let currentMap = null;
@@ -31,7 +33,8 @@ export async function map_lum() {
 
     // Agregar la escala
     L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
-
+// Llamar a la función para agregar el título centrado
+addCenteredTitle(currentMap);
     // Inicializar `overlayMaps` antes de usarlo
     const overlayMaps = {};
 
@@ -41,7 +44,7 @@ export async function map_lum() {
         const data = await response.json();
 
         // Crear la capa GeoJSON
-        const geojsonLayer = L.geoJSON(data, {
+         geojsonLayer = L.geoJSON(data, {
             style: function (feature) {
                 let gridcode = feature.properties.gridcode;
                 let fillColor;
@@ -112,11 +115,11 @@ export async function map_lum() {
     function createOpacitySlider() {
         // Obtener el contenedor del mapa
         const mapContainer = currentMap.getContainer();
-
+    
         // Crear el contenedor del slider de opacidad
         const opacitySliderContainer = document.createElement('div');
         opacitySliderContainer.id = 'opacity-slider-container';
-
+    
         // Posicionar el slider en el centro derecha
         opacitySliderContainer.style.position = 'absolute';
         opacitySliderContainer.style.top = '50%';
@@ -124,7 +127,7 @@ export async function map_lum() {
         opacitySliderContainer.style.transform = 'translateY(-50%)';
         opacitySliderContainer.style.zIndex = '1000';
         opacitySliderContainer.style.userSelect = 'none';
-
+    
         // Agregar estilos CSS para el slider
         const style = document.createElement('style');
         style.type = 'text/css';
@@ -139,7 +142,7 @@ export async function map_lum() {
             position: relative;
             color: #866a62;
         }
-
+    
         .opacity-slider::before {
             content: "";
             width: 100%;
@@ -153,7 +156,7 @@ export async function map_lum() {
                 0 230px 0 0 #dedede,
                 0 229px 0 0 white;
         }
-
+    
         .buttons span {
             display: block;
             height: 50px;
@@ -162,7 +165,7 @@ export async function map_lum() {
             font-size: 24px;
             line-height: 18px;
         }
-
+    
         .drag-line {
             width: 8px;
             height: 182px;
@@ -171,7 +174,7 @@ export async function map_lum() {
             margin: 25px auto;
             position: relative;
         }
-
+    
         .line {
             width: 8px;
             height: 182px;
@@ -180,7 +183,7 @@ export async function map_lum() {
             position: absolute;
             top: 0;
         }
-
+    
         .draggable-button {
             width: 29px;
             height: 29px;
@@ -192,7 +195,7 @@ export async function map_lum() {
             cursor: pointer;
             top: 0; /* Inicialmente en la parte superior */
         }
-
+    
         /* Estilos para el indicador de porcentaje */
         .percentage-display {
             position: absolute;
@@ -204,45 +207,45 @@ export async function map_lum() {
         }
         `;
         document.head.appendChild(style);
-
+    
         // Crear el slider y sus componentes
         const opacitySlider = document.createElement('div');
         opacitySlider.className = 'opacity-slider';
         opacitySliderContainer.appendChild(opacitySlider);
-
+    
         // Crear el contenedor de los botones
         const buttons = document.createElement('div');
         buttons.className = 'buttons';
         opacitySlider.appendChild(buttons);
-
+    
         // Botón de más
         const plusButton = document.createElement('span');
         plusButton.textContent = '+';
         buttons.appendChild(plusButton);
-
+    
         // Contenedor de la línea y el botón draggable
         const dragLine = document.createElement('div');
         dragLine.className = 'drag-line';
         buttons.appendChild(dragLine);
-
+    
         const line = document.createElement('div');
         line.className = 'line';
         dragLine.appendChild(line);
-
+    
         const draggableButton = document.createElement('div');
         draggableButton.className = 'draggable-button';
         dragLine.appendChild(draggableButton);
-
+    
         // Crear el indicador de porcentaje
         const percentageDisplay = document.createElement('div');
         percentageDisplay.className = 'percentage-display';
         dragLine.appendChild(percentageDisplay);
-
+    
         // Botón de menos
         const minusButton = document.createElement('span');
         minusButton.textContent = '-';
         buttons.appendChild(minusButton);
-
+    
         // Evitar la propagación de eventos al mapa
         opacitySliderContainer.addEventListener('mousedown', (e) => {
             e.stopPropagation();
@@ -253,16 +256,16 @@ export async function map_lum() {
         opacitySliderContainer.addEventListener('mouseup', (e) => {
             e.stopPropagation();
         });
-
+    
         // Agregar el slider al contenedor del mapa
         mapContainer.appendChild(opacitySliderContainer);
-
+    
         // Variables para el arrastre
         let isDragging = false;
         let startY;
         let startTop;
         const dragMax = 182 - 29; // Altura de la línea menos la altura del botón
-
+    
         // Funciones para manejar el arrastre
         draggableButton.addEventListener('mousedown', function(e) {
             isDragging = true;
@@ -271,7 +274,7 @@ export async function map_lum() {
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
         });
-
+    
         function onMouseMove(e) {
             if (!isDragging) return;
             let deltaY = e.clientY - startY;
@@ -281,40 +284,36 @@ export async function map_lum() {
             updateLine(newTop);
             updateOpacity(newTop);
         }
-
+    
         function onMouseUp() {
             isDragging = false;
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
         }
-
+    
         // Función para actualizar la línea
         function updateLine(position) {
             // La línea debe recortarse desde la posición del botón hacia abajo
             line.style.clip = `rect(${position}px, 8px, 183px, 0px)`;
         }
-
+    
         // Función para actualizar la opacidad y el indicador de porcentaje
         function updateOpacity(position) {
             // Calcular la opacidad basada en la posición del botón
             let opacity = 1 - (position / dragMax);
             // Asegurarse de que la opacidad esté entre 0 y 1
             opacity = Math.max(0, Math.min(opacity, 1));
-
-            // Actualizar la opacidad de la capa deseada
-            // Si deseas ajustar la opacidad de la capa raster:
-            // rasterLayer.setOpacity(opacity);
-
-            // Si deseas ajustar la opacidad de la capa GeoJSON:
+    
+            // Actualizar la opacidad de la capa GeoJSON
             if (geojsonLayer) {
                 geojsonLayer.setStyle({ fillOpacity: opacity });
             }
-
+    
             // Actualizar el indicador de porcentaje
             const percentageValue = Math.round(opacity * 100);
             percentageDisplay.textContent = `${percentageValue}%`;
         }
-
+    
         // Eventos para los botones de más y menos
         plusButton.addEventListener('click', function() {
             let currentTop = parseInt(draggableButton.style.top || '0', 10);
@@ -324,7 +323,7 @@ export async function map_lum() {
             updateLine(newTop);
             updateOpacity(newTop);
         });
-
+    
         minusButton.addEventListener('click', function() {
             let currentTop = parseInt(draggableButton.style.top || '0', 10);
             let newTop = currentTop + 14;
@@ -333,11 +332,12 @@ export async function map_lum() {
             updateLine(newTop);
             updateOpacity(newTop);
         });
-
+    
         // Inicializar la línea y opacidad
         updateLine(0);
         updateOpacity(0);
     }
+    
 
     // Función para agregar la leyenda al mapa
     function addLegend() {
