@@ -10,8 +10,8 @@ const huYearlyFiles_tif = Array.from({ length: 6 }, (_, i) => {
 });
 
 const hucvsFiles_tif = [
-    { url: '/assets/csv/Huella_Urbana_Anual.csv', name: 'Huella_Urbana_Yearly.csv' },
-    { url: '/assets/csv/Areas_Huella_Urbana_Yearly.csv', name: 'Huella_Urbana_Yearly.csv' }
+    { url: '/assets/csv/Huella_Urbana_Anual.csv', name: 'Huella_Urbana_Anual.csv' },
+    { url: '/assets/csv/Areas_Huella_Urbana_Yearly.csv', name: 'Areas_Huella_Urbana.csv' }
 ];
 
 
