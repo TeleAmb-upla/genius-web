@@ -40,7 +40,7 @@ addCenteredTitle(currentMap);
 
     // Cargar la capa GeoJSON
     try {
-        const response = await fetch('/assets/vec/capas/3M_Class_Vector.geojson');
+        const response = await fetch('/assets/vec/capas/Quilpue_Class_Smoothed.geojson');
         const data = await response.json();
 
         // Crear la capa GeoJSON
@@ -64,8 +64,7 @@ addCenteredTitle(currentMap);
                     case 4:
                         fillColor = 'yellow'; // Amarillo (Alta)
                         break;
-                    default:
-                        fillColor = 'gray'; // Color por defecto
+                    
                 }
 
                 return {
