@@ -1179,12 +1179,12 @@ function toggleMultiLayer() {
     hideAllButtonContainers();
     hideAllTables();
 
-    var multiTable = document.getElementById('multi_capa');
-    if (multiTable) {
-        multiTable.style.display = 'none';
+    var table_multi_capa = document.getElementById('table_multi_capa');
+    if (table_multi_capa) {
+      table_multi_capa.style.display = 'none';
         setTimeout(() => {
-            multiTable.style.display = 'table';
-            window.mapInstance = multi_capa('multi_capa');
+          table_multi_capa.style.display = 'table';
+            window.mapInstance = multi_capa('table_multi_capa');
         }, 50);
     }
 }
@@ -1400,7 +1400,7 @@ function hideAllTables() {
                     window.g_a_hu('p48');
                     window.g_m_hu('p49');
                     window.text_hu('p66'); // Asegúrate de que estás llamando la función de la forma correcta
-                  } else if (type === 'multi_capa') { 
+                  } else if (type === 'MultiLayer') { 
                     document.getElementById('p75').innerHTML = '';  
                     document.getElementById('p76').innerHTML = '';  
                     window.mapInstance = multi_capa('p75');
