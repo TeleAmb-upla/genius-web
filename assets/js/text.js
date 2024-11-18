@@ -5,6 +5,7 @@ import {createAndDownloadno2Zip,createAndDownloadno2Zip_json_Barrio,createAndDow
 import {createAndDownloadso2Zip, createAndDownloadso2Zip_json_Barrio, createAndDownloadso2Zip_json_Manzanas} from './download/download_so2.js';
 import{createAndDownloadiluZip} from './download/download_ilu.js';
 import { createAndDownloadhuZip} from './download/download_hu.js';  
+import {createAndDownloadmultiZip} from './download/download_multi.js';
 
 // Función para crear y agregar contenido al contenedor especificado
 // Función para crear y agregar contenido al contenedor especificado
@@ -234,11 +235,15 @@ export async function text_hu() {
 
 export async function text_multi() {
     const multiContainers = ['p76']; 
+    const downloadLinks = [
+        { label: 'Descargar MultiCapa ZIP', action: createAndDownloadmultiZip },
+    ];
     addContentToContainer(multiContainers,
-        'Descripción  de Multi', 
-        'El Indicador de Multi es una herramienta que combina varios indicadores para proporcionar una visión integral de la ciudad. Este indicador permite a los planificadores y gestores territoriales analizar y comprender la interacción entre diferentes aspectos urbanos, como iluminación, Temperatura y RGB en una sola capa, facilitando la toma de decisiones informadas sobre la planificación y gestión urbana.',
-        'Metodología de Multi', 
-        'La metodología consistió en combinar los indicadores de RGB, Temperatura y iluminación en una sola capa, utilizando un sistema de ponderación para asignar un valor a cada indicador.', 
+        'Descripción de Multi', 
+        'El Indicador Multi es una herramienta que integra varias capas de información clave en una sola vista para ofrecer una comprensión integral de la Plaza Vieja. Combina: RGB (imágenes de color verdadero capturadas por drones, que muestran la realidad visual del entorno), Iluminación nocturna (datos obtenidos de imágenes de drones, procesados y clasificados para reflejar los niveles de luz) y Temperatura (datos precisos de la temperatura superficial de la Plaza Vieja). Esta herramienta permite a los planificadores y gestores urbanos analizar la interacción entre diferentes aspectos del espacio, facilitando decisiones informadas para la planificación y gestión de la Plaza Vieja.',
+        'Descargar MultiCapa ZIP', 
+        '', 
         '/assets/img/Iconos_Genius/GENIUS-multicapa.png',
+        downloadLinks
     );
 }
