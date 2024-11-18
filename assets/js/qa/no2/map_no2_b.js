@@ -14,7 +14,7 @@ export async function map_no2_b() {
     <div id="before_b_no2" style="width: 100%; height: 100%;"></div>
     <div id="after_b_no2" style="width: 100%; height: 100%;"></div>
 <div id="title" class="map-title">
-    NO² Estadística Zonal (Barrio)
+  NO<sub>2</sub> Estadística Zonal (Barrio)
     </div>
   `;
 

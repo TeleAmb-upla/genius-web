@@ -24,7 +24,7 @@ let trendGeoraster = null;
 
 let currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
 
-let currentLeftYear = "1995";
+let currentLeftYear = "1997";
 let currentRightYear = "2023";
 
 let currentLeftMonth = "01";

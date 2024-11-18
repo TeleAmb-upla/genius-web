@@ -115,9 +115,9 @@ export function createTrendLegend() {
     legendContent.style.textAlign = 'left';
     legendContent.style.fontFamily = 'Arial, sans-serif';
 
-    // Título de la leyenda
+    // Título de la leyenda con subíndice
     const title = document.createElement('div');
-    title.textContent = 'Tendencia NO² Manzanas';
+    title.innerHTML = 'Tendencia NO<sub>2</sub> Manzanas'; // Usar innerHTML para incluir el subíndice
     title.style.fontSize = '12px';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '3px';
@@ -134,7 +134,7 @@ export function createTrendLegend() {
     // Configuración de dominio y colores de la leyenda
     const domain = [-0.3, 0.3];
     const steps = 7; // Solo 7 rangos
-    const colors = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse();;
+    const colors = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse();
     const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 

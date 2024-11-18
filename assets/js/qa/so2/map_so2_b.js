@@ -13,7 +13,7 @@ export async function map_so2_b() {
     <div id="before_b_so2" style="width: 100%; height: 100%;"></div>
     <div id="after_b_so2" style="width: 100%; height: 100%;"></div>
 <div id="title" class="map-title">
-    SO² Estadística Zonal (Barrio)
+   SO<sub>2</sub> Área Urbana (píxel)
     </div>
   `;
 

@@ -13,7 +13,7 @@ export async function map_no2_m() {
       <div id="before_m_no2" style="width: 100%; height: 100%;"></div>
       <div id="after_m_no2" style="width: 100%; height: 100%;"></div>
 <div id="title" class="map-title">
-        NO² Estadística Zonal (Manzana)
+       NO<sub>2</sub> Estadística Zonal (Manzana)
       </div>
     `;
     const beforeMap = new maplibregl.Map({

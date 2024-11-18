@@ -22,20 +22,21 @@ export function createYearLegend() {
   title.style.marginBottom = '5px';
   legendContent.appendChild(title);
 
-  // Agregar subtítulo
+  // Agregar subtítulo con subíndice
   const subtitle = document.createElement('div');
-  subtitle.textContent = 'NO² (µmol/m²)';
+  subtitle.innerHTML = 'NO<sub>2</sub> (µmol/m²)'; // Usar innerHTML para incluir el subíndice
   subtitle.style.fontSize = '12px';
   subtitle.style.color = '#555'; // Color gris para diferenciar del título
   subtitle.style.marginBottom = '10px';
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda
-  const domain =  [12.267,13.676]; // O rangos
+  const domain = [12.267, 13.676]; // O rangos
   const steps = 7; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
 
-  const colors =  [ '#333333', // black
+  const colors = [
+    '#333333', // black
     '#0000FF', // blue
     '#800080', // purple
     '#00FFFF', // cyan
@@ -46,7 +47,6 @@ export function createYearLegend() {
 
   // Generar los valores para la leyenda
   const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
-
 
   // Crear el contenido de la leyenda en HTML con rangos
   Values.forEach((value, index) => {
@@ -74,10 +74,11 @@ export function createYearLegend() {
     legendItem.appendChild(label);
 
     legendContent.appendChild(legendItem);
-});
+  });
 
-return legendContent;
+  return legendContent;
 }
+
 
 export function createMonthLegend() {
   const legendContent = document.createElement('div');
@@ -100,21 +101,22 @@ export function createMonthLegend() {
   title.style.marginBottom = '5px';
   legendContent.appendChild(title);
 
-  // Agregar subtítulo
+  // Agregar subtítulo con subíndice
   const subtitle = document.createElement('div');
-  subtitle.textContent = 'NO² (µmol/m²)' ;
+  subtitle.innerHTML = 'NO<sub>2</sub> (µmol/m²)'; // Usar innerHTML para incluir el subíndice
   subtitle.style.fontSize = '12px';
   subtitle.style.color = '#555'; // Color gris para diferenciar del título
   subtitle.style.marginBottom = '10px';
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda
-  const domain = [11.25,23.63];
+  const domain = [11.25, 23.63];
   const steps = 7; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
 
-  // Colors 
-  const colors =  [ '#333333', // black
+  // Colores 
+  const colors =  [ 
+    '#333333', // black
     '#0000FF', // blue
     '#800080', // purple
     '#00FFFF', // cyan
@@ -152,7 +154,8 @@ export function createMonthLegend() {
     legendItem.appendChild(label);
 
     legendContent.appendChild(legendItem);
-});
+  });
 
-return legendContent;
+  return legendContent;
 }
+

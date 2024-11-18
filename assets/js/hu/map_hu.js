@@ -11,7 +11,8 @@ import { loadinf_critica } from '../inf_critica_leaflet.js';
 let currentMap = null;
 let currentLayers = {}; // Objeto para almacenar las capas cargadas
 let legendDiv = null; // Variable global para la leyenda
-
+let infCriticaLayer = null; // Variable global para la capa de infraestructura crítica
+let mapTitleDiv = null; // Variable global para el título del mapa
 export async function map_hu() {
     // Elimina el mapa y la leyenda si ya están inicializados
     if (currentMap) {

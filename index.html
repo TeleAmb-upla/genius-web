@@ -248,7 +248,7 @@
               <img src="./assets/img/Iconos_Genius/GENIUS-NG-12.png" onclick="toggleAireButton()" alt="Calidad De Aire">
               <img src="./assets/img/Iconos_Genius/GENIUS-NG-13.png" onclick="toggleLumus()" alt="Luminosidad">
               <img src="./assets/img/Iconos_Genius/GENIUS-NG-16.png" onclick="togglehu()" alt="Huella Urbana"> 
-              <img src ="./assets/img/Iconos_Genius/Multi_Capa.png" onclick="toggleMultiLayer()" alt="Multi Layer">     
+              <img src ="./assets/img/Iconos_Genius/GENIUS-multicapa.png" onclick="toggleMultiLayer()" alt="MultiLayer">     
             </div> 
 
             <!-- Botones NDVI -->
@@ -294,10 +294,11 @@
     <span class="t-text" style="margin-top: 5px; font-size: 14px; text-align: center; display: none;">Píxel</span>
 </div>
 
-<!-- <div style="display: flex; flex-direction: column; align-items: center;">
-  <button id="tButtonIslas" onclick="toggleTable('tTableIslas', 't_islas');" class="button-orange-border" style="background-image: url('./assets/img/butom/manzanas.gif'); width: 100px; height: 100px;"></button>
+ <div style="display: flex; flex-direction: column; align-items: center;">
+  <button id="tButtonIslas" onclick="toggleTable('tTableIslas', 't_islas');" class="button-orange-border" style="background-image: url('./assets/img/butom/isla_calor.gif'); width: 100px; height: 100px;"></button>
   <span class="t-text" style="margin-top: 5px; font-size: 14px; text-align: center; display: none;">Isla De Calor</span>
---> </div>
+ </div>
+</div>
 
           
                        <!-- Botones para Calidad De Aire -->
@@ -783,8 +784,20 @@
                     </tr>
                 </table>
                                             <!-- Seccion de las tablas Multi Layer -------------------------------->
-                                            
-                                          
+                  <!-- Tabla Multi Layer -->
+                  <table id="multi_capa" >
+                    <tr>
+                      <td>
+                        <div id="p75" class="map-container" style="width: 1800px; height: 800px;"></div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="2"> 
+                        <div id="p76" style="width: 100%; height: 500px; margin-top: 20px;"></div> 
+                      </td>
+                    </tr>
+              </table>
+
             
                                 </section>
           </div>
@@ -823,7 +836,7 @@
       <script type="module">
 
       // Textos para visualizar
-      import{text_ndvi , text_lst , text_aod, text_no2, text_so2, text_lum, text_hu} from './assets/js/text.js';
+      import{text_ndvi , text_lst , text_aod, text_no2, text_so2, text_lum, text_hu, text_multi} from './assets/js/text.js';
 
       // archivos js para area verde
         import { map_ndvi } from './assets/js/ndvi/map_ndvi.js';
@@ -894,6 +907,9 @@
         import { g_a_hu } from './assets/js/hu/g_anual_hu.js';
         import { g_m_hu } from './assets/js/hu/g_mensual_hu.js';
 
+        // multi layer
+        import { multi_capa } from './assets/js/multi/multi_capa.js';
+        
 
           /// Funcion global
           window.text_ndvi = text_ndvi;
@@ -971,6 +987,9 @@
           window.map_hu = map_hu;
           window.g_a_hu = g_a_hu;
           window.g_m_hu = g_m_hu;
+          // Funciones de multi layer
+          window.multi_capa = multi_capa;
+          window.text_multi = text_multi;
 
 
       </script>
@@ -1154,6 +1173,24 @@ function togglehu() {
         }, 50);
     }
 }
+
+function toggleMultiLayer() {
+    selectButton(document.querySelector('img[onclick="toggleMultiLayer()"]'));
+    hideAllButtonContainers();
+    hideAllTables();
+
+    var multiTable = document.getElementById('multi_capa');
+    if (multiTable) {
+        multiTable.style.display = 'none';
+        setTimeout(() => {
+            multiTable.style.display = 'table';
+            window.mapInstance = multi_capa('multi_capa');
+        }, 50);
+    }
+}
+
+
+
 
 function hideAllTables() {
     var allTables = document.querySelectorAll('table');
@@ -1363,16 +1400,22 @@ function hideAllTables() {
                     window.g_a_hu('p48');
                     window.g_m_hu('p49');
                     window.text_hu('p66'); // Asegúrate de que estás llamando la función de la forma correcta
-                  }
+                  } else if (type === 'multi_capa') { 
+                    document.getElementById('p75').innerHTML = '';  
+                    document.getElementById('p76').innerHTML = '';  
+                    window.mapInstance = multi_capa('p75');
+                    window.text_multi('p76'); // Asegúrate de que estás llamando la función de la forma correcta
             }
         }
     }
+  }
     
     window.onload = function() {
   // FUNCIONES para p65 p66 no cargaban correctamente.
 
     text_lum(); // Para p65
     text_hu();  // Para p66
+    text_multi(); // Para p76
 };
 
 
@@ -1385,6 +1428,7 @@ function hideAllTables() {
     window.toggleLumus = toggleLumus;
     window.togglehu = togglehu;
     window.toggleSubAireButtons = toggleSubAireButtons;
+    window.toggleMultiLayer = toggleMultiLayer;
     
     </script>
     

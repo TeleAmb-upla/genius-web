@@ -26,7 +26,9 @@ export async function g_a_no2_m() {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial")
-        .text("NO² Interanual Urbano de Quilpué");
+        .html(() => `
+        NO<tspan baseline-shift="sub">2</tspan> Interanual Urbano de Quilpué
+    `);
 
     // Titles for axes
     svg.append("text")
@@ -44,7 +46,9 @@ export async function g_a_no2_m() {
         .attr("x", -margin.top - 30)
         .style("font-family", "Arial")
         .style("font-size", "12px")
-        .text("NO²");
+        .html(() => `
+        NO<tspan baseline-shift="sub">2</tspan>
+    `);
 
     // Parse the Data
     const data = await d3.csv("/assets/csv/NO2_Anual_Comunal.csv");

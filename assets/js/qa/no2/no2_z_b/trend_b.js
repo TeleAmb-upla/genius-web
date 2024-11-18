@@ -102,7 +102,6 @@ export async function map_trend(map) {
 }
 
 
-
 export function createTrendLegend() {
     const legendContent = document.createElement('div');
     legendContent.id = 'trendLegend';
@@ -117,9 +116,9 @@ export function createTrendLegend() {
     legendContent.style.textAlign = 'left';
     legendContent.style.fontFamily = 'Arial, sans-serif';
 
-    // Título de la leyenda
+    // Título de la leyenda con subíndice
     const title = document.createElement('div');
-    title.textContent = 'Tendencia NO² Barrios';
+    title.innerHTML = 'Tendencia NO<sub>2</sub> Barrios'; // Usar innerHTML para incluir el subíndice
     title.style.fontSize = '12px';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '3px';
@@ -134,7 +133,7 @@ export function createTrendLegend() {
     legendContent.appendChild(subtitle);
 
     // Configuración de dominio y colores de la leyenda
-    const domain = [-0.1904,0.058];
+    const domain = [-0.1904, 0.058];
     const steps = 7; // Solo 7 rangos
     const colors = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse();
     const stepValue = (domain[1] - domain[0]) / (steps - 1);
@@ -178,5 +177,6 @@ export function createTrendLegend() {
 
     return legendContent;
 }
+
 
   

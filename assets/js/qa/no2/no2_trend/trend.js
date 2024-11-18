@@ -126,7 +126,7 @@ export function createSTLegendSVG() {
             <text x="0" y="20" font-size="12" font-family="Arial" font-weight="bold">Dióxido de Nitrógeno Tendencia</text>
 
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="0" y="40" font-size="10" font-family="Arial">NO²(µmol/m²) 2019-2023</text>
+            <text x="0" y="40" font-size="10" font-family="Arial">NO<tspan baseline-shift="sub">2</tspan>(µmol/m²) 2019-2023</text>
 
             <!-- Bloques de colores -->
             ${legendItems}

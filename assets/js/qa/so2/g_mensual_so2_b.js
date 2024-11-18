@@ -17,16 +17,16 @@ export async function g_m_so2_b() {
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    // Add title
-    svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", -margin.top / 2)
-        .attr("text-anchor", "middle")
-        .style("font-size", "14px")
-        .style("font-weight", "bold")
-        .style("font-family", "Arial") 
-        .text("SO² IntraAnual Urbano de Quilpué");
-
+// Add title
+svg.append("text")
+    .attr("x", width / 2)
+    .attr("y", -margin.top / 2)
+    .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("font-weight", "bold")
+    .style("font-family", "Arial")
+    .html(() => `
+        SO<tspan baseline-shift="sub">2</tspan> IntraAnual Regional `);
    // titulos ejes 
    svg.append("text")
    .attr("text-anchor", "end")
@@ -35,15 +35,17 @@ export async function g_m_so2_b() {
    .style("font-family", "Arial")
    .style("font-size", "12px")
    .text("Meses");
-
+   
    svg.append("text")
    .attr("text-anchor", "end")
    .attr("transform", "rotate(-90)")
    .attr("y", -margin.left + 60)
    .attr("x", -margin.top - 30)
    .style("font-family", "Arial")
-   .style("font-size", "12px") 
-   .text("SO²");
+   .style("font-size", "12px")
+   .html(() => `
+   SO<tspan baseline-shift="sub">2</tspan>
+   `);
    
     // Parse the Data
     const data = await d3.csv("/assets/csv/SO2_Mensual_Comunal.csv");

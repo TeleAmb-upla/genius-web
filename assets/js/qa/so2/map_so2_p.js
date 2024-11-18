@@ -74,8 +74,9 @@ export async function map_so2_p() {
   
    
 
-    // Actualizar el título del mapa
-    addCenteredTitle(currentMap, "SO² Área Urbana (píxel)");
+// Actualizar el título del mapa
+addCenteredTitle(currentMap, "SO<sub>2</sub> Área Urbana (píxel)");
+
 
 
     // Cargar capa de infraestructura crítica
@@ -152,7 +153,7 @@ export async function map_so2_p() {
     
             // Crear el título 
             const title = document.createElement('h4');
-            title.innerHTML = "SO²"; // Texto del título
+            title.innerHTML = "SO<sub>2</sub>"; // Texto del título
             title.classList.add('leaflet-control-title');
     
             // Crear el separador

@@ -1,6 +1,5 @@
 // loadLayersyear.js
-import {map_1995} from './js_anual/year_1995.js';
-import {map_1996} from './js_anual/year_1996.js';
+
 import {map_1997} from './js_anual/year_1997.js';
 import {map_1998} from './js_anual/year_1998.js';
 import {map_1999} from './js_anual/year_1999.js';
@@ -29,8 +28,6 @@ import { map_2022 } from './js_anual/year_2022.js';
 import { map_2023 } from './js_anual/year_2023.js';
 
 const Loaders = [
-    map_1995,
-    map_1996,
     map_1997,
     map_1998,
     map_1999,
@@ -61,7 +58,7 @@ const Loaders = [
 
 
 export async function loadLayersyear(map) {
-    const years = [1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023];
+    const years = [1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023];
     const Layers = {};
     const georasters = {};
     try {

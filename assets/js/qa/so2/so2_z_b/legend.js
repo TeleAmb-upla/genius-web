@@ -21,14 +21,14 @@ export function createYearLegend() {
   title.style.marginBottom = '5px';
   legendContent.appendChild(title);
 
-  // Agregar subtítulo
+  // Agregar subtítulo con subíndice
   const subtitle = document.createElement('div');
-  subtitle.textContent = 'SO² (µmol/m²)';
+  subtitle.innerHTML = 'SO<sub>2</sub> (µmol/m²)'; // Usar innerHTML para incluir el subíndice
   subtitle.style.fontSize = '12px';
   subtitle.style.color = '#555'; // Color gris para diferenciar del título
   subtitle.style.marginBottom = '10px';
   legendContent.appendChild(subtitle);
-
+  
   // Dominio de valores para la leyenda
   const domain =  [82,322]; // O rangos
   const steps = 7; // Dividimos en 6 partes
@@ -95,13 +95,13 @@ export function createMonthLegend() {
   title.style.marginBottom = '5px';
   legendContent.appendChild(title);
 
-  // Agregar subtítulo
-  const subtitle = document.createElement('div');
-  subtitle.textContent = 'SO² (µmol/m²)';
-  subtitle.style.fontSize = '12px';
-  subtitle.style.color = '#555'; // Color gris para diferenciar del título
-  subtitle.style.marginBottom = '10px';
-  legendContent.appendChild(subtitle);
+    // Agregar subtítulo con subíndice
+    const subtitle = document.createElement('div');
+    subtitle.innerHTML = 'SO<sub>2</sub> (µmol/m²)'; // Usar innerHTML para incluir el subíndice
+    subtitle.style.fontSize = '12px';
+    subtitle.style.color = '#555'; // Color gris para diferenciar del título
+    subtitle.style.marginBottom = '10px';
+    legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda
   const domain = [ 0,2768];

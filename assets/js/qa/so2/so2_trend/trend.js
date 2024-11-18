@@ -123,13 +123,12 @@ export function createSTLegendSVG() {
 
     // Crear el SVG completo
     return `
-        <svg width="165" height="${totalHeight + 80}" xmlns="http://www.w3.org/2000/svg">
+        <svg width="200" height="${totalHeight + 80}" xmlns="http://www.w3.org/2000/svg">
             <!-- Título principal alineado a la izquierda -->
-            <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Tendencia SO²</text>
+            <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Dióxido de Azufre Tendencia</text>
 
-            <!-- Subtítulo alineado a la izquierda -->
-            <text x="5" y="40" font-size="12" font-family="Arial">2016 - 2023</text>
-
+          <!-- Subtítulo alineado a la izquierda -->
+            <text x="0" y="40" font-size="10" font-family="Arial">SO<tspan baseline-shift="sub">2</tspan>(µmol/m²) 2016-2023</text>
             <!-- Bloques de colores -->
             ${legendItems}
 

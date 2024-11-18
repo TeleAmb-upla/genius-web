@@ -82,21 +82,21 @@ addCenteredTitle(currentMap);
         console.error('Error al cargar el archivo GeoJSON:', error);
     }
 
+  
     // Cargar la capa de infraestructura crítica
-    let infCriticaLayer = await loadinf_critica();
-    if (infCriticaLayer) {
-        // Verificar si `infCriticaLayer` es un `L.Layer` o un objeto que contiene subcapas
-        if (infCriticaLayer instanceof L.Layer) {
-            overlayMaps["Infraestructura Crítica"] = infCriticaLayer;
-            infCriticaLayer.addTo(currentMap); // Opcional: agregarla al inicio
-        } else if (Array.isArray(infCriticaLayer) || typeof infCriticaLayer === 'object') {
-            // Envolver subcapas en un `L.layerGroup`
-            infCriticaLayer = L.layerGroup(Object.values(infCriticaLayer));
-            overlayMaps["Infraestructura Crítica"] = infCriticaLayer;
-            infCriticaLayer.addTo(currentMap);
-        } else {
-            console.error("La capa de infraestructura crítica no es un objeto de capa de Leaflet válido:", infCriticaLayer);
-        }
+    const infCriticaLayer = await loadinf_critica(currentMap);
+    if (infCriticaLayer && typeof infCriticaLayer === 'object') {
+        // Convertir las subcapas en un `L.layerGroup`
+        const layersArray = Object.values(infCriticaLayer);
+        const infCriticaGroup = L.layerGroup(layersArray);
+
+        // Agregar la capa de infraestructura crítica al control de capas
+        overlayMaps["Infraestructura Crítica"] = infCriticaGroup;
+
+        // Opcional: agregar la capa al mapa directamente al inicio
+        infCriticaGroup.addTo(currentMap);
+    } else {
+        console.error("La capa de infraestructura crítica no es un objeto de capa de Leaflet válido:", infCriticaLayer);
     }
 
     // Crear el control de capas y agregarlo al mapa

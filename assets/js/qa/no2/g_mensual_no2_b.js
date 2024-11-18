@@ -17,15 +17,18 @@ export async function g_m_no2_b() {
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    // Add title
-    svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", -margin.top / 2)
-        .attr("text-anchor", "middle")
-        .style("font-size", "14px")
-        .style("font-weight", "bold")
-        .style("font-family", "Arial") 
-        .text("NO² IntraAnual Urbano de Quilpué");
+// Add title
+svg.append("text")
+    .attr("x", width / 2)
+    .attr("y", -margin.top / 2)
+    .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("font-weight", "bold")
+    .style("font-family", "Arial")
+    .html(() => `
+        NO<tspan baseline-shift="sub">2</tspan> IntraAnual Urbano de Quilpué
+    `);
+
 
    // titulos ejes 
    svg.append("text")
@@ -42,9 +45,10 @@ export async function g_m_no2_b() {
    .attr("y", -margin.left + 60)
    .attr("x", -margin.top - 30)
    .style("font-family", "Arial")
-   .style("font-size", "12px") 
-   .text("NO²");
-   
+   .style("font-size", "12px")
+   .html(() => `
+   NO<tspan baseline-shift="sub">2</tspan>
+`);
     // Parse the Data
     const data = await d3.csv("/assets/csv/NO2_Mensual_Comunal.csv");
 

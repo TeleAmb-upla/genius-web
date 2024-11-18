@@ -115,9 +115,9 @@ export function createTrendLegend() {
     legendContent.style.textAlign = 'left';
     legendContent.style.fontFamily = 'Arial, sans-serif';
 
-    // Título de la leyenda
+    // Título de la leyenda con subíndice
     const title = document.createElement('div');
-    title.textContent = 'Tendencia SO² Manzanas';
+    title.innerHTML = 'Tendencia SO<sub>2</sub> Barrios'; // Usar innerHTML para incluir el subíndice
     title.style.fontSize = '12px';
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '3px';
