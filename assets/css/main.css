@@ -2912,7 +2912,7 @@ button {
 #SO2Table_M,
 #IluTable,
 #huellatable,
-#multi_capa {
+#table_multi_capa {
     width: 80%; /* Ancho de las tablas */
     margin: 0 auto; /* Centrar las tablas horizontalmente */
     border-collapse: collapse; /* Colapsar los bordes */
