@@ -239,7 +239,7 @@ export async function text_multi() {
         { label: 'Descargar MultiCapa ZIP', action: createAndDownloadmultiZip },
     ];
     addContentToContainer(multiContainers,
-        'Descripción de Multi', 
+        'Descripción de MultiCapa', 
         'El Indicador Multi es una herramienta que integra varias capas de información clave en una sola vista para ofrecer una comprensión integral de la Plaza Vieja. Combina: RGB (imágenes de color verdadero capturadas por drones, que muestran la realidad visual del entorno), Iluminación nocturna (datos obtenidos de imágenes de drones, procesados y clasificados para reflejar los niveles de luz) y Temperatura (datos precisos de la temperatura superficial de la Plaza Vieja). Esta herramienta permite a los planificadores y gestores urbanos analizar la interacción entre diferentes aspectos del espacio, facilitando decisiones informadas para la planificación y gestión de la Plaza Vieja.',
         'Descargar MultiCapa ZIP', 
         '', 
