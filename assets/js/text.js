@@ -130,8 +130,8 @@ export async function text_ndvi() {
       // Definir los enlaces de descarga específicos de NDVI
       const downloadLinks = [
         { label: 'Descargar NDVI TIF ZIP', action: createAndDownloadNDVIZip_tif },
-        { label: 'Descargar NDVI JSON Manzanas ZIP', action: createAndDownloadNDVIZip_json_Manzanas },
-        { label: 'Descargar NDVI JSON Barrios ZIP', action: createAndDownloadNDVIZip_json_Barrio }
+        { label: 'Descargar NDVI GeoJson Manzanas ZIP', action: createAndDownloadNDVIZip_json_Manzanas },
+        { label: 'Descargar NDVI GeoJson Barrios ZIP', action: createAndDownloadNDVIZip_json_Barrio }
     ];
 
     addContentToContainer(ndviContainers, 
@@ -149,8 +149,8 @@ export async function text_lst() {
     const lstContainers = ['p53', 'p54', 'p55']; // Contenedores que mostrarán la misma información
     const downloadLinks = [
         { label: 'Descargar LST TIF ZIP', action: createAndDownloadlstZip_tif_lst },
-        { label: 'Descargar LST JSON Manzanas ZIP', action: createAndDownloadlstZip_json_Manzanas_lst },
-        { label: 'Descargar LST JSON Barrios ZIP', action:     createAndDownloadlstZip_json_Barrios_lst }
+        { label: 'Descargar LST GeoJson Manzanas ZIP', action: createAndDownloadlstZip_json_Manzanas_lst },
+        { label: 'Descargar LST GeoJson Barrios ZIP', action:     createAndDownloadlstZip_json_Barrios_lst }
     ];
     addContentToContainer(lstContainers, 
         'Descripción  de LST', 
@@ -168,8 +168,8 @@ export async function text_aod() {
 
     const downloadLinks = [
         { label: 'Descargar AOD TIF ZIP', action: createAndDownloadAODZip },
-        { label: 'Descargar AOD JSON Manzanas ZIP', action: createAndDownloadAODZip_json_Barrio },
-        { label: 'Descargar AOD JSON Barrios ZIP', action:     createAndDownloadAODZip_json_Manzanas }
+        { label: 'Descargar AOD GeoJson Manzanas ZIP', action: createAndDownloadAODZip_json_Barrio },
+        { label: 'Descargar AOD GeoJson Barrios ZIP', action:     createAndDownloadAODZip_json_Manzanas }
     ];
 
     addContentToContainer(aodContainers, 
@@ -188,8 +188,8 @@ export async function text_no2() {
     
         const downloadLinks = [
         { label: 'Descargar NO² TIF ZIP', action: createAndDownloadno2Zip },
-        { label: 'Descargar NO² JSON Manzanas ZIP', action: createAndDownloadno2Zip_json_Barrio },
-        { label: 'Descargar NO² JSON Barrios ZIP', action:     createAndDownloadno2Zip_json_Manzanas }
+        { label: 'Descargar NO² GeoJson Manzanas ZIP', action: createAndDownloadno2Zip_json_Barrio },
+        { label: 'Descargar NO² GeoJson Barrios ZIP', action:     createAndDownloadno2Zip_json_Manzanas }
     ];
     addContentToContainer(no2Containers, 
         'Descripción  de NO2', 
@@ -206,8 +206,8 @@ export async function text_so2() {
     const so2Containers = ['p62', 'p63', 'p64']; // Contenedores que mostrarán la misma información
     const downloadLinks = [
         { label: 'Descargar SO² TIF ZIP', action: createAndDownloadso2Zip },
-        { label: 'Descargar SO² JSON Manzanas ZIP', action: createAndDownloadso2Zip_json_Barrio },
-        { label: 'Descargar SO² JSON Barrios ZIP', action:     createAndDownloadso2Zip_json_Manzanas }
+        { label: 'Descargar SO² GeoJson Manzanas ZIP', action: createAndDownloadso2Zip_json_Barrio },
+        { label: 'Descargar SO² GeoJson Barrios ZIP', action:     createAndDownloadso2Zip_json_Manzanas }
     ];
     addContentToContainer(so2Containers, 
         'Descripción  de SO2', 
@@ -223,7 +223,7 @@ export async function text_so2() {
 export async function text_lum() {
     const lumContainer = ['p65']; // Contenedor que mostrará la información de Luminosidad
     const downloadLinks = [
-        { label: 'Descargar Iluminacion Json ZIP', action: createAndDownloadiluZip },
+        { label: 'Descargar Iluminacion GeoJson ZIP', action: createAndDownloadiluZip },
        
     ];
     addContentToContainer(lumContainer, 
@@ -273,7 +273,7 @@ export async function text_multi() {
 export async function text_isla(){
     const multiContainers = ['p74'];
     const downloadLinks = [
-        { label: 'Descargar Isla de calor ZIP', action: createAndDownloadislaZip },
+        { label: 'Descargar Isla de calor GeoJson ZIP', action: createAndDownloadislaZip },
     ];
     addContentToContainer(multiContainers,
         'Descripción de Isla de Calor', 
