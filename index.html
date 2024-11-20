@@ -836,7 +836,7 @@
       <script type="module">
 
       // Textos para visualizar
-      import{text_ndvi , text_lst , text_aod, text_no2, text_so2, text_lum, text_hu, text_multi} from './assets/js/text.js';
+      import{text_ndvi , text_lst , text_aod, text_no2, text_so2, text_lum, text_hu, text_multi, text_isla} from './assets/js/text.js';
 
       // archivos js para area verde
         import { map_ndvi } from './assets/js/ndvi/map_ndvi.js';
@@ -919,6 +919,8 @@
           window.text_so2 = text_so2;
           window.text_lum = text_lum;
           window.text_hu = text_hu;
+          window.text_isla = text_isla;
+          window.text_multi = text_multi;
 
           // Funciones de NDVI 
           window.map_ndvi = map_ndvi;
@@ -948,6 +950,7 @@
           window.map_t_islas = map_t_islas;
           window.g_a_t_islas = g_a_t_islas;
           window.g_m_t_islas = g_m_t_islas;
+         
 
           // Funciones de AOD
           window.map_aod_p = map_aod_p;
@@ -989,7 +992,7 @@
           window.g_m_hu = g_m_hu;
           // Funciones de multi layer
           window.multi_capa = multi_capa;
-          window.text_multi = text_multi;
+      
  
 
 
@@ -1298,7 +1301,7 @@ function hideAllTables() {
                     window.mapInstance = map_t_islas('p71');
                     window.g_a_t_islas('p72');
                     window.g_m_t_islas('p73');
-                    window.text_lst('p74');
+                    window.text_isla('p74');
                 }
             } else if (type.startsWith('AOD')) {
                 if (type === 'AOD_P') {
@@ -1417,6 +1420,7 @@ function hideAllTables() {
     text_lum(); // Para p65
     text_hu();  // Para p66
     text_multi(); // Para p76
+    text_isla(); // Para p74
 };
 
 

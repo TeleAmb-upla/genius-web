@@ -6,6 +6,7 @@ import {createAndDownloadso2Zip, createAndDownloadso2Zip_json_Barrio, createAndD
 import{createAndDownloadiluZip} from './download/download_ilu.js';
 import { createAndDownloadhuZip} from './download/download_hu.js';  
 import {createAndDownloadmultiZip} from './download/download_multi.js';
+import { createAndDownloadislaZip} from './download/download_isla.js';
 
 // Función para crear y agregar contenido al contenedor especificado
 // Función para crear y agregar contenido al contenedor especificado
@@ -25,10 +26,13 @@ function addContentToContainer(containerIds, titleMetodologia, textMetodologia, 
         const mainFlexContainer = document.createElement('div');
         Object.assign(mainFlexContainer.style, {
             display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'wrap', // Permitir que los elementos se envuelvan en pantallas pequeñas
             alignItems: 'flex-start',
             justifyContent: 'space-between',
             width: '100%',
-            height: '100%'
+            height: '100%',
+            gap: '20px' // Espacio entre elementos
         });
 
         // Crear los contenedores de Descripción y Metodología con títulos y textos dinámicos
@@ -47,8 +51,21 @@ function addContentToContainer(containerIds, titleMetodologia, textMetodologia, 
                 event.preventDefault();  // Evitar que el enlace navegue
                 downloadLinkData.action();  // Llama a la función de descarga específica
             };
-            downloadLink.style.display = 'block';
-            downloadLink.style.marginTop = '10px';
+            Object.assign(downloadLink.style, {
+                display: 'block',
+                marginTop: '10px',
+                color: '#007BFF',
+                textDecoration: 'none'
+            });
+
+            // Agregar un efecto de hover
+            downloadLink.onmouseover = () => {
+                downloadLink.style.textDecoration = 'underline';
+            };
+            downloadLink.onmouseout = () => {
+                downloadLink.style.textDecoration = 'none';
+            };
+
             descripcionContainer.appendChild(downloadLink);  // Agregar el enlace a la descripción
         });
 
@@ -66,21 +83,24 @@ function addContentToContainer(containerIds, titleMetodologia, textMetodologia, 
 function createTextContainer(title, textContent) {
     const container = document.createElement('div');
     Object.assign(container.style, {
-        width: '30%',
+        flex: '1 1 300px', // Flex-grow, flex-shrink, flex-basis
+        minWidth: '250px',
         marginRight: '20px',
-        fontFamily: 'Arial',
+        fontFamily: 'Arial, sans-serif',
         textAlign: 'justify'
     });
 
     const titleElement = document.createElement('h3');
     titleElement.textContent = title;
-    titleElement.style.fontFamily = 'Arial';
+    titleElement.style.fontFamily = 'Arial, sans-serif';
+    titleElement.style.fontSize = '1.2em'; // Tamaño de fuente relativo
 
     const paragraph = document.createElement('p');
     paragraph.style.margin = '15px 0';
     paragraph.style.lineHeight = '1.5';
-    paragraph.style.fontFamily = 'Arial';
+    paragraph.style.fontFamily = 'Arial, sans-serif';
     paragraph.style.textAlign = 'justify';
+    paragraph.style.fontSize = '1em'; // Tamaño de fuente relativo
     paragraph.textContent = textContent;
 
     container.appendChild(titleElement);
@@ -95,14 +115,15 @@ function createImage(src) {
     image.src = src;
     image.alt = 'Metodología de la imagen';
     Object.assign(image.style, {
-        maxWidth: '90%',
-        height: '100%',
-        width: '35%',
+        maxWidth: '100%', // Asegura que la imagen no exceda el contenedor
+        height: 'auto', // Mantiene la proporción de la imagen
+        flex: '1 1 200px', // Permite flexibilidad en el diseño
         objectFit: 'contain'
     });
 
     return image;
 }
+
 // Función para cargar texto específico de NDVI
 export async function text_ndvi() {
     const ndviContainers = ['p50', 'p51', 'p52', 'p70']; // Contenedores que mostrarán la misma información
@@ -125,7 +146,7 @@ export async function text_ndvi() {
 
 // Función para cargar texto específico de LST
 export async function text_lst() {
-    const lstContainers = ['p53', 'p54', 'p55', 'p74']; // Contenedores que mostrarán la misma información
+    const lstContainers = ['p53', 'p54', 'p55']; // Contenedores que mostrarán la misma información
     const downloadLinks = [
         { label: 'Descargar LST TIF ZIP', action: createAndDownloadlstZip_tif_lst },
         { label: 'Descargar LST JSON Manzanas ZIP', action: createAndDownloadlstZip_json_Manzanas_lst },
@@ -243,7 +264,28 @@ export async function text_multi() {
         'El Indicador Multi es una herramienta que integra varias capas de información clave en una sola vista para ofrecer una comprensión integral de la Plaza Vieja. Combina: RGB (imágenes de color verdadero capturadas por drones, que muestran la realidad visual del entorno), Iluminación nocturna (datos obtenidos de imágenes de drones, procesados y clasificados para reflejar los niveles de luz) y Temperatura (datos precisos de la temperatura superficial de la Plaza Vieja). Esta herramienta permite a los planificadores y gestores urbanos analizar la interacción entre diferentes aspectos del espacio, facilitando decisiones informadas para la planificación y gestión de la Plaza Vieja.',
         'Descargar MultiCapa ZIP', 
         '', 
-        '/assets/img/Iconos_Genius/GENIUS-multicapa.png',
+        './assets/img/Iconos_Genius/GENIUS-multicapa.png',
         downloadLinks
     );
+}
+
+
+export async function text_isla(){
+    const multiContainers = ['p74'];
+    const downloadLinks = [
+        { label: 'Descargar Isla de calor ZIP', action: createAndDownloadislaZip },
+    ];
+    addContentToContainer(multiContainers,
+        'Descripción de Isla de Calor', 
+        'Las islas de calor urbano de superficie (ICUs) son fenómenos generados por la diferencia de temperatura superficial (LST) entre áreas urbanas y rurales. Esta diferencia se puede expresar como: Δ°T = °T(urbano) − °T(rural). Las ICUs revelan la distribución térmica dentro de las ciudades, mostrando tanto puntos calientes (Hotspots) como puntos frescos (Coldspots). Su intensidad es generalmente mayor durante el día y varía según las estaciones del año, siendo más pronunciada en los meses de verano. Los valores de la LST, cuando se procesan para identificar estas islas de calor, se expresan en grados Celsius (°C) por consiguiente los valores expuestos también serán en estos valores.La zonificación y espacialización de las islas de calor son herramientas clave en la planificación urbana, ya que permiten identificar las áreas más afectadas y proponer estrategias efectivas para mitigar sus efectos negativos. Este enfoque contribuye a la creación de ciudades más sostenibles y equitativas, promoviendo una transición hacia entornos urbanos climáticamente más justos.',
+        'Metodología de Isla de Calor', 
+        'Para obtener los valores que conforman el visualizador, se utiliza la metodología propuesta por Sarricolea y Vide (2014). En este enfoque, se emplean los valores de temperatura previamente calculados para la temperatura superficial (LST), con todas sus especificaciones. A continuación, se identifica el píxel con el valor térmico más bajo, el cual se define como el representante del área rural. A este valor se le resta a cada una de las imágenes, lo que da como resultado un conjunto de valores que posteriormente se categorizan en cuatro clases: la clase 0, que corresponde a valores entre 0 y 3°C; la clase 1, que abarca valores de 3 a 6°C; la clase 2, para valores de 6 a 9°C; y la clase 3, que incluye valores superiores a los 9°C.', 
+        './assets/img/Iconos_Genius/GENIUS-NG-11.png',
+        downloadLinks
+    );
+
+
+
+
+
 }
