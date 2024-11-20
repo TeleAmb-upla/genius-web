@@ -277,15 +277,11 @@ export async function text_isla(){
     ];
     addContentToContainer(multiContainers,
         'Descripción de Isla de Calor', 
-        'Las islas de calor urbano de superficie (ICUs) son fenómenos generados por la diferencia de temperatura superficial (LST) entre áreas urbanas y rurales. Esta diferencia se puede expresar como: Δ°T = °T(urbano) − °T(rural). Las ICUs revelan la distribución térmica dentro de las ciudades, mostrando tanto puntos calientes (Hotspots) como puntos frescos (Coldspots). Su intensidad es generalmente mayor durante el día y varía según las estaciones del año, siendo más pronunciada en los meses de verano. Los valores de la LST, cuando se procesan para identificar estas islas de calor, se expresan en grados Celsius (°C) por consiguiente los valores expuestos también serán en estos valores.La zonificación y espacialización de las islas de calor son herramientas clave en la planificación urbana, ya que permiten identificar las áreas más afectadas y proponer estrategias efectivas para mitigar sus efectos negativos. Este enfoque contribuye a la creación de ciudades más sostenibles y equitativas, promoviendo una transición hacia entornos urbanos climáticamente más justos.',
-        'Metodología de Isla de Calor', 
         'Para obtener los valores que conforman el visualizador, se utiliza la metodología propuesta por Sarricolea y Vide (2014). En este enfoque, se emplean los valores de temperatura previamente calculados para la temperatura superficial (LST), con todas sus especificaciones. A continuación, se identifica el píxel con el valor térmico más bajo, el cual se define como el representante del área rural. A este valor se le resta a cada una de las imágenes, lo que da como resultado un conjunto de valores que posteriormente se categorizan en cuatro clases: la clase 0, que corresponde a valores entre 0 y 3°C; la clase 1, que abarca valores de 3 a 6°C; la clase 2, para valores de 6 a 9°C; y la clase 3, que incluye valores superiores a los 9°C.', 
+        'Metodología de Isla de Calor', 
+        'Las islas de calor urbano de superficie (ICUs) son fenómenos generados por la diferencia de temperatura superficial (LST) entre áreas urbanas y rurales. Esta diferencia se puede expresar como: Δ°T = °T(urbano) − °T(rural). Las ICUs revelan la distribución térmica dentro de las ciudades, mostrando tanto puntos calientes (Hotspots) como puntos frescos (Coldspots). Su intensidad es generalmente mayor durante el día y varía según las estaciones del año, siendo más pronunciada en los meses de verano. Los valores de la LST, cuando se procesan para identificar estas islas de calor, se expresan en grados Celsius (°C) por consiguiente los valores expuestos también serán en estos valores.La zonificación y espacialización de las islas de calor son herramientas clave en la planificación urbana, ya que permiten identificar las áreas más afectadas y proponer estrategias efectivas para mitigar sus efectos negativos. Este enfoque contribuye a la creación de ciudades más sostenibles y equitativas, promoviendo una transición hacia entornos urbanos climáticamente más justos.',
         './assets/img/Iconos_Genius/GENIUS-NG-11.png',
         downloadLinks
     );
-
-
-
-
 
 }
