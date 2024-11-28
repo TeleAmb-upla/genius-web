@@ -11,7 +11,7 @@ const range = [
     "#75aaff", // Azul claro para valores positivos bajos
     "#4d66ff", // Azul medio para valores positivos moderados
     "#0313ff"  // Azul intenso para valores positivos altos
-].reverse(); // Invertir el orden para que el rojo sea el primer color
+]; // Invertir el orden para que el rojo sea el primer color
 
 // Calcular el paso entre cada color en función del dominio
 const step = (domain[1] - domain[0]) / (range.length - 1);

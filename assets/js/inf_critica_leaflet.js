@@ -279,85 +279,62 @@ const subcategoryIcons = {
 
 // Función para cargar datos GeoJSON y configurar capas
 export async function loadinf_critica(currentMap) {
-    try {
-      const response = await fetch('/assets/vec/capas/intraestructura_critica.geojson');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-  
-      const data = await response.json();
-  
-      // Obtener categorías únicas y normalizadas
-      const categories = new Set();
-      data.features.forEach(feature => {
-        if (feature.properties.SUBCATEGOR) {
-          categories.add(normalizeSubcategory(feature.properties.SUBCATEGOR));
-        }
-      });
-  
-      // Crear un objeto para almacenar las capas
-      const categoryLayers = {};
-  
-      // Crear una capa para cada categoría
-      categories.forEach(category => {
-        const layerName = subcategoryNames[category] || category;
-  
-        // Filtrar las características para esta categoría
-        const categoryFeatures = data.features.filter(feature => normalizeSubcategory(feature.properties.SUBCATEGOR) === category);
-  
-        const layer = L.geoJSON(categoryFeatures, {
-          pointToLayer: function (feature, latlng) {
-            const subcategory = normalizeSubcategory(feature.properties.SUBCATEGOR);
-            const icon = subcategoryIcons[subcategory] || new L.Icon.Default();
-            return L.marker(latlng, { icon: icon });
-          },
-          onEachFeature: function (feature, layer) {
-            // Crear un tooltip para cada marcador
-            const properties = feature.properties;
-  
-            const tooltipContent = `
-              <strong>Categoria:</strong> ${properties.CATEGORIA}<br>
-              <strong>Sub-Categoría:</strong> ${properties.SUBCATEGOR}<br>
-              <strong>Nombre:</strong> ${properties.NOM_RBD}
-            `;
-            layer.bindTooltip(tooltipContent);
-          }
-        });
-  
-        // Añadir la capa al objeto de capas
-        categoryLayers[layerName] = layer;
-      });
-  
-      // Añadir lógica para controlar la visibilidad de las capas según el nivel de zoom
-      currentMap.on('zoomend', function () {
-        const currentZoom = currentMap.getZoom();
-  
-        // Nivel de zoom correspondiente a distancias aproximadas (ajusta según tu mapa):
-        // - Nivel >= 15 corresponde a aproximadamente 1 km o menos.
-        // - Nivel <= 14 corresponde a aproximadamente 3 km o más.
-  
-        if (currentZoom >= 14) {
-          // Mostrar todas las capas si el nivel de zoom es 15 o mayor (1 km o menos)
-          for (const layerName in categoryLayers) {
-            if (!currentMap.hasLayer(categoryLayers[layerName])) {
-              currentMap.addLayer(categoryLayers[layerName]);
-            }
-          }
-        } else if (currentZoom <= 13) {
-          // Ocultar todas las capas si el nivel de zoom es menor o igual a 14 (más de 3 km)
-          for (const layerName in categoryLayers) {
-            if (currentMap.hasLayer(categoryLayers[layerName])) {
-              currentMap.removeLayer(categoryLayers[layerName]);
-            }
-          }
-        }
-      });
-  
-      // Devolver las capas para usarlas más tarde, sin añadirlas automáticamente al mapa
-      return categoryLayers;
-  
-    } catch (error) {
-      console.error("Error al cargar el GeoJSON:", error);
+  try {
+    const response = await fetch('/assets/vec/capas/intraestructura_critica.geojson');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const data = await response.json();
+
+    // Obtener categorías únicas y normalizadas
+    const categories = new Set();
+    data.features.forEach(feature => {
+      if (feature.properties.SUBCATEGOR) {
+        categories.add(normalizeSubcategory(feature.properties.SUBCATEGOR));
+      }
+    });
+
+    // Crear un objeto para almacenar las capas
+    const categoryLayers = {};
+
+    // Crear una capa para cada categoría y añadirla al mapa
+    categories.forEach(category => {
+      const layerName = subcategoryNames[category] || category;
+
+      // Filtrar las características para esta categoría
+      const categoryFeatures = data.features.filter(feature => normalizeSubcategory(feature.properties.SUBCATEGOR) === category);
+
+      const layer = L.geoJSON(categoryFeatures, {
+        pointToLayer: function (feature, latlng) {
+          const subcategory = normalizeSubcategory(feature.properties.SUBCATEGOR);
+          const icon = subcategoryIcons[subcategory] || new L.Icon.Default();
+          return L.marker(latlng, { icon: icon });
+        },
+        onEachFeature: function (feature, layer) {
+          // Crear un tooltip para cada marcador
+          const properties = feature.properties;
+
+          const tooltipContent = `
+            <strong>Categoría:</strong> ${properties.CATEGORIA}<br>
+            <strong>Sub-Categoría:</strong> ${properties.SUBCATEGOR}<br>
+            <strong>Nombre:</strong> ${properties.NOM_RBD}
+          `;
+          layer.bindTooltip(tooltipContent);
+        }
+      });
+
+      // Añadir la capa al mapa directamente
+     // layer.addTo(currentMap);
+
+      // Añadir la capa al objeto de capas
+      categoryLayers[layerName] = layer;
+    });
+
+    // Devolver las capas si necesitas usarlas más tarde
+    return categoryLayers;
+
+  } catch (error) {
+    console.error("Error al cargar el GeoJSON:", error);
   }
-  
+}
