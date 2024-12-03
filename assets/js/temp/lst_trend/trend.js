@@ -3,14 +3,8 @@ function valueToSTColor(value) {
     const domain = [0, 0.44]; // mínimo y máximo
     // Paleta de colores invertida que representa los diferentes valores de NDVI
     const range = [
-        "#ff0000", // Rojo intenso para los valores negativos bajos
-        "#ff3d66", // Rojo medio para valores negativos moderados
-        "#ff75ad", // Rojo suave para valores negativos más cercanos a 0
-        "#ffffff", // Blanco para el valor 0
-        "#75aaff", // Azul claro para valores positivos bajos
-        "#4d66ff", // Azul medio para valores positivos moderados
-        "#0313ff"  // Azul intenso para valores positivos altos
-    ].reverse();
+        "#FFF2ED", "#FFB6B2", "#FF7977", "#FF3D3B", "#FF0000"
+    ]
     
     // Calcular el paso entre cada color en función del dominio
     const step = (domain[1] - domain[0]) / (range.length - 1);
@@ -63,7 +57,7 @@ export async function map_trend(map) {
 export function createSTLegendSVG() {
     const domain = [0, 0.44]; // Mínimo y máximo
     const steps = 6; // 3 tonos de rojo y 2 tonos de azul
-    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#75aaff", "#0313ff"].reverse(); // Tres rojos de intensidad decreciente y dos azules
+    const colorsBase = ["#FFF2ED", "#FFB6B2", "#FF7977", "#FF3D3B", "#FF0000"]; // Tres rojos de intensidad decreciente y dos azules
 
     // Crear una escala cuantizada que asigna rangos de dominio a colores específicos
     const colorScale = d3.scaleQuantize()
