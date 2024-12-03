@@ -35,7 +35,7 @@ export function createYearLegend() {
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
 
   
-  const colors =  ["#C3E934", "#335B01", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
+  const colors =   ["#335B01", "#C3E934", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
 
   // Generar los valores para la leyenda
   const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
@@ -62,7 +62,7 @@ export function createYearLegend() {
     colorBox.style.marginRight = '10px';
 
     const label = document.createElement('span');
-    label.textContent = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`; // Mostrar el rango
+    label.textContent = `${value.toFixed(0)} - ${nextValue.toFixed(0)}`; // Mostrar el rango
 
     legendItem.appendChild(colorBox);
     legendItem.appendChild(label);
@@ -109,7 +109,7 @@ export function createMonthLegend() {
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
 
   
-  const colors = ["#C3E934", "#335B01", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
+  const colors = ["#335B01", "#C3E934", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
 
   // Generar los valores para la leyenda
   const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
@@ -135,7 +135,7 @@ export function createMonthLegend() {
     colorBox.style.marginRight = '10px';
 
     const label = document.createElement('span');
-    label.textContent = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`; // Mostrar el rango
+    label.textContent = `${value.toFixed(0)} - ${nextValue.toFixed(0)}`; // Mostrar el rango
 
     legendItem.appendChild(colorBox);
     legendItem.appendChild(label);

@@ -6,7 +6,7 @@ export function createyearLegendSVG() {
     const steps = 7; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
 
-    const colors =  ["#C3E934", "#335B01", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
+    const colors =   ["#335B01", "#C3E934", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
 
     // Generar los valores de la leyenda
     const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
@@ -48,8 +48,7 @@ export function createmonthLegendSVG() {
     const steps = 7; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
     
-    const colors =  ["#C3E934", "#335B01", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
-
+    const colors =   ["#335B01", "#C3E934", "#FFE733", "#FFA500", "#FF4500", "#8B0000"];
     // Generar los valores de la leyenda
     const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 

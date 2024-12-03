@@ -44,5 +44,49 @@ export async function m_tem(map) {
         }
     });
 
+    // Manejador de clic
+    function onMapClick(e) {
+        const latlng = e.latlng;
+        const value = geoblaze.identify(georaster, [latlng.lng, latlng.lat]);
+
+        if (value && value.length > 0) {
+            const rasterValue = value[0];
+
+            // Mostrar el valor en un popup
+            L.popup()
+                .setLatLng(latlng)
+                .setContent(`<strong>Temperatura:</strong> ${rasterValue.toFixed(2)} °C`)
+                .openOn(map);
+        } else {
+            // No hay valor en esta ubicación
+            console.log('No se pudo obtener el valor del raster en esta ubicación');
+        }
+    }
+
+    // Manejador de movimiento del ratón
+    function onMapMouseMove(e) {
+        const value = geoblaze.identify(georaster, [e.latlng.lng, e.latlng.lat]);
+        if (value && value.length > 0 && !isNaN(value[0])) {
+            map.getContainer().style.cursor = 'pointer';
+        } else {
+            map.getContainer().style.cursor = '';
+        }
+    }
+
+    // Cuando la capa se añade al mapa, adjuntamos los eventos
+    layer.on('add', function () {
+        map.on('click', onMapClick);
+        map.on('mousemove', onMapMouseMove);
+    });
+
+    // Cuando la capa se elimina del mapa, eliminamos los eventos
+    layer.on('remove', function () {
+        map.off('click', onMapClick);
+        map.off('mousemove', onMapMouseMove);
+        // Restaurar el cursor
+        map.getContainer().style.cursor = '';
+    });
+
+    // No añadimos la capa al mapa aquí; se gestionará en multi_capa()
     return layer;
 }

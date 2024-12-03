@@ -56,19 +56,18 @@ export async function map_trend(map) {
     return { layer: Layer, georaster: georaster };
 }
 
-export function createSTLegendSVG() 
-{
-    const domain =[-0.1, 0.1]; // Mínimo y máximo
+export function createSTLegendSVG() {
+    const domain = [-0.1, 0.1]; // Mínimo y máximo
     const steps = 9; // Cantidad de bloques: 4 rojos, 1 blanco, 4 azules
-    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse(); // 4 colores para rojos y azules, blanco en el centro
+    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"]; // Colores sin invertir
 
     // Crear una escala secuencial con los colores interpolados
     const colorScale = d3.scaleSequential()
         .domain([0, steps - 1]) // Definir el dominio
         .interpolator(d3.interpolateRgbBasis(colorsBase)); // Interpolación entre los colores base
 
-    // Generar la paleta extendida de colores
-    const extendedColors = d3.range(steps).map(i => colorScale(i));
+    // Generar la paleta extendida de colores y revertir para tener positivos primero
+    const extendedColors = d3.range(steps).map(i => colorScale(i)).reverse();
 
     // Altura total del SVG y tamaño de cada bloque
     const blockHeight = 20; // Altura de cada bloque de color
@@ -85,15 +84,16 @@ export function createSTLegendSVG()
 
     // Crear etiquetas para los valores de cada bloque (escalados entre el dominio)
     const valueLabels = Array.from({ length: steps }, (_, i) => {
-        const value = (domain[0] + i * (domain[1] - domain[0]) / (steps - 1)).toFixed(2); // Redondear el valor
-        const nextValue = (domain[0] + (i + 1) * (domain[1] - domain[0]) / (steps - 1)).toFixed(2); // Valor siguiente para el rango
+        const reversedIndex = steps - 1 - i; // Invertir el índice para los labels
+        const value = parseFloat((domain[0] + reversedIndex * (domain[1] - domain[0]) / (steps - 1)).toFixed(2));
+        const nextValue = parseFloat((domain[0] + (reversedIndex + 1) * (domain[1] - domain[0]) / (steps - 1)).toFixed(2));
         const yPosition = 60 + i * blockHeight + blockHeight / 2 + 5;
 
         // Mostrar etiquetas con los rangos adecuados
         if (i === 0) {
             return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">&lt;${value}</text>`;
         } else if (i === steps - 1) {
-            return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">&gt;${value}</text>`; // Último bloque para >7.00
+            return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">&gt;${value}</text>`; // Último bloque para >0.1
         } else if (i === Math.floor(steps / 2)) {
             return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">0</text>`;
         } else {
@@ -118,3 +118,4 @@ export function createSTLegendSVG()
         </svg>
     `;
 }
+

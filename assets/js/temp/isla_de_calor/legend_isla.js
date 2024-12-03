@@ -35,10 +35,10 @@ export function legend_isla() {
 
     // Definir las clases y colores
     const classes = [
-        { label: '0: 0-3°C', color: '#FFFFFF' },
-        { label: '1: 3-6°C', color: '#FFCCCC' },
-        { label: '2: 6-9°C', color: '#FF6666' },
-        { label: '3: > 9°C', color: '#FF0000' }
+        { label: '(0): 0-3°C', color: '#FFFFFF' },
+        { label: '(1): 3-6°C', color: '#FFCCCC' },
+        { label: '(2): 6-9°C', color: '#FF6666' },
+        { label: '(3): > 9°C', color: '#FF0000' }
     ];
 
     // Crear elementos para cada clase
