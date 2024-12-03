@@ -378,7 +378,7 @@ switch (event.name) {
 
             // Crear y agregar el nuevo cuadro de texto adicional
             const additionalContent = `
-                <p>Aunque se observan tendencias en los datos, estas no son estadísticamente significativas, ya que el valor p es mayor a 0.05.</p>
+                <p>El análisis de los datos revela tendencias aparentes; sin embargo no se observan significancias estadísticas (p-value 0.05).</p>
             `;
             trendAdditionalTextDiv = createTrendAdditionalText(additionalContent);
             currentMap.getContainer().appendChild(trendAdditionalTextDiv);

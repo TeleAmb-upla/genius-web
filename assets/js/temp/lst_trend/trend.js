@@ -60,42 +60,41 @@ export async function map_trend(map) {
         return null;
     }
 }
-
 export function createSTLegendSVG() {
     const domain = [0, 0.44]; // Mínimo y máximo
-    const steps = 7; // Cantidad de bloques: 3 rojos, 1 blanco, 3 azules
-    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse(); // 3 colores para rojos y azules, blanco en el centro
+    const steps = 6; // 3 tonos de rojo y 2 tonos de azul
+    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#75aaff", "#0313ff"].reverse(); // Tres rojos de intensidad decreciente y dos azules
 
     // Crear una escala cuantizada que asigna rangos de dominio a colores específicos
     const colorScale = d3.scaleQuantize()
         .domain(domain) // [0, 0.44]
-        .range(colorsBase); // Array de 7 colores
-
+        .range(colorsBase); // Array de 5 colores
+    
     // Generar la paleta extendida de colores mapeando cada paso al valor correspondiente en el dominio
     const extendedColors = d3.range(steps).map(i => {
         const value = domain[0] + i * (domain[1] - domain[0]) / (steps - 1);
         return colorScale(value);
     });
-
+    
     // Altura total del SVG y tamaño de cada bloque
     const blockHeight = 20; // Altura de cada bloque de color
-    const totalHeight = blockHeight * steps; // La altura total es basada en los 7 bloques
-
+    const totalHeight = blockHeight * steps; // La altura total es basada en los 5 bloques
+    
     // Crear bloques de colores con bordes para diferenciarlos
     const legendItems = extendedColors.map((color, index) => {
         let yPosition = 60 + index * blockHeight;
-
+    
         return `
             <rect x="30" y="${yPosition}" width="20" height="${blockHeight}" style="fill:${color}; stroke:#000; stroke-width:0.5" />
         `;
     }).join('');
-
+    
     // Crear etiquetas para los valores de cada bloque (escalados entre el dominio)
     const valueLabels = Array.from({ length: steps }, (_, i) => {
         const value = (domain[0] + i * (domain[1] - domain[0]) / (steps - 1)).toFixed(2); // Redondear el valor
         const nextValue = (domain[0] + (i + 1) * (domain[1] - domain[0]) / (steps - 1)).toFixed(2); // Valor siguiente para el rango
         const yPosition = 60 + i * blockHeight + blockHeight / 2 + 5;
-
+    
         // Mostrar etiquetas con los rangos adecuados
         if (i === 0) {
             return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">&lt;${value}</text>`;
@@ -105,22 +104,25 @@ export function createSTLegendSVG() {
             return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">${value} - ${nextValue}</text>`;
         }
     }).join('');
-
+    
     // Crear el SVG completo
     return `
         <svg width="165" height="${totalHeight + 80}" xmlns="http://www.w3.org/2000/svg">
             <!-- Título principal alineado a la izquierda -->
             <text x="5" y="20" font-size="12" font-family="Arial" font-weight="bold">Tendencia LST(°C)</text>
-
+    
             <!-- Subtítulo alineado a la izquierda -->
             <text x="5" y="40" font-size="10" font-family="Arial">1995 - 2023</text>
-
+    
             <!-- Bloques de colores -->
             ${legendItems}
-
+    
             <!-- Etiquetas de valores -->
             ${valueLabels}
         </svg>
     `;
 }
+
+
+
 
