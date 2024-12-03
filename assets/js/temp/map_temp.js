@@ -15,6 +15,7 @@ let leftLayer = null;
 let rightLayer = null;
 let trendLayer = null; // Declarar trendLayer aquí
 let sideBySideControl = null;
+let trendAdditionalTextDiv = null; // Variable global para el cuadro de texto adicional
 
 let legendDiv = null; // Variable global para la leyenda
 
@@ -37,6 +38,23 @@ let layers = {
     rightLayer: null,
     trendLayer: null
 };
+
+
+
+function createTrendAdditionalText(content) {
+    const textDiv = document.createElement('div');
+    textDiv.id = 'trend-additional-text';
+    textDiv.style.position = 'absolute';
+    textDiv.style.top = 'calc(50% + 340px)'; // Ajusta este valor según la posición de la leyenda
+    textDiv.style.left = '10px';
+    textDiv.style.backgroundColor = 'white';
+    textDiv.style.padding = '10px';
+    textDiv.style.borderRadius = '8px';
+    textDiv.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
+    textDiv.style.zIndex = '1000';
+    textDiv.innerHTML = content;
+    return textDiv;
+}
 
 export async function map_t() {
     // Elimina el mapa y la leyenda si ya están inicializados
@@ -343,26 +361,37 @@ export async function map_t() {
                 // Agregar el control Side by Side
                 sideBySideControl = L.control.sideBySide(leftLayer, rightLayer).addTo(currentMap);
                 break;
-            case "Tendencia":
-                currentLayerType = 'Tendencia';
-                currentLayerTypeRef.value = 'Tendencia';
-                // Ocultar selectores que no son necesarios
-                yearLeftSelector.style.display = 'none';
-                yearRightSelector.style.display = 'none';
-                monthLeftSelector.style.display = 'none';
-                monthRightSelector.style.display = 'none';
-
-                legendDiv.innerHTML = createSTLegendSVG();
-                trendGeoraster = trendLayerData.georaster;
-
-                // Añadir la capa de tendencia al mapa si no está ya
-                if (!currentMap.hasLayer(trendLayer)) {
-                    currentMap.addLayer(trendLayer);
-                }
-
-                layers.trendLayer = trendLayer; // Actualizar layers
-
-                break;
+                case "Tendencia":
+                    currentLayerType = 'Tendencia';
+                    currentLayerTypeRef.value = 'Tendencia';
+                    // Ocultar selectores que no son necesarios
+                    yearLeftSelector.style.display = 'none';
+                    yearRightSelector.style.display = 'none';
+                    monthLeftSelector.style.display = 'none';
+                    monthRightSelector.style.display = 'none';
+                    
+                    // Actualizar la leyenda
+                    legendDiv.innerHTML = createSTLegendSVG();
+        
+                    // Asignar georaster de tendencia
+                    trendGeoraster = trendLayerData.georaster;
+        
+                    // Añadir la capa de tendencia al mapa si no está ya
+                    if (!currentMap.hasLayer(trendLayer)) {
+                        currentMap.addLayer(trendLayer);
+                    }
+        
+                    // Actualizar el objeto layers
+                    layers.trendLayer = trendLayer;
+        
+                    // Crear y agregar el nuevo cuadro de texto adicional
+                    const additionalContent = `
+                        <p>Aunque se observan tendencias en los datos, estas no son estadísticamente significativas, ya que el valor p es mayor a 0.05.</p>
+                    `;
+                    trendAdditionalTextDiv = createTrendAdditionalText(additionalContent);
+                    currentMap.getContainer().appendChild(trendAdditionalTextDiv);
+        
+                    break;
             // Puedes manejar otros casos aquí si es necesario
         }
     });
@@ -410,13 +439,18 @@ export async function map_t() {
                 currentMap.removeLayer(trendLayer);
             }
             trendGeoraster = null;
-            layers.trendLayer = null;
             if (currentLayerType === 'Tendencia') {
                 currentLayerType = null;
                 currentLayerTypeRef.value = null;
             }
+    
+            // Remover el cuadro de texto adicional si existe
+            if (trendAdditionalTextDiv) {
+                trendAdditionalTextDiv.remove();
+                trendAdditionalTextDiv = null;
+            }
         }
-
+    
         if (legendDiv) {
             legendDiv.innerHTML = '';
         }

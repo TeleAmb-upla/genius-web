@@ -6,12 +6,22 @@ const json = [
 
 ];
 
+const textFiles = [
+    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+];
+
+
+//Combina todos los archivos de lst en un solo array
+const allfiles = [...textFiles, ...json];
+
+
+
 // Función para crear y descargar un archivo ZIP con todos los archivos TIF de NDVI
 export async function createAndDownloadmultiZip() {
     const zip = new JSZip();
 
     // Agregar cada archivo TIF al ZIP
-    for (const file of json) {
+    for (const file of allfiles) {
         try {
             const response = await fetch(file.url);
             if (!response.ok) throw new Error(`Error al cargar ${file.url}`);

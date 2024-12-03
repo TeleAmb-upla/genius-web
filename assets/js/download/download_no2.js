@@ -73,13 +73,18 @@ const no2TrendFiles_json_Manzanas = [
 ];
 
 
+const textFiles = [
+    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+];
+
+
 
 // Combina todos los archivos de NDVI en un solo array
-const allno2Files = [...no2MonthlyFiles_tif, ...no2YearlyFiles_tif, ...no2TrendFiles_tif];
+const allno2Files = [...no2MonthlyFiles_tif, ...no2YearlyFiles_tif, ...no2TrendFiles_tif, ...textFiles];
 
-const allno2Files_json_Barrio = [...no2MonthlyFiles_json_Barrio, ...no2YearlyFiles_json_Barrio, ...no2TrendFiles_json_Barrio];
+const allno2Files_json_Barrio = [...no2MonthlyFiles_json_Barrio, ...no2YearlyFiles_json_Barrio, ...no2TrendFiles_json_Barrio, ...textFiles ];
 
-const allno2Files_json_Manzanas = [...no2MonthlyFiles_json_Manzanas, ...no2YearlyFiles_json_Manzanas, ...no2TrendFiles_json_Manzanas];
+const allno2Files_json_Manzanas = [...no2MonthlyFiles_json_Manzanas, ...no2YearlyFiles_json_Manzanas, ...no2TrendFiles_json_Manzanas, ...textFiles];
 
 
 // Función para crear y descargar un archivo ZIP con todos los archivos TIF de NDVI

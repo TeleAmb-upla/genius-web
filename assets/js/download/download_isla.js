@@ -10,12 +10,19 @@ const islaYearlyFiles_json = Array.from({ length: endYear - startYear + 1 }, (_,
     };
 });
 
+const textFiles = [
+    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+];
+
+
+// Combina todos los archivos de hu en un solo array
+const allhuFiles = [...islaYearlyFiles_json, ...textFiles];
 
 
 export async function createAndDownloadislaZip() {
     const zip = new JSZip();
 
-    for (const file of islaYearlyFiles_json) {
+    for (const file of allhuFiles) {
         try {
             const response = await fetch(file.url);
             if (!response.ok) throw new Error(`Error al cargar ${file.url}`);

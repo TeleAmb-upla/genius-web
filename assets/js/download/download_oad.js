@@ -76,14 +76,17 @@ const aodTrendFiles_json_Manzanas = [
     { url: '/assets/vec/raster/aod_pixel/AOD_Yearly/AOD_Anual.csv', name: 'AOD_Anual.csv' }
 ];
 
+const textFiles = [
+    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+];
 
 
 // Combina todos los archivos de NDVI en un solo array
-const allaodFiles = [...aodMonthlyFiles_tif, ...aodYearlyFiles_tif, ...aodTrendFiles_tif];
+const allaodFiles = [...aodMonthlyFiles_tif, ...aodYearlyFiles_tif, ...aodTrendFiles_tif, ...textFiles];
 
-const allaodFiles_json_Barrio = [...aodMonthlyFiles_json_Barrio, ...aodYearlyFiles_json_Barrio, ...aodTrendFiles_json_Barrio];
+const allaodFiles_json_Barrio = [...aodMonthlyFiles_json_Barrio, ...aodYearlyFiles_json_Barrio, ...aodTrendFiles_json_Barrio, ...textFiles ];
 
-const allaodFiles_json_Manzanas = [...aodMonthlyFiles_json_Manzanas, ...aodYearlyFiles_json_Manzanas, ...aodTrendFiles_json_Manzanas];
+const allaodFiles_json_Manzanas = [...aodMonthlyFiles_json_Manzanas, ...aodYearlyFiles_json_Manzanas, ...aodTrendFiles_json_Manzanas,  ...textFiles];
 
 
 // Función para crear y descargar un archivo ZIP con todos los archivos TIF de NDVI

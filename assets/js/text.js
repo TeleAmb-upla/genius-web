@@ -260,8 +260,8 @@ export async function text_multi() {
         { label: 'Descargar MultiCapa ZIP', action: createAndDownloadmultiZip },
     ];
     addContentToContainer(multiContainers,
-        'Descripción de MultiCapa', 
-        'El Indicador Multi es una herramienta que integra varias capas de información clave en una sola vista para ofrecer una comprensión integral de la Plaza Vieja. Combina: RGB (imágenes de color verdadero capturadas por drones, que muestran la realidad visual del entorno), Iluminación nocturna (datos obtenidos de imágenes de drones, procesados y clasificados para reflejar los niveles de luz) y Temperatura (datos precisos de la temperatura superficial de la Plaza Vieja). Esta herramienta permite a los planificadores y gestores urbanos analizar la interacción entre diferentes aspectos del espacio, facilitando decisiones informadas para la planificación y gestión de la Plaza Vieja.',
+        'Descripción de MultiCapa (Versión Beta)', 
+        'MultiCapa es una herramienta que integra múltiples capas de información en una sola visualización, diseñada para ofrecer una comprensión integral de un área de estudio. Esta herramienta combina datos clave, tales como: Imágenes de alta resolución en RGB: Imagen de color real capturadas por drones que permiten observar detalles como la materialidad e infraestructura con gran claridad. Iluminación nocturna: Información procesada y clasificada sobre los niveles de iluminación, obtenida también mediante drones, ideal para evaluar la calidad del alumbrado público. Temperatura superficial: Datos precisos capturados con drones y sensores térmicos para analizar patrones térmicos en la superficie en una resolución espacial de 12 centímetros. Gracias a esta integración, los planificadores y gestores urbanos pueden analizar cómo interactúan diferentes aspectos del espacio físico, lo que facilita la toma de decisiones informadas para la planificación y gestión territorial.',
         'Descargar MultiCapa ZIP', 
         '', 
         './assets/img/Iconos_Genius/GENIUS-multicapa.png',

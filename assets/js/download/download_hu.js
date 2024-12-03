@@ -15,11 +15,14 @@ const hucvsFiles_tif = [
 ];
 
 
+const textFiles = [
+    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+];
 
 
 
 // Combina todos los archivos de hu en un solo array
-const allhuFiles = [...huYearlyFiles_tif, ...hucvsFiles_tif];
+const allhuFiles = [...huYearlyFiles_tif, ...hucvsFiles_tif, ...textFiles];
 
 // Función para crear y descargar un archivo ZIP con todos los archivos TIF de hu
 export async function createAndDownloadhuZip() {

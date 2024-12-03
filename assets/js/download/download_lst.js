@@ -74,18 +74,21 @@ const lstTrendFiles_json_Manzanas = [
     { url: '/assets/vec/raster/lst_pixel/lst_Yearly/LST_Anual.csv', name: 'LST_Anual.csv' }
 ];
 
+const textFiles = [
+    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+];
 
 
 // Combina todos los archivos de lst en un solo array
-const alllstFiles_tif = [...lstMonthlyFiles_tif, ...lstYearlyFiles_tif, ...lstTrendFiles_tif];
+const alllstFiles_tif = [...lstMonthlyFiles_tif, ...lstYearlyFiles_tif, ...lstTrendFiles_tif, ...textFiles];
 
 // Combina todos los archivos de lst en un solo array
 
-const alllstFiles_json_Barrio = [...lstMonthlyFiles_json_Barrio, ...lstYearlyFiles_json_Barrio, ...lstTrendFiles_json_Barrio];
+const alllstFiles_json_Barrio = [...lstMonthlyFiles_json_Barrio, ...lstYearlyFiles_json_Barrio, ...lstTrendFiles_json_Barrio, ...textFiles];
 
 // Combina todos los archivos de lst en un solo array
 
-const alllstFiles_json_Manzanas = [...lstMonthlyFiles_json_Manzanas, ...lstYearlyFiles_json_Manzanas, ...lstTrendFiles_json_Manzanas];
+const alllstFiles_json_Manzanas = [...lstMonthlyFiles_json_Manzanas, ...lstYearlyFiles_json_Manzanas, ...lstTrendFiles_json_Manzanas, ...textFiles];
 
 
 // Función para crear y descargar un archivo ZIP con todos los archivos TIF de lst

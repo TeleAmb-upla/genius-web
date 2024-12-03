@@ -76,12 +76,20 @@ const ndviTrendFiles_json_Manzanas = [
     { url: '/assets/vec/raster/NDVI_pixel/NDVI_Yearly/NDVI_Anual.csv', name: 'NDVI_Anual.csv' },
 ];
 
+
+const textFiles = [
+    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+];
+
+
+
+
 // Combina todos los archivos de NDVI en un solo array PARA TIFF
-const allNdviFiles_tif = [...ndviMonthlyFiles_tif, ...ndviYearlyFiles_tif, ...ndviTrendFiles_tif];
+const allNdviFiles_tif = [...ndviMonthlyFiles_tif, ...ndviYearlyFiles_tif, ...ndviTrendFiles_tif, ...textFiles];
 // Combina todos los archivos de NDVI en un solo array PARA TIFF
-const allNdviFiles_json_Barrio = [...ndviMonthlyFiles_json_Barrio, ...ndviYearlyFiles_json_Barrio, ...ndviTrendFiles_json_Barrio];
+const allNdviFiles_json_Barrio = [...ndviMonthlyFiles_json_Barrio, ...ndviYearlyFiles_json_Barrio, ...ndviTrendFiles_json_Barrio, ...textFiles ];
 // Combina todos los archivos de NDVI en un solo array PARA TIFF
-const allNdviFiles_json_Manzanas = [...ndviMonthlyFiles_json_Manzanas, ...ndviYearlyFiles_json_Manzanas, ...ndviTrendFiles_json_Manzanas];
+const allNdviFiles_json_Manzanas = [...ndviMonthlyFiles_json_Manzanas, ...ndviYearlyFiles_json_Manzanas, ...ndviTrendFiles_json_Manzanas, ...textFiles];
 
 
 

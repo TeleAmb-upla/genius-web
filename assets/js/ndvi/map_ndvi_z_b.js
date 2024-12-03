@@ -6,8 +6,29 @@ import { createYearLegend, createMonthLegend } from './ndvi_z_b/legend.js';
 import {map_trend, createTrendLegend} from './ndvi_z_b/trend_b.js';
 import{ loadInfCriticaMapLibre } from '../inf_critica_map_libre.js';
 
+let trendAdditionalTextDiv = null; // Variable global para el cuadro de texto adicional
 
 export async function map_ndvi_zonal_b() {
+
+  function createTrendAdditionalText(content) {
+    const textDiv = document.createElement('div');
+    textDiv.id = 'trend-additional-text';
+    
+    // Estilos para el cuadro de texto
+    textDiv.style.position = 'absolute';
+    textDiv.style.top = 'calc(50% + 100px)'; // Ajusta este valor según la posición de la leyenda
+    textDiv.style.left = '10px'; // Alineado con la leyenda
+    textDiv.style.backgroundColor = 'white';
+    textDiv.style.padding = '10px';
+    textDiv.style.borderRadius = '8px';
+    textDiv.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
+    textDiv.style.zIndex = '1000';
+    textDiv.style.width = '200px'; // Ajusta el ancho según necesidad
+    textDiv.innerHTML = content;
+    
+    return textDiv;
+  }
+  
 
   const container = document.getElementById('p04');
   container.innerHTML = `
@@ -379,6 +400,28 @@ const afterMap = new maplibregl.Map({
      updateOpacity(0);
    }
  
+  // Definir la función para crear el cuadro de texto adicional
+  function createTrendAdditionalText(content) {
+    const textDiv = document.createElement('div');
+    textDiv.id = 'trend-additional-text';
+    
+    // Estilos para el cuadro de texto
+    textDiv.style.position = 'absolute';
+    textDiv.style.top = 'calc(50% + 100px)'; // Ajusta este valor según la posición de la leyenda
+    textDiv.style.left = '10px'; // Alineado con la leyenda
+    textDiv.style.backgroundColor = 'white';
+    textDiv.style.padding = '10px';
+    textDiv.style.borderRadius = '8px';
+    textDiv.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
+    textDiv.style.zIndex = '1000';
+    textDiv.style.width = '200px'; // Ajusta el ancho según necesidad
+    textDiv.innerHTML = content;
+    
+    return textDiv;
+  }
+
+
+
    function removeAllLayers(map) {
      const layers = map.getStyle().layers;
      if (!layers) return;
@@ -431,21 +474,29 @@ const afterMap = new maplibregl.Map({
         monthLegend.style.display = 'block';
         trendLegend.style.display = 'none';
     } else if (mode === 'trend') {
-        // Cargar capa de tendencia en ambos mapas
-        await map_trend(beforeMap);
-        await map_trend(afterMap);
+      // Cargar capa de tendencia en ambos mapas
+      await map_trend(beforeMap);
+      await map_trend(afterMap);
 
-        // Mostrar solo la leyenda de tendencia y ocultar otros selectores
-        yearSelectors.style.display = 'none';
-        monthSelectors.style.display = 'none';
-        yearLegend.style.display = 'none';
-        monthLegend.style.display = 'none';
-        trendLegend.style.display = 'block';
+      // Mostrar solo la leyenda de tendencia y ocultar otros selectores
+      yearSelectors.style.display = 'none';
+      monthSelectors.style.display = 'none';
+      yearLegend.style.display = 'none';
+      monthLegend.style.display = 'none';
+      trendLegend.style.display = 'block';
 
-        // Ocultar el slider para dar la ilusión de un solo mapa
-        if (window.compareInstance && window.compareInstance.slider) {
-            window.compareInstance.slider.style.display = 'none';
-        }
+      // Ocultar el slider para dar la ilusión de un solo mapa
+      if (window.compareInstance && window.compareInstance.slider) {
+        window.compareInstance.slider.style.display = 'none';
+      }
+      /*  
+      // Crear y agregar el nuevo cuadro de texto adicional
+      const additionalContent = `
+        <p>Este análisis muestra la tendencia del NDVI en los últimos años, indicando áreas de crecimiento o declive en la vegetación urbana.</p>
+      `;
+      */
+      trendAdditionalTextDiv = createTrendAdditionalText(additionalContent);
+      container.appendChild(trendAdditionalTextDiv);
     } else if (mode === 'infraestructura') {
         // Cargar la capa de infraestructura crítica en ambos mapas
         try {

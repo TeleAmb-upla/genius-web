@@ -30,9 +30,9 @@ export function addLegend_noche(map) {
 
     // Elementos de la leyenda
     const categories = [
-        { label: 'Alta', color: 'yellow' },
-        { label: 'Media', color: 'red' },
-        { label: 'Baja', color: '#000080' }
+        { label: '(4) Alta', color: 'yellow' },
+        { label: '(3) Media', color: 'red' },
+        { label: '(2) Baja', color: '#000080' }
     ];
 
     categories.forEach(category => {

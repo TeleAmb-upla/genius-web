@@ -13,7 +13,7 @@ function valueToSTColor(value) {
         "#75aaff", // Azul claro para valores positivos bajos
         "#4d66ff", // Azul medio para valores positivos moderados
         "#0313ff"  // Azul intenso para valores positivos altos
-    ].reverse();
+    ];
 
     // Calcular el paso entre cada color en función del dominio
     const step = (domain[1] - domain[0]) / (range.length - 1);
@@ -76,7 +76,7 @@ export async function map_trend(map) {
 }
 
 export function createSTLegendSVG() {
-    const domain = [-7, 7]; // Mínimo y máximo para tendencia NO²
+    const domain = [7, -7]; // Mínimo y máximo para tendencia NO²
     const steps = 9; // Cantidad de bloques: 4 rojos, 1 blanco, 4 azules
     const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse(); // 4 colores para rojos y azules, blanco en el centro
 

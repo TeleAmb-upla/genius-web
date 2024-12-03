@@ -77,16 +77,18 @@ const so2TrendFiles_json_Manzanas = [
 ];
 
 
-
+const textFiles = [
+    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+];
 
 
 // Combina todos los archivos de so2 en un solo array
-const allso2Files = [...so2MonthlyFiles_tif, ...so2YearlyFiles_tif, ...so2TrendFiles_tif];
+const allso2Files = [...so2MonthlyFiles_tif, ...so2YearlyFiles_tif, ...so2TrendFiles_tif, ...textFiles];
 // Combina todos los archivos de so2 en un solo array
-const allso2Files_json_Barrio = [...so2MonthlyFiles_json_Barrio, ...so2YearlyFiles_json_Barrio, ...so2TrendFiles_json_Barrio];
+const allso2Files_json_Barrio = [...so2MonthlyFiles_json_Barrio, ...so2YearlyFiles_json_Barrio, ...so2TrendFiles_json_Barrio, ...textFiles ];
 // Combina todos los archivos de so2 en un solo array
 
-const allso2Files_json_Manzanas = [...so2MonthlyFiles_json_Manzanas, ...so2YearlyFiles_json_Manzanas, ...so2TrendFiles_json_Manzanas];
+const allso2Files_json_Manzanas = [...so2MonthlyFiles_json_Manzanas, ...so2YearlyFiles_json_Manzanas, ...so2TrendFiles_json_Manzanas, ...textFiles];
 
 // Función para crear y descargar un archivo ZIP con todos los archivos TIF de so2
 export async function createAndDownloadso2Zip() {
