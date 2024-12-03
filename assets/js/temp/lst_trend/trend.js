@@ -63,20 +63,23 @@ export async function map_trend(map) {
 
 export function createSTLegendSVG() {
     const domain = [0, 0.44]; // Mínimo y máximo
-    const steps = 9; // Cantidad de bloques: 4 rojos, 1 blanco, 4 azules
-    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse(); // 4 colores para rojos y azules, blanco en el centro
+    const steps = 7; // Cantidad de bloques: 3 rojos, 1 blanco, 3 azules
+    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse(); // 3 colores para rojos y azules, blanco en el centro
 
-    // Crear una escala secuencial con los colores interpolados
-    const colorScale = d3.scaleSequential()
-        .domain([0, steps - 1]) // Definir el dominio
-        .interpolator(d3.interpolateRgbBasis(colorsBase)); // Interpolación entre los colores base
+    // Crear una escala cuantizada que asigna rangos de dominio a colores específicos
+    const colorScale = d3.scaleQuantize()
+        .domain(domain) // [0, 0.44]
+        .range(colorsBase); // Array de 7 colores
 
-    // Generar la paleta extendida de colores
-    const extendedColors = d3.range(steps).map(i => colorScale(i));
+    // Generar la paleta extendida de colores mapeando cada paso al valor correspondiente en el dominio
+    const extendedColors = d3.range(steps).map(i => {
+        const value = domain[0] + i * (domain[1] - domain[0]) / (steps - 1);
+        return colorScale(value);
+    });
 
     // Altura total del SVG y tamaño de cada bloque
     const blockHeight = 20; // Altura de cada bloque de color
-    const totalHeight = blockHeight * steps; // La altura total es basada en los 9 bloques
+    const totalHeight = blockHeight * steps; // La altura total es basada en los 7 bloques
 
     // Crear bloques de colores con bordes para diferenciarlos
     const legendItems = extendedColors.map((color, index) => {
@@ -97,9 +100,7 @@ export function createSTLegendSVG() {
         if (i === 0) {
             return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">&lt;${value}</text>`;
         } else if (i === steps - 1) {
-            return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">&gt;1.00</text>`; // Último bloque para >7.00
-        } else if (i === Math.floor(steps / 2)) {
-            return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">0</text>`;
+            return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">&gt;${domain[1].toFixed(2)}</text>`; // Último bloque para >0.44
         } else {
             return `<text x="60" y="${yPosition}" font-size="10" font-family="Arial">${value} - ${nextValue}</text>`;
         }
@@ -122,3 +123,4 @@ export function createSTLegendSVG() {
         </svg>
     `;
 }
+

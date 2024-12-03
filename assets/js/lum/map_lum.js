@@ -39,75 +39,90 @@ addCenteredTitle(currentMap);
     const overlayMaps = {};
 
     // Cargar la capa GeoJSON
-    try {
-        const response = await fetch('/assets/vec/capas/Quilpue_Class_Smoothed.geojson');
-        const data = await response.json();
+  // Cargar la capa GeoJSON
+try {
+    const response = await fetch('/assets/vec/capas/Quilpue_Class_Smoothed.geojson');
+    const data = await response.json();
 
-        geojsonLayer = L.geoJSON(data, {
-            style: function (feature) {
-                let gridcode = feature.properties.gridcode;
-                let fillColor;
-                let fillOpacity = 1; // Opacidad por defecto
-        
-                switch (gridcode) {
-                    case 1:
-                        fillColor = 'transparent';
-                        fillOpacity = 0; // Completamente transparente
-                        break;
-                    case 2:
-                        fillColor = '#000080'; // Azul marino (Baja)
-                        break;
-                    case 3:
-                        fillColor = 'red'; // Rojo (Media)
-                        break;
-                    case 4:
-                        fillColor = 'yellow'; // Amarillo (Alta)
-                        break;
-                }
-        
-                return {
-                    color: 'transparent', // Borde invisible
-                    weight: 0,            // Sin grosor de borde
-                    fillColor: fillColor,
-                    fillOpacity: fillOpacity
-                };
-            },
-            onEachFeature: function (feature, layer) {
-                // Solo adjuntar eventos si gridcode no es 1
-                if (feature.properties.gridcode !== 1) {
-                    // Evento click
-                    layer.on('click', function (e) {
-                        L.popup()
-                            .setLatLng(e.latlng)
-                            .setContent(`<strong>Luminosidad:</strong> ${feature.properties.gridcode}`)
-                            .openOn(currentMap);
-                    });
-            
-                    // Cambiar el cursor al pasar el mouse sobre la característica
-                    layer.on('mouseover', function (e) {
-                        e.target.setStyle({
-                            weight: 2,
-                            color: '#666',
-                            fillOpacity: e.target.options.fillOpacity // Accedemos a fillOpacity desde las opciones de la capa
-                        });
-                        // Cambiar el cursor a pointer
-                        currentMap.getContainer().style.cursor = 'pointer';
-                    });
-            
-                    // Restaurar el estilo al salir el mouse de la característica
-                    layer.on('mouseout', function (e) {
-                        geojsonLayer.resetStyle(e.target);
-                        // Restaurar el cursor
-                        currentMap.getContainer().style.cursor = '';
-                    });
-                }
+    const luminosidadLabels = {
+        1: 'Transparente',
+        2: 'Baja',
+        3: 'Media',
+        4: 'Alta'
+    };
+
+    geojsonLayer = L.geoJSON(data, {
+        style: function (feature) {
+            let gridcode = feature.properties.gridcode;
+            let fillColor;
+            let fillOpacity = 1; // Opacidad por defecto
+
+            switch (gridcode) {
+                case 1:
+                    fillColor = 'transparent';
+                    fillOpacity = 0; // Completamente transparente
+                    break;
+                case 2:
+                    fillColor = '#000080'; // Azul marino (Baja)
+                    break;
+                case 3:
+                    fillColor = 'red'; // Rojo (Media)
+                    break;
+                case 4:
+                    fillColor = 'yellow'; // Amarillo (Alta)
+                    break;
+                default:
+                    fillColor = 'gray'; // Color por defecto para valores inesperados
             }
-            }).addTo(currentMap);
-        // Agregar la capa al `overlayMaps`
-        overlayMaps["Luminosiad"] = geojsonLayer;
-    } catch (error) {
-        console.error('Error al cargar el archivo GeoJSON:', error);
-    }
+
+            return {
+                color: 'transparent', // Borde invisible
+                weight: 0,            // Sin grosor de borde
+                fillColor: fillColor,
+                fillOpacity: fillOpacity
+            };
+        },
+        onEachFeature: function (feature, layer) {
+            // Solo adjuntar eventos si gridcode no es 1
+            if (feature.properties.gridcode !== 1) {
+                // Evento click
+                layer.on('click', function (e) {
+                    const gridcode = feature.properties.gridcode;
+                    const luminosidad = luminosidadLabels[gridcode] || 'Desconocida';
+
+                    L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(`<strong>Luminosidad:</strong> ${luminosidad}`)
+                        .openOn(currentMap);
+                });
+
+                // Cambiar el cursor al pasar el mouse sobre la característica
+                layer.on('mouseover', function (e) {
+                    e.target.setStyle({
+                        weight: 2,
+                        color: '#666',
+                        fillOpacity: e.target.options.fillOpacity // Accedemos a fillOpacity desde las opciones de la capa
+                    });
+                    // Cambiar el cursor a pointer
+                    currentMap.getContainer().style.cursor = 'pointer';
+                });
+
+                // Restaurar el estilo al salir el mouse de la característica
+                layer.on('mouseout', function (e) {
+                    geojsonLayer.resetStyle(e.target);
+                    // Restaurar el cursor
+                    currentMap.getContainer().style.cursor = '';
+                });
+            }
+        }
+    }).addTo(currentMap);
+
+    // Agregar la capa al `overlayMaps`
+    overlayMaps["Luminosidad"] = geojsonLayer; // Corregido de "Luminosiad" a "Luminosidad"
+} catch (error) {
+    console.error('Error al cargar el archivo GeoJSON:', error);
+}
+
 
   
     // Cargar la capa de infraestructura crítica
@@ -398,9 +413,9 @@ addCenteredTitle(currentMap);
 
         // Información de la leyenda
         const categories = [
-            { label: '(4) Alta', color: 'yellow' },
-            { label: '(3) Media', color: 'red' },
-            { label: '(2) Baja', color: '#000080' }
+            { label: 'Alta', color: 'yellow' },
+            { label: 'Media', color: 'red' },
+            { label: 'Baja', color: '#000080' }
         ];
 
         categories.forEach(category => {

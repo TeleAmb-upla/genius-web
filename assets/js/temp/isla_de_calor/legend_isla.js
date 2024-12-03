@@ -26,7 +26,7 @@ export function legend_isla() {
     
   // Subtítulo
   const subtitle = document.createElement('div');
-  subtitle.textContent = 'Clase';
+  subtitle.textContent = '';
   subtitle.style.fontSize = '12px'; // Reducir tamaño de la fuente del subtítulo
   subtitle.style.color = '#555'; // Color gris para diferenciar del título
   subtitle.style.marginBottom = '5px'; // Reducir espacio
@@ -35,10 +35,10 @@ export function legend_isla() {
 
     // Definir las clases y colores
     const classes = [
-        { label: '(0): 0-3°C', color: '#FFFFFF' },
-        { label: '(1): 3-6°C', color: '#FFCCCC' },
-        { label: '(2): 6-9°C', color: '#FF6666' },
-        { label: '(3): > 9°C', color: '#FF0000' }
+        { label: '0-3°C', color: '#FFFFFF' },
+        { label: '3-6°C', color: '#FFCCCC' },
+        { label: '6-9°C', color: '#FF6666' },
+        { label: '> 9°C', color: '#FF0000' }
     ];
 
     // Crear elementos para cada clase

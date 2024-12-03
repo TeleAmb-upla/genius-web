@@ -51,46 +51,67 @@ function removeSource(map, sourceId) {
     }
 }
 
-// Función para actualizar la capa del mapa con datos anuales
+/// Función para actualizar la capa del mapa con datos anuales
 export async function updateMapLayerYear_isla(map, sourceId, layerId, year) {
-    const url = `/assets/vec/vectoriales/LST_SUHI_Yearly/LST_SUHI_Yearly_${year}.geojson`;
-    const data = await preprocessGeoJSON(url, 'yearly');
-    if (!data) return;
+    try {
+        const url = `/assets/vec/vectoriales/LST_SUHI_Yearly/LST_SUHI_Yearly_${year}.geojson`;
+        const data = await preprocessGeoJSON(url, 'yearly');
+        if (!data) return;
 
-    removeLayerAndEvents(map, layerId);
-    removeSource(map, sourceId);
+        // Remover capa y fuente anteriores si existen
+        removeLayerAndEvents(map, layerId);
+        removeSource(map, sourceId);
 
-    map.addSource(sourceId, { type: 'geojson', data });
-    map.addLayer({
-        id: layerId,
-        type: 'fill',
-        source: sourceId,
-        paint: {
-            'fill-color': ['get', 'color'], // Utiliza el color definido en la propiedad color
-            'fill-opacity': 1,
-            'fill-outline-color': 'black' // Borde negro
-        }
-    });
+        // Agregar nueva fuente GeoJSON al mapa
+        map.addSource(sourceId, { type: 'geojson', data });
 
-    // Agregar eventos interactivos
-    map.on('click', layerId, (e) => {
-        const properties = e.features[0].properties;
-        new maplibregl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(`
-                <strong>Año:</strong> ${properties.Year}<br>
-                <strong>Clase:</strong> ${properties.Clase}<br>
-            `)
-            .addTo(map);
-    });
+        // Agregar nueva capa al mapa
+        map.addLayer({
+            id: layerId,
+            type: 'fill',
+            source: sourceId,
+            paint: {
+                'fill-color': ['get', 'color'], // Utiliza el color definido en la propiedad color
+                'fill-opacity': 1,
+                'fill-outline-color': 'black' // Borde negro
+            }
+        });
 
-    map.on('mouseenter', layerId, () => {
-        map.getCanvas().style.cursor = 'pointer';
-    });
+        // Mapeo de Clase a rangos de temperatura
+        const claseLabels = {
+            0: '0-3°C',
+            1: '3-6°C',
+            2: '6-9°C',
+            3: '> 9°C'
+        };
 
-    map.on('mouseleave', layerId, () => {
-        map.getCanvas().style.cursor = '';
-    });
+        // Agregar eventos interactivos
+        map.on('click', layerId, (e) => {
+            const properties = e.features[0].properties;
+            const clase = properties.Clase;
+            const claseLabel = claseLabels[clase] || 'Desconocida';
+
+            new maplibregl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(`
+                    <strong>Año:</strong> ${properties.Year}<br>
+                    <strong>Temperatura:</strong> ${claseLabel}<br>
+                `)
+                .addTo(map);
+        });
+
+        // Cambiar el cursor al pasar el mouse sobre la característica
+        map.on('mouseenter', layerId, () => {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        // Restaurar el cursor al salir de la característica
+        map.on('mouseleave', layerId, () => {
+            map.getCanvas().style.cursor = '';
+        });
+    } catch (error) {
+        console.error('Error al actualizar la capa del mapa:', error);
+    }
 }
 
 

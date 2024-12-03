@@ -382,7 +382,7 @@ export async function map_aod_p() {
             
                         // Crear y agregar el nuevo cuadro de texto adicional
                         const additionalContent = `
-                            <p>Aunque se observan tendencias en los datos, estas no son estadísticamente significativas, ya que el valor p es mayor a 0.05.</p>
+                            <p>Aunque se observan tendencias en los datos, estas son estadísticamente significativas, ya que el valor p es menor o igual a 0.05.</p>
                         `;
                         trendAdditionalTextDiv = createTrendAdditionalText(additionalContent);
                         currentMap.getContainer().appendChild(trendAdditionalTextDiv);
