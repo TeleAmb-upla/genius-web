@@ -3,40 +3,27 @@ import * as d3 from 'https://cdn.skypack.dev/d3@7';
 // Función para asignar colores a los valores según el rango definido
 function valueToSTColor(value) {
     const domain = [0, 0.303];
+    // Paleta de colores invertida que representa los diferentes valores de NDVI
     const range = [
-        "#ff0000", // Rojo intenso para los valores negativos bajos
-        "#ff3d66", // Rojo medio para valores negativos moderados
-        "#ff75ad", // Rojo suave para valores negativos más cercanos a 0
-        "#ffffff", // Blanco para el valor 0
-        "#75aaff", // Azul claro para valores positivos bajos
-        "#4d66ff", // Azul medio para valores positivos moderados
-        "#0313ff"  // Azul intenso para valores positivos altos
-    ].reverse();
-
-    // Calcular el índice con más precisión
+        "#FFF2ED", "#FFB6B2", "#FF7977", "#FF3D3B", "#FF0000"
+    ];
+    
+    
+    // Calcular el paso entre cada color en función del dominio
     const step = (domain[1] - domain[0]) / (range.length - 1);
-
+    
+    // Asignar los colores basado en el valor
     if (value < domain[0]) {
-        return range[0]; // Menor que el mínimo
+        return range[0]; // Si es menor que el mínimo, devolver el primer color
     } 
     if (value > domain[1]) {
-        return range[range.length - 1]; // Mayor que el máximo
+        return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
     }
-
-    // Calcular la posición exacta del índice y usar interpolación lineal si es necesario
-    const index = (value - domain[0]) / step;
-    const lowerIndex = Math.floor(index);
-    const upperIndex = Math.min(lowerIndex + 1, range.length - 1);
-    const fractionalPart = index - lowerIndex;
-
-    // Interpolar entre colores si es necesario
-    if (fractionalPart === 0) {
-        return range[lowerIndex];
+    
+    // Encontrar el color adecuado dentro del rango
+    const index = Math.floor((value - domain[0]) / step);
+    return range[index];
     }
-
-    // Mezclar colores si estás entre dos índices
-    return d3.interpolateRgb(range[lowerIndex], range[upperIndex])(fractionalPart);
-}
 
 
 export async function map_trend(map) {
@@ -134,8 +121,8 @@ export function createTrendLegend() {
 
     // Configuración de dominio y colores de la leyenda
     const domain = [0, 0.303];
-    const steps = 7; // Solo 7 rangos
-    const colors = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse();;
+    const steps = 5; // Solo 7 rangos
+    const colors = [ "#FFF2ED", "#FFB6B2", "#FF7977", "#FF3D3B", "#FF0000"];
     const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 
