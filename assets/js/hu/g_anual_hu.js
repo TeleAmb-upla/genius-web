@@ -99,7 +99,7 @@ d3.select(this)
 
 var mousemove = function (event, d) {
 tooltip
-    .html("ha: " + d.Hectareas.toFixed(0) + "<br>Mes: " + d.Year)
+    .html("ha: " + d.Hectareas.toFixed(0) + "<br>Año: " + d.Year)
     .style("left", (event.pageX + 15) + "px")
     .style("top", (event.pageY - 15) + "px");
 }
