@@ -3,78 +3,84 @@ import { ndviToColorMonth } from './ndvi_month/ndvi_palette_month.js';
 
 
 // Función para crear la leyenda SVG para NDVI anual
-export function createyearLegendSVG() {
-    const domain = [-0.3359, 0.7422]; // Mínimo y máximo
-    const steps = 6; // Cantidad de valores que queremos en la leyenda
-    const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
+export function createyearLegendSVG(isMobile = false) {
+    const domain = [-0.3359, 0.7422];
+    const steps = 6;
+    const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#2E5D2D', '#194D18'];
-    // Generar los valores de la leyenda
     const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
+
+    // Parámetros para móvil o desktop (más compacto en móvil, pero más ancho para no cortar texto)
+    const width = isMobile ? 132 : 172;
+    const fontSizeTitle = isMobile ? 8 : 15;
+    const fontSizeSubtitle = isMobile ? 7 : 13;
+    const fontSizeLabel = isMobile ? 7 : 13;
+    const rectSize = isMobile ? 8 : 20;
+    const yStart = isMobile ? 18 : 45;
+    const yStep = isMobile ? 11 : 30;
+    const svgHeight = yStart + steps * (isMobile ? 9 : 25);
 
     // Crear elementos de la leyenda con colores y rangos
     const legendItems = Values.map((value, index) => {
-        if (index === Values.length - 1) return ''; // No mostrar para el último valor
-
+        if (index === Values.length - 1) return '';
         const nextValue = Values[index + 1];
-        const color = colors[index]; // Asignar color basado en el valor
-        const yPosition = 45 + index * 30; // Ajustar la posición Y para incluir el subtítulo
+        const color = colors[index];
+        const yPosition = yStart + index * yStep;
         const label = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`;
-
         return `
-            <rect x="0" y="${yPosition}" width="20" height="20" style="fill:${color}" />
-            <text x="25" y="${yPosition + 15}" font-size="12" font-family="Arial">${label}</text>
+            <rect x="0" y="${yPosition}" width="${rectSize}" height="${rectSize}" style="fill:${color}" />
+            <text x="${rectSize + 3}" y="${yPosition + rectSize - 1}" font-size="${fontSizeLabel}" font-family="Arial">${label}</text>
         `;
     }).join('');
 
-    // Altura del SVG ajustada para incluir el texto adicional
-    const svgHeight = 45 + steps * 25;
-
     // Retornar el SVG completo con el subtítulo y el texto adicional
     return `
-        <svg width="150" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
-            <text x="0" y="30" font-size="12" font-family="Arial">NDVI Anual</text>
+        <svg width="${width}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
+            <text x="0" y="${fontSizeTitle + 2}" font-size="${fontSizeTitle}" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
+            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Anual</text>
             ${legendItems}
-          
         </svg>
     `;
 }
 
 
 // Función para crear la leyenda SVG para NDVI mensual
-export function createmonthLegendSVG() {
-    const domain = [-0.3281, 0.7969]; // Mínimo y máximo
-    const steps = 6; // Cantidad de valores que queremos en la leyenda
-    const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
+export function createmonthLegendSVG(isMobile = false) {
+    const domain = [-0.3281, 0.7969];
+    const steps = 6;
+    const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#2E5D2D', '#194D18'];
-    // Generar los valores de la leyenda
     const Values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 
-    // Crear elementos de la leyenda con colores y rangos
+    // Parámetros para móvil o desktop (más compacto en móvil, pero más ancho para no cortar texto)
+    const width = isMobile ? 130 : 170;
+    const fontSizeTitle = isMobile ? 8 : 15;
+    const fontSizeSubtitle = isMobile ? 7 : 13;
+    const fontSizeLabel = isMobile ? 7 : 13;
+    const rectSize = isMobile ? 8 : 20;
+    const yStart = isMobile ? 18 : 45;
+    const yStep = isMobile ? 11 : 30;
+    const svgHeight = yStart + steps * (isMobile ? 9 : 25);
+
     const legendItems = Values.map((value, index) => {
-        if (index === Values.length - 1) return ''; // No mostrar para el último valor
-
+        if (index === Values.length - 1) return '';
         const nextValue = Values[index + 1];
-        const color = colors[index]; // Asignar color basado en el valor
-        const yPosition = 45 + index * 30; // Ajustar la posición Y para incluir el subtítulo
+        const color = colors[index];
+        const yPosition = yStart + index * yStep;
         const label = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`;
-
         return `
-            <rect x="0" y="${yPosition}" width="20" height="20" style="fill:${color}" />
-            <text x="25" y="${yPosition + 15}" font-size="12" font-family="Arial">${label}</text>
+            <rect x="0" y="${yPosition}" width="${rectSize}" height="${rectSize}" style="fill:${color}" />
+            <text x="${rectSize + 3}" y="${yPosition + rectSize - 1}" font-size="${fontSizeLabel}" font-family="Arial">${label}</text>
         `;
     }).join('');
 
-    const calculatedHeight = 40 + steps * 25; // Altura dinámica basada en la cantidad de elementos de la leyenda
-
     return `
-        <svg width="150" height="${calculatedHeight}" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
-            <text x="0" y="30" font-size="12" font-family="Arial">NDVI Mensual</text>
+        <svg width="${width}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
+            <text x="0" y="${fontSizeTitle + 2}" font-size="${fontSizeTitle}" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
+            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Mensual</text>
             ${legendItems}
         </svg>
     `;
-    
 }
 let mapTitleDiv = null;
 

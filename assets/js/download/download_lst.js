@@ -1,6 +1,6 @@
 
 const startYear = 1997;
-const endYear = 2023;
+const endYear = 2024;
 
 
 
@@ -23,8 +23,8 @@ const lstYearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, i
 
 const lstTrendFiles_tif = [
     { url: '/assets/vec/raster/lst_pixel/lst_Trend/LST_Yearly_Trend.tif', name: 'LST_Trend.tif' },
-    { url: '/assets/vec/raster/lst_pixel/lst_Monthly/LST_Mensual.csv', name: 'LST_Monthly.csv' },
-    { url: '/assets/vec/raster/lst_pixel/lst_Yearly/LST_Anual.csv', name: 'LST_Anual.csv' }
+    { url: '/assets/csv/LST_m_urban.csv', name: 'LST_Monthly.csv' },
+    { url: '/assets/csv/LST_y_urban.csv', name: 'LST_Anual.csv' }
  ];
 
 
@@ -48,8 +48,8 @@ const lstYearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 
 
 const lstTrendFiles_json_Barrio = [
     { url: '/assets/vec/vectoriales/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson', name: 'LST_Trend.geojson' },
-    { url: '/assets/vec/raster/lst_pixel/lst_Monthly/LST_Mensual.csv', name: 'LST_Monthly.csv' },
-    { url: '/assets/vec/raster/lst_pixel/lst_Yearly/LST_Anual.csv', name: 'LST_Anual.csv' }
+    { url: '/assets/csv/LST_m_urban.csv', name: 'LST_Monthly.csv' },
+    { url: '/assets/csv/LST_y_urban.csv', name: 'LST_Anual.csv' }
 ];
 
 
@@ -70,8 +70,8 @@ const lstYearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 
 });
 const lstTrendFiles_json_Manzanas = [
     { url: '/assets/vec/vectoriales/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson', name: 'LST_Trend.geojson' },
-    { url: '/assets/vec/raster/lst_pixel/lst_Monthly/LST_Mensual.csv', name: 'LST_Monthly.csv' },
-    { url: '/assets/vec/raster/lst_pixel/lst_Yearly/LST_Anual.csv', name: 'LST_Anual.csv' }
+    { url: '/assets/csv/LST_m_urban.csv', name: 'LST_Monthly.csv' },
+    { url: '/assets/csv/LST_y_urban.csv', name: 'LST_Anual.csv' }
 ];
 
 const textFiles = [

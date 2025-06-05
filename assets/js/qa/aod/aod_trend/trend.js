@@ -128,7 +128,7 @@ export function createSTLegendSVG()  {
             <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Tendencia AOD</text>
 
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="5" y="40" font-size="12" font-family="Arial">2001 - 2023</text>
+            <text x="5" y="40" font-size="12" font-family="Arial">2001 - 2024</text>
 
             <!-- Bloques de colores -->
             ${legendItems}

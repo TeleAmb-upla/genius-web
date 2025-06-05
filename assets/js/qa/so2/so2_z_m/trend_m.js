@@ -82,7 +82,7 @@ export async function map_trend(map) {
         new maplibregl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`
-                <strong>Rango de años:</strong> 2019 - 2023<br>
+                <strong>Rango de años:</strong> 2019 - 2024<br>
                 <strong>Cantidad de Personas:</strong> ${properties.TOTAL_PERS || 'No disponible'}<br>
                 <strong>Tendencia SO²:</strong> ${trendValue}<br>
             `)
@@ -125,7 +125,7 @@ export function createTrendLegend() {
 
     // Subtítulo de la leyenda
     const subtitle = document.createElement('div');
-    subtitle.textContent = '2019 - 2023';
+    subtitle.textContent = '2019 - 2024';
     subtitle.style.fontSize = '10px';
     subtitle.style.color = '#555';
     subtitle.style.marginBottom = '5px';

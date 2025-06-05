@@ -1,6 +1,6 @@
 
 const startYear = 2019;
-const endYear = 2023;
+const endYear = 2024;
 
 const no2MonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
@@ -20,8 +20,8 @@ const no2YearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, i
 
 const no2TrendFiles_tif = [
     { url: '/assets/vec/raster/no2_pixel/NO2_Trend/NO2_Yearly_Trend.tif', name: 'NO2_Trend.tif' },
-    { url: '/assets/vec/raster/no2_pixel/NO2_Monthly/NO2_Mensual.csv', name: 'NO2_Monthly.csv' },
-    { url: '/assets/vec/raster/no2_pixel/NO2_Yearly/NO2_Anual.csv', name: 'NO2_Anual.csv' }
+    { url: '/assets/csv/NO2_Anual_Comunal.csv', name: 'NO2_Monthly.csv' },
+    { url: '/assets/csv/NO2_Mensual_Comunal.csv', name: 'NO2_Anual.csv' }
  ];
 
 //////////////////////// BARRIO
@@ -44,8 +44,8 @@ const no2YearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 
 
 const no2TrendFiles_json_Barrio = [
     { url: '/assets/vec/vectoriales/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Barrios/Trend_NO2_ZonalStats_Barrios.geojson', name: 'NO2_Trend.geojson' },
-    { url: '/assets/vec/raster/no2_pixel/NO2_Monthly/NO2_Mensual.csv', name: 'NO2_Monthly.csv' },
-    { url: '/assets/vec/raster/no2_pixel/NO2_Yearly/NO2_Anual.csv', name: 'NO2_Anual.csv' }
+    { url: '/assets/csv/NO2_Anual_Comunal.csv', name: 'NO2_Monthly.csv' },
+    { url: '/assets/csv/NO2_Mensual_Comunal.csv', name: 'NO2_Anual.csv' }
 ];
 
 ////////////////    MANZANAS
@@ -68,8 +68,8 @@ const no2YearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 
 
 const no2TrendFiles_json_Manzanas = [
     { url: '/assets/vec/vectoriales/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Manzanas/Trend_NO2_ZonalStats_Manzanas.geojson', name: 'NO2_Trend.geojson' },
-    { url: '/assets/vec/raster/no2_pixel/NO2_Monthly/NO2_Mensual.csv', name: 'NO2_Monthly.csv' },
-    { url: '/assets/vec/raster/no2_pixel/NO2_Yearly/NO2_Anual.csv', name: 'NO2_Anual.csv' }
+    { url: '/assets/csv/NO2_Anual_Comunal.csv', name: 'NO2_Monthly.csv' },
+    { url: '/assets/csv/NO2_Mensual_Comunal.csv', name: 'NO2_Anual.csv' }
 ];
 
 

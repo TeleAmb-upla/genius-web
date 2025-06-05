@@ -1,3 +1,21 @@
+// -----------------------------------------------------------------------------
+// Mejoras implementadas en este archivo:
+//
+// 1. createOpacitySlider: Slider de opacidad responsivo y táctil
+//    - Responsivo: Se adapta automáticamente a escritorio y móvil usando media queries en el CSS inyectado.
+//      * Escritorio: tamaño y posición estándar, vertical al costado derecho.
+//      * Móvil: más pequeño, centrado verticalmente, ocupa menos espacio.
+//    - Soporte táctil: Se agregaron eventos touchstart, touchmove y touchend para manipulación táctil.
+//    - Porcentaje visible: Debajo del slider aparece el texto dinámico “Opacidad: XX%”, actualizado en tiempo real.
+//    - Interacción mejorada: Área de la esfera suficientemente grande y cómoda para arrastrar en cualquier dispositivo.
+//
+// 2. createyearLegendSVG y createmonthLegendSVG: Leyendas SVG adaptativas
+//    - Versión responsive: Ambas funciones aceptan un parámetro isMobile para renderizar versión compacta en móvil y extendida en escritorio.
+//    - Tamaños y fuentes reducidos en móvil: Leyenda más angosta, textos y rectángulos más pequeños, espaciado ajustado.
+//    - Sin cortes de texto: El ancho del SVG se ajustó para que textos largos como “Indicador de Vegetación” no se recorten.
+//    - Consistencia visual: Apariencia y jerarquía visual coherentes en ambas versiones, asegurando legibilidad y alineación.
+// -----------------------------------------------------------------------------
+
 // Importar funciones desde otros módulos
 import { loadGeoJSONAndSetupLayers, createAvSelector, positionAvSelector } from './capas/utilis_select_av.js';
 import { map_stdev, createDevLegendSVG } from './ndvi_trend_dev/stddev.js'; // Ajusta la ruta según tu estructura de carpetas
@@ -183,14 +201,14 @@ function createOpacitySlider(map, rasterLayer, categoryLayersArray) {
     const style = document.createElement('style');
     style.type = 'text/css';
     const css = `
-      /* Estilos generales */
+     /* Estilos generales */
       .wrapper {
         width: 52px;
         position: absolute;
         top: 50%;
         right: 20px;
         transform: translateY(-50%);
-        z-index: 1000; /* Reducir z-index para que el avSelector esté por encima */
+        z-index: 1000;
         user-select: none;
       }
 
@@ -267,6 +285,46 @@ function createOpacitySlider(map, rasterLayer, categoryLayersArray) {
         font-size: 14px;
         color: #333;
       }
+
+      /* --- MOBILE VERSION --- */
+      @media (max-width: 600px) {
+        .wrapper {
+          width: 38px;
+          right: 10px;
+          top: 50%;
+          bottom: auto;
+          left: auto;
+          transform: translateY(-50%);
+        }
+        .map-slider {
+          width: 38px;
+          height: 180px;
+          font-size: 12px;
+        }
+        .buttons span {
+          height: 32px;
+          padding-top: 7px;
+          font-size: 18px;
+        }
+        .drag-line {
+          width: 6px;
+          height: 90px;
+          margin: 10px auto;
+        }
+        .line {
+          width: 6px;
+          height: 90px;
+        }
+        .draggable-button {
+          width: 18px;
+          height: 18px;
+          margin-left: -6px;
+        }
+        .percentage-display {
+          font-size: 11px;
+          top: calc(100% + 4px);
+        }
+      }
     `;
     if (style.styleSheet) {
         style.styleSheet.cssText = css;
@@ -290,9 +348,28 @@ function createOpacitySlider(map, rasterLayer, categoryLayersArray) {
         document.addEventListener('mouseup', onMouseUp);
     });
 
+    // Soporte táctil
+    draggableButton.addEventListener('touchstart', function(e) {
+        isDragging = true;
+        startY = e.touches[0].clientY;
+        startTop = parseInt(draggableButton.style.top || '0', 10);
+        document.addEventListener('touchmove', onTouchMove);
+        document.addEventListener('touchend', onTouchEnd);
+    });
+
     function onMouseMove(e) {
         if (!isDragging) return;
         let deltaY = e.clientY - startY;
+        let newTop = startTop + deltaY;
+        newTop = Math.max(0, Math.min(newTop, dragMax));
+        draggableButton.style.top = newTop + 'px';
+        updateLine(newTop);
+        updateOpacity(newTop);
+    }
+
+    function onTouchMove(e) {
+        if (!isDragging) return;
+        let deltaY = e.touches[0].clientY - startY;
         let newTop = startTop + deltaY;
         newTop = Math.max(0, Math.min(newTop, dragMax));
         draggableButton.style.top = newTop + 'px';
@@ -304,6 +381,12 @@ function createOpacitySlider(map, rasterLayer, categoryLayersArray) {
         isDragging = false;
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+    }
+
+    function onTouchEnd() {
+        isDragging = false;
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
     }
 
     // Función para actualizar la línea

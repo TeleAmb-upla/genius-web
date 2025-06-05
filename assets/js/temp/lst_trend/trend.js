@@ -106,7 +106,7 @@ export function createSTLegendSVG() {
             <text x="5" y="20" font-size="12" font-family="Arial" font-weight="bold">Tendencia LST(°C)</text>
     
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="5" y="40" font-size="10" font-family="Arial">1995 - 2023</text>
+            <text x="5" y="40" font-size="10" font-family="Arial">1995 - 2024</text>
     
             <!-- Bloques de colores -->
             ${legendItems}

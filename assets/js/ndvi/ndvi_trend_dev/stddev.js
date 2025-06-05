@@ -24,7 +24,7 @@ return range[index];
     export async function map_stdev(map) {
         try {
             // Leer el archivo  
-            const response = await fetch('/assets/vec/raster/NDVI_pixel/NDVI_StdDev/NDVI_Monthly_StdDev_2022-2024.tif');
+            const response = await fetch('/assets/vec/raster/NDVI_pixel/NDVI_StdDev/NDVI_Monthly_SD2023_2025.tif');
             const arrayBuffer = await response.arrayBuffer();
     
             // Parsear el georaster

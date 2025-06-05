@@ -33,122 +33,107 @@ export async function map_lum() {
 
     // Agregar la escala
     L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
-// Llamar a la función para agregar el título centrado
-addCenteredTitle(currentMap);
+
+    // Llamar a la función para agregar el título centrado
+    addCenteredTitle(currentMap);
+
     // Inicializar `overlayMaps` antes de usarlo
     const overlayMaps = {};
 
-    // Cargar la capa GeoJSON
-  // Cargar la capa GeoJSON
-try {
-    const response = await fetch('/assets/vec/capas/Quilpue_Class_Smoothed.geojson');
-    const data = await response.json();
+    // Cargar solo la capa GeoJSON de Luminosidad al inicio
+    try {
+        const response = await fetch('/assets/vec/capas/Quilpue_Class_Smoothed.geojson');
+        const data = await response.json();
 
-    const luminosidadLabels = {
-        1: 'Transparente',
-        2: 'Baja',
-        3: 'Media',
-        4: 'Alta'
-    };
+        const luminosidadLabels = {
+            1: 'Transparente',
+            2: 'Baja',
+            3: 'Media',
+            4: 'Alta'
+        };
 
-    geojsonLayer = L.geoJSON(data, {
-        style: function (feature) {
-            let gridcode = feature.properties.gridcode;
-            let fillColor;
-            let fillOpacity = 1; // Opacidad por defecto
+        geojsonLayer = L.geoJSON(data, {
+            style: function (feature) {
+                let gridcode = feature.properties.gridcode;
+                let fillColor;
+                let fillOpacity = 1;
 
-            switch (gridcode) {
-                case 1:
-                    fillColor = 'transparent';
-                    fillOpacity = 0; // Completamente transparente
-                    break;
-                case 2:
-                    fillColor = '#000080'; // Azul marino (Baja)
-                    break;
-                case 3:
-                    fillColor = 'red'; // Rojo (Media)
-                    break;
-                case 4:
-                    fillColor = 'yellow'; // Amarillo (Alta)
-                    break;
-                default:
-                    fillColor = 'gray'; // Color por defecto para valores inesperados
-            }
+                switch (gridcode) {
+                    case 1:
+                        fillColor = 'transparent';
+                        fillOpacity = 0;
+                        break;
+                    case 2:
+                        fillColor = '#000080';
+                        break;
+                    case 3:
+                        fillColor = 'red';
+                        break;
+                    case 4:
+                        fillColor = 'yellow';
+                        break;
+                    default:
+                        fillColor = 'gray';
+                }
 
-            return {
-                color: 'transparent', // Borde invisible
-                weight: 0,            // Sin grosor de borde
-                fillColor: fillColor,
-                fillOpacity: fillOpacity
-            };
-        },
-        onEachFeature: function (feature, layer) {
-            // Solo adjuntar eventos si gridcode no es 1
-            if (feature.properties.gridcode !== 1) {
-                // Evento click
-                layer.on('click', function (e) {
-                    const gridcode = feature.properties.gridcode;
-                    const luminosidad = luminosidadLabels[gridcode] || 'Desconocida';
+                return {
+                    color: 'transparent',
+                    weight: 0,
+                    fillColor: fillColor,
+                    fillOpacity: fillOpacity
+                };
+            },
+            onEachFeature: function (feature, layer) {
+                if (feature.properties.gridcode !== 1) {
+                    layer.on('click', function (e) {
+                        const gridcode = feature.properties.gridcode;
+                        const luminosidad = luminosidadLabels[gridcode] || 'Desconocida';
 
-                    L.popup()
-                        .setLatLng(e.latlng)
-                        .setContent(`<strong>Luminosidad:</strong> ${luminosidad}`)
-                        .openOn(currentMap);
-                });
-
-                // Cambiar el cursor al pasar el mouse sobre la característica
-                layer.on('mouseover', function (e) {
-                    e.target.setStyle({
-                        weight: 2,
-                        color: '#666',
-                        fillOpacity: e.target.options.fillOpacity // Accedemos a fillOpacity desde las opciones de la capa
+                        L.popup()
+                            .setLatLng(e.latlng)
+                            .setContent(`<strong>Luminosidad:</strong> ${luminosidad}`)
+                            .openOn(currentMap);
                     });
-                    // Cambiar el cursor a pointer
-                    currentMap.getContainer().style.cursor = 'pointer';
-                });
 
-                // Restaurar el estilo al salir el mouse de la característica
-                layer.on('mouseout', function (e) {
-                    geojsonLayer.resetStyle(e.target);
-                    // Restaurar el cursor
-                    currentMap.getContainer().style.cursor = '';
-                });
+                    layer.on('mouseover', function (e) {
+                        e.target.setStyle({
+                            weight: 2,
+                            color: '#666',
+                            fillOpacity: e.target.options.fillOpacity
+                        });
+                        currentMap.getContainer().style.cursor = 'pointer';
+                    });
+
+                    layer.on('mouseout', function (e) {
+                        geojsonLayer.resetStyle(e.target);
+                        currentMap.getContainer().style.cursor = '';
+                    });
+                }
             }
-        }
-    }).addTo(currentMap);
+        }).addTo(currentMap);
 
-    // Agregar la capa al `overlayMaps`
-    overlayMaps["Luminosidad"] = geojsonLayer; // Corregido de "Luminosiad" a "Luminosidad"
-} catch (error) {
-    console.error('Error al cargar el archivo GeoJSON:', error);
-}
-
-
-  
-    // Cargar la capa de infraestructura crítica
-    const infCriticaLayer = await loadinf_critica(currentMap);
-    if (infCriticaLayer && typeof infCriticaLayer === 'object') {
-        // Convertir las subcapas en un `L.layerGroup`
-        const layersArray = Object.values(infCriticaLayer);
-        const infCriticaGroup = L.layerGroup(layersArray);
-
-        // Agregar la capa de infraestructura crítica al control de capas
-        overlayMaps["Infraestructura Crítica"] = infCriticaGroup;
-
-        // Opcional: agregar la capa al mapa directamente al inicio
-        infCriticaGroup.addTo(currentMap);
-    } else {
-        console.error("La capa de infraestructura crítica no es un objeto de capa de Leaflet válido:", infCriticaLayer);
+        overlayMaps["Luminosidad"] = geojsonLayer;
+    } catch (error) {
+        console.error('Error al cargar el archivo GeoJSON:', error);
     }
+
+    // No cargar la capa de infraestructura crítica al inicio
+    // Si quieres que el usuario pueda activarla manualmente, puedes cargarla aquí pero no agregarla al mapa:
+    // const infCriticaLayer = await loadinf_critica(currentMap);
+    // if (infCriticaLayer && typeof infCriticaLayer === 'object') {
+    //     const layersArray = Object.values(infCriticaLayer);
+    //     const infCriticaGroup = L.layerGroup(layersArray);
+    //     overlayMaps["Infraestructura Crítica"] = infCriticaGroup;
+    // }
 
     // Crear el control de capas y agregarlo al mapa
     L.control.layers(null, overlayMaps).addTo(currentMap);
 
-        // Llamar a la función para crear el slider de opacidad
-        createOpacitySlider();
+    // Llamar a la función para crear el slider de opacidad
+    createOpacitySlider();
 
-        // Agregar la leyenda al mapa
-        addLegend();
+    // Agregar la leyenda al mapa
+    addLegend();
 
 
 

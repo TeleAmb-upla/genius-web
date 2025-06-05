@@ -23,7 +23,7 @@ export function addCenteredTitle(map) {
     }
 
     // Actualiza el contenido del título
-    mapTitleDiv.innerHTML = `Luminacion Urbana`;
+    mapTitleDiv.innerHTML = `Luminacion Urbana 2024`;
 }
 
 

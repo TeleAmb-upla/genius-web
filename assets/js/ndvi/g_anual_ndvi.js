@@ -1,10 +1,13 @@
 import * as d3 from 'https://cdn.skypack.dev/d3@7';
 
 export async function g_a_ndvi() {
-    // Set the dimensions and margins of the graph
-    var margin = { top: 80, right: 10, bottom: 60, left: 100 },
-        width = 550 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
+    // Usa el tamaño del contenedor definido por CSS
+    const container = document.getElementById("p02");
+    const width = container.offsetWidth || 550;
+    const height = container.offsetHeight || 400;
+    const margin = { top: 80, right: 10, bottom: 60, left: 100 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
 
     // Clear any existing SVG
     d3.select("#p02").selectAll("*").remove();
@@ -12,14 +15,14 @@ export async function g_a_ndvi() {
     // Append the svg object to the div with id "p02"
     var svg = d3.select("#p02")
         .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     // Add title
     svg.append("text")
-        .attr("x", width / 2)
+        .attr("x", innerWidth / 2)
         .attr("y", -margin.top / 2)
         .attr("text-anchor", "middle")
         .style("font-size", "14px")
@@ -30,8 +33,8 @@ export async function g_a_ndvi() {
     // Titles for axes
     svg.append("text")
         .attr("text-anchor", "end")
-        .attr("x", width / 2 + margin.left - 60)
-        .attr("y", height + margin.top - 40)
+        .attr("x", innerWidth / 2 + margin.left - 60)
+        .attr("y", innerHeight + margin.top - 40)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Años");
@@ -46,12 +49,12 @@ export async function g_a_ndvi() {
         .text("NDVI");
 
     // Parse the Data
-    const data = await d3.csv("/assets/csv/NDVI_Anual.csv");
+    const data = await d3.csv("/assets/csv/NDVI_y_urban.csv");
 
     // Format the data
     data.forEach(d => {
         d.Year = +d.Year;           // Convert Year to number
-        d.NDVI_median = +d.NDVI_median;    // Convert NDVI_median to number
+        d.NDVI_median = +d.NDVI;    // Convert NDVI_median to number
     });
 
     // Find the minimum and maximum NDVI_median values
@@ -61,16 +64,16 @@ export async function g_a_ndvi() {
     // Add X axis
     var x = d3.scaleBand()
         .domain(data.map(d => d.Year))
-        .range([0, width])
+        .range([0, innerWidth])
         
     svg.append("g")
-        .attr("transform", "translate(0," + height + ")")
+        .attr("transform", "translate(0," + innerHeight + ")")
         .call(d3.axisBottom(x).tickFormat(d3.format("d")));
 
     // Add Y axis
     var y = d3.scaleLinear()
         .domain([minNDVI - 0.01, maxNDVI + 0.01]) // Adjust the domain to add a margin below and above
-        .range([height, 0]);
+        .range([innerHeight, 0]);
     svg.append("g")
         .call(d3.axisLeft(y));
 

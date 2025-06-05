@@ -128,110 +128,20 @@ export async function map_t_zonal_m() {
 
   // Función para crear el slider de opacidad y su funcionalidad
   function createOpacitySlider() {
-    // Crear el contenedor del slider de opacidad
-    const opacitySliderContainer = document.createElement('div');
-    opacitySliderContainer.id = 'opacity-slider-container';
-    container.appendChild(opacitySliderContainer);
+    // Crear el contenedor principal del slider y agregarlo al contenedor del mapa
+    const wrapper = document.createElement('div');
+    wrapper.className = 'wrapper';
+    container.appendChild(wrapper);
 
-    // Agregar estilos CSS para el slider
-    const style = document.createElement('style');
-    style.type = 'text/css';
-    style.innerHTML = `
-      #opacity-slider-container {
-        width: 52px;
-        position: absolute;
-        top: 50%;
-        right: 20px;
-        transform: translateY(-50%);
-        z-index: 1000;
-        user-select: none;
-      }
-
-      .opacity-slider {
-        width: 52px;
-        height: 330px;
-        background: #f7f7f7;
-        border-radius: 3px;
-        text-align: center;
-        box-shadow: 0 0 3px 1px rgba(0,0,0,0.2);
-        position: relative;
-        color: #866a62;
-      }
-
-      .opacity-slider::before {
-        content: "";
-        width: 100%;
-        height: 1px;
-        background: #dedede;
-        position: absolute;
-        left: 0;
-        margin-top: 50px;
-        box-shadow:
-          0 1px 0 0 white,
-          0 230px 0 0 #dedede,
-          0 229px 0 0 white;
-      }
-
-      .buttons span {
-        display: block;
-        height: 50px;
-        cursor: pointer;
-        padding-top: 16px;
-        font-size: 24px;
-        line-height: 18px;
-      }
-
-      .drag-line {
-        width: 8px;
-        height: 182px;
-        background: #ff9770;
-        border-radius: 8px;
-        margin: 25px auto;
-        position: relative;
-      }
-
-      .line {
-        width: 8px;
-        height: 182px;
-        background: #adccce;
-        border-radius: 8px;
-        position: absolute;
-        top: 0;
-      }
-
-      .draggable-button {
-        width: 29px;
-        height: 29px;
-        background: #f7f7f7;
-        border-radius: 50%;
-        position: absolute;
-        box-shadow: 0px 4px 10px 1px rgba(0,0,0,0.2);
-        margin-left: -9px;
-        cursor: pointer;
-        top: 0; /* Inicialmente en la parte superior */
-      }
-
-      /* Estilos para el indicador de porcentaje */
-      .percentage-display {
-        position: absolute;
-        width: 100%;
-        text-align: center;
-        top: calc(100% + 10px); /* Ubicarlo justo debajo del dragLine */
-        font-size: 14px;
-        color: #333;
-      }
-    `;
-    document.head.appendChild(style);
-
-    // Crear el slider y sus componentes
-    const opacitySlider = document.createElement('div');
-    opacitySlider.className = 'opacity-slider';
-    opacitySliderContainer.appendChild(opacitySlider);
+    // Crear el contenedor del slider
+    const mapSlider = document.createElement('div');
+    mapSlider.className = 'map-slider';
+    wrapper.appendChild(mapSlider);
 
     // Crear el contenedor de los botones
     const buttons = document.createElement('div');
     buttons.className = 'buttons';
-    opacitySlider.appendChild(buttons);
+    mapSlider.appendChild(buttons);
 
     // Botón de más
     const plusButton = document.createElement('span');
@@ -261,16 +171,138 @@ export async function map_t_zonal_m() {
     minusButton.textContent = '-';
     buttons.appendChild(minusButton);
 
-    // Evitar la propagación de eventos
-    opacitySliderContainer.addEventListener('mousedown', (e) => {
-      e.stopPropagation();
-    });
-    opacitySliderContainer.addEventListener('mousemove', (e) => {
-      e.stopPropagation();
-    });
-    opacitySliderContainer.addEventListener('mouseup', (e) => {
-      e.stopPropagation();
-    });
+    // Evitar propagación de eventos al mapa
+    wrapper.addEventListener('mousedown', (e) => e.stopPropagation());
+    wrapper.addEventListener('mousemove', (e) => e.stopPropagation());
+    wrapper.addEventListener('mouseup', (e) => e.stopPropagation());
+
+    // Agregar los estilos CSS al documento desde JavaScript (idénticos a slider_opacity.js)
+    const style = document.createElement('style');
+    style.type = 'text/css';
+    const css = `
+      .wrapper {
+        width: 52px;
+        position: absolute;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        z-index: 1000;
+        user-select: none;
+      }
+      .map-slider {
+        width: 52px;
+        height: 330px;
+        background: #f7f7f7;
+        border-radius: 3px;
+        text-align: center;
+        box-shadow: 0 0 3px 1px rgba(0,0,0,0.2);
+        position: relative;
+        color: #866a62;
+      }
+      .map-slider::before {
+        content: "";
+        width: 100%;
+        height: 1px;
+        background: #dedede;
+        position: absolute;
+        left: 0;
+        margin-top: 50px;
+        box-shadow:
+          0 1px 0 0 white,
+          0 230px 0 0 #dedede,
+          0 229px 0 0 white;
+      }
+      .buttons span {
+        display: block;
+        height: 50px;
+        cursor: pointer;
+        padding-top: 16px;
+        font-size: 24px;
+        line-height: 18px;
+      }
+      .drag-line {
+        width: 8px;
+        height: 182px;
+        background: #ff9770;
+        border-radius: 8px;
+        margin: 25px auto;
+        position: relative;
+      }
+      .line {
+        width: 8px;
+        height: 182px;
+        background: #adccce;
+        border-radius: 8px;
+        position: absolute;
+        top: 0;
+      }
+      .draggable-button {
+        width: 29px;
+        height: 29px;
+        background: #f7f7f7;
+        border-radius: 50%;
+        position: absolute;
+        box-shadow: 0px 4px 10px 1px rgba(0,0,0,0.2);
+        margin-left: -9px;
+        cursor: pointer;
+        top: 0;
+      }
+      .percentage-display {
+        position: absolute;
+        width: 100%;
+        text-align: center;
+        top: calc(100% + 10px);
+        font-size: 14px;
+        color: #333;
+      }
+      /* --- Adaptabilidad para móvil --- */
+      /* --- MOBILE VERSION --- */
+      @media (max-width: 600px) {
+        .wrapper {
+          width: 38px;
+          right: 10px;
+          left: auto;
+          top: 50%;
+          bottom: auto;
+          transform: translateY(-50%);
+          position: absolute;
+        }
+        .map-slider {
+          width: 38px;
+          height: 180px;
+          font-size: 12px;
+        }
+        .buttons span {
+          height: 32px;
+          padding-top: 7px;
+          font-size: 18px;
+        }
+        .drag-line {
+          width: 6px;
+          height: 90px;
+          margin: 10px auto;
+        }
+        .line {
+          width: 6px;
+          height: 90px;
+        }
+        .draggable-button {
+          width: 18px;
+          height: 18px;
+          margin-left: -6px;
+        }
+        .percentage-display {
+          font-size: 11px;
+          top: calc(100% + 4px);
+        }
+      }
+    `;
+    if (style.styleSheet) {
+      style.styleSheet.cssText = css;
+    } else {
+      style.appendChild(document.createTextNode(css));
+    }
+    document.head.appendChild(style);
 
     // Variables para el arrastre
     let isDragging = false;
@@ -305,54 +337,39 @@ export async function map_t_zonal_m() {
 
     // Función para actualizar la línea
     function updateLine(position) {
-      // La línea debe recortarse desde la posición del botón hacia abajo
       let clipValue = position + 'px, 8px, 183px, 0px';
       line.style.clip = 'rect(' + clipValue + ')';
     }
 
     // Función para actualizar la opacidad y el indicador de porcentaje
     function updateOpacity(position) {
-      // Calcular la opacidad basada en la posición del botón
       let opacity = 1 - (position / dragMax);
-      // Asegurarse de que la opacidad esté entre 0 y 1
       opacity = Math.max(0, Math.min(opacity, 1));
-
-      // Actualizar la opacidad de las capas en ambos mapas
       setMapLayersOpacity(beforeMap, opacity);
       setMapLayersOpacity(afterMap, opacity);
-
-      // Actualizar el indicador de porcentaje
       const percentageValue = Math.round(opacity * 100);
       percentageDisplay.textContent = `${percentageValue}%`;
     }
 
- 
     function setMapLayersOpacity(map, opacity) {
-      // Verificar si el estilo del mapa está cargado
       if (!map.getStyle() || !map.getStyle().layers) return;
-  
       const layers = map.getStyle().layers;
-  
       layers.forEach((layer) => {
-          // Ajustar la opacidad para capas relevantes
-          if (layer.id.startsWith('vectorLayer') || layer.id === 'generic-trend-layer') {
-              const layerType = map.getLayer(layer.id).type;
-  
-              // Ajustar opacidad según el tipo de capa
-              if (layerType === 'fill') {
-                  map.setPaintProperty(layer.id, 'fill-opacity', opacity);
-              } else if (layerType === 'line') {
-                  map.setPaintProperty(layer.id, 'line-opacity', opacity);
-              } else if (layerType === 'symbol') {
-                  map.setPaintProperty(layer.id, 'icon-opacity', opacity);
-                  map.setPaintProperty(layer.id, 'text-opacity', opacity);
-              } else if (layerType === 'raster') {
-                  map.setPaintProperty(layer.id, 'raster-opacity', opacity);
-              }
-              // Agrega otros tipos de capas si es necesario
+        if (layer.id.startsWith('vectorLayer') || layer.id === 'generic-trend-layer') {
+          const layerType = map.getLayer(layer.id).type;
+          if (layerType === 'fill') {
+            map.setPaintProperty(layer.id, 'fill-opacity', opacity);
+          } else if (layerType === 'line') {
+            map.setPaintProperty(layer.id, 'line-opacity', opacity);
+          } else if (layerType === 'symbol') {
+            map.setPaintProperty(layer.id, 'icon-opacity', opacity);
+            map.setPaintProperty(layer.id, 'text-opacity', opacity);
+          } else if (layerType === 'raster') {
+            map.setPaintProperty(layer.id, 'raster-opacity', opacity);
           }
+        }
       });
-  }
+    }
 
     // Eventos para los botones de más y menos
     plusButton.addEventListener('click', function() {
@@ -377,7 +394,6 @@ export async function map_t_zonal_m() {
     updateLine(0);
     updateOpacity(0);
   }
-
   function removeAllLayers(map) {
     const layers = map.getStyle().layers;
     if (!layers) return;

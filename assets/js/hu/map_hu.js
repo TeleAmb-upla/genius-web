@@ -65,18 +65,13 @@ export async function map_hu() {
     overlayMaps["Huella Urbana 2019"] = currentLayers["Huella Urbana 2019"];
     overlayMaps["Huella Urbana 2018"] = currentLayers["Huella Urbana 2018"];
 
-    // Cargar la capa de infraestructura crítica
+    // Cargar la capa de infraestructura crítica pero NO agregarla automáticamente al mapa
     const infCriticaLayer = await loadinf_critica(currentMap);
     if (infCriticaLayer && typeof infCriticaLayer === 'object') {
-        // Convertir las subcapas en un `L.layerGroup`
         const layersArray = Object.values(infCriticaLayer);
         const infCriticaGroup = L.layerGroup(layersArray);
-
-        // Agregar la capa de infraestructura crítica al control de capas
         overlayMaps["Infraestructura Crítica"] = infCriticaGroup;
-
-        // Opcional: agregar la capa al mapa directamente al inicio
-        infCriticaGroup.addTo(currentMap);
+        // No agregar: infCriticaGroup.addTo(currentMap);
     } else {
         console.error("La capa de infraestructura crítica no es un objeto de capa de Leaflet válido:", infCriticaLayer);
     }

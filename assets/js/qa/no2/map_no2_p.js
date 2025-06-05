@@ -24,7 +24,7 @@ let trendGeoraster = null;
 let currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
 
 let currentLeftYear = "2019";
-let currentRightYear = "2023";
+let currentRightYear = "2024";
 
 let currentLeftMonth = "01";
 let currentRightMonth = "12";
@@ -98,7 +98,7 @@ export async function map_no2_p() {
 
 // Actualizar el título del mapa
 // Actualizar el título del mapa
-addCenteredTitle(currentMap, "NO<sub>2</sub> Área Urbana (píxel)");
+addCenteredTitle(currentMap, "NO<sub>2</sub> Área Regional (píxel)");
 
 
 

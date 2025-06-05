@@ -128,7 +128,7 @@ export function createSTLegendSVG() {
             <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Dióxido de Azufre Tendencia</text>
 
           <!-- Subtítulo alineado a la izquierda -->
-            <text x="0" y="40" font-size="10" font-family="Arial">SO<tspan baseline-shift="sub">2</tspan>(µmol/m²) 2016-2023</text>
+            <text x="0" y="40" font-size="10" font-family="Arial">SO<tspan baseline-shift="sub">2</tspan>(µmol/m²) 2016-2024</text>
             <!-- Bloques de colores -->
             ${legendItems}
 

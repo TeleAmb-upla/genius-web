@@ -1,45 +1,47 @@
-
 import * as d3 from 'https://cdn.skypack.dev/d3@7';
 
-export async function g_a_so2_m() {
-    // Set the dimensions and margins of the graph
-    var margin = { top: 80, right: 10, bottom: 60, left: 100 },
-        width = 550 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
+export async function g_a_so2_m(containerId = "p44") {
+ // Get container dimensions
+    const container = document.getElementById(containerId);
+    const width = container.offsetWidth || 550;
+    const height = container.offsetHeight || 400;
+    const margin = { top: 80, right: 10, bottom: 60, left: 100 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
 
     // Clear any existing SVG
-    d3.select("#p44").selectAll("*").remove();
+    d3.select(`#${containerId}`).selectAll("*").remove();
 
-    // Append the svg object to the div with id "p44"
-    var svg = d3.select("#p44")
+    // Append the svg object to the div with id containerId
+    var svg = d3.select(`#${containerId}`)
         .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
+        .attr("width", width)
+        .attr("height", height)
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+    // Add title
+    svg.append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", -margin.top / 2)
+        .attr("text-anchor", "middle")
+        .style("font-size", "14px")
+        .style("font-weight", "bold")
+        .style("font-family", "Arial")
+        .html(() => `
+            SO<tspan baseline-shift="sub">2</tspan> Interanual Regional
+        `);
 
-// Add title
-svg.append("text")
-    .attr("x", width / 2)
-    .attr("y", -margin.top / 2)
-    .attr("text-anchor", "middle")
-    .style("font-size", "14px")
-    .style("font-weight", "bold")
-    .style("font-family", "Arial")
-    .html(() => `
-        SO<tspan baseline-shift="sub">2</tspan> Interanual Regional
-    `);
     // Titles for axes
     svg.append("text")
         .attr("text-anchor", "end")
-        .attr("x", width / 2 + margin.left - 60)
-        .attr("y", height + margin.top - 40)
+        .attr("x", innerWidth / 2 + margin.left - 60)
+        .attr("y", innerHeight + margin.top - 40)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Años");
 
-        svg.append("text")
+    svg.append("text")
         .attr("text-anchor", "end")
         .attr("transform", "rotate(-90)")
         .attr("y", -margin.left + 60)
@@ -50,14 +52,13 @@ svg.append("text")
         SO<tspan baseline-shift="sub">2</tspan>
     `);
 
-
     // Parse the Data
     const data = await d3.csv("/assets/csv/SO2_Anual_Comunal.csv");
 
     // Format the data
     data.forEach(d => {
-        d.Year = +d.Year;           // Convert Year to number
-        d.SO2_median_fixed = +d.SO2_median_fixed;    // Convert SO2_median_fixed to number
+        d.Year = +d.Year;
+        d.SO2_median_fixed = +d.SO2_median_fixed;
     });
 
     // Find the minimum and maximum SO2_median_fixed values
@@ -67,21 +68,21 @@ svg.append("text")
     // Add X axis
     var x = d3.scaleBand()
         .domain(data.map(d => d.Year))
-        .range([0, width])
-        
+        .range([0, innerWidth]);
+
     svg.append("g")
-        .attr("transform", "translate(0," + height + ")")
+        .attr("transform", "translate(0," + innerHeight + ")")
         .call(d3.axisBottom(x).tickFormat(d3.format("d")));
 
     // Add Y axis
     var y = d3.scaleLinear()
-        .domain([minNDVI - 0.01, maxNDVI + 0.01]) // Adjust the domain to add a margin below and above
-        .range([height, 0]);
+        .domain([minNDVI - 0.01, maxNDVI + 0.01])
+        .range([innerHeight, 0]);
     svg.append("g")
         .call(d3.axisLeft(y));
 
     // Create a tooltip
-    const tooltip = d3.select("#p44")
+    const tooltip = d3.select(`#${containerId}`)
         .append("div")
         .style("opacity", 0)
         .attr("class", "tooltip")
@@ -113,30 +114,30 @@ svg.append("text")
             .style("opacity", 0);
         d3.select(this)
             .style("stroke", "none");
-            
-        }
-        // Add the line with smoothing and animation
+    }
+
+    // Add the line with smoothing and animation
     var line = d3.line()
-    .x(d => x(d.Year) + x.bandwidth() / 2) // Ensure the line passes through the center of the band
-    .y(d => y(d.SO2_median_fixed))
-    .curve(d3.curveCatmullRom.alpha(0.5)); // Use curveCatmullRom for smoothing
+        .x(d => x(d.Year) + x.bandwidth() / 2)
+        .y(d => y(d.SO2_median_fixed))
+        .curve(d3.curveCatmullRom.alpha(0.5));
 
     var animation = svg.append("path")
-    .datum(data)
-    .attr("fill", "none")
-    .attr("stroke", "steelblue")
-    .attr("stroke-width", 1.5)
-    .attr("d", line);
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 1.5)
+        .attr("d", line);
 
     var totalLength = animation.node().getTotalLength();
 
     animation
-    .attr("stroke-dasharray", totalLength + " " + totalLength)
-    .attr("stroke-dashoffset", totalLength)
-    .transition()
-    .duration(5000)
-    .ease(d3.easeLinear)
-    .attr("stroke-dashoffset", 0);
+        .attr("stroke-dasharray", totalLength + " " + totalLength)
+        .attr("stroke-dashoffset", totalLength)
+        .transition()
+        .duration(5000)
+        .ease(d3.easeLinear)
+        .attr("stroke-dashoffset", 0);
 
     // Add larger, invisible circles for better mouse interaction
     svg.append("g")
@@ -146,11 +147,10 @@ svg.append("text")
         .append("circle")
         .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
         .attr("cy", d => y(d.SO2_median_fixed))
-        .attr("r", 4) // Larger radius for easier interaction
+        .attr("r", 4)
         .attr("fill", "steelblue")
-        .attr("pointer-events", "all") // Ensure these circles capture mouse events
+        .attr("pointer-events", "all")
         .on("mouseover", mouseover)
         .on("mousemove", mousemove)
         .on("mouseleave", mouseleave);
-
 }

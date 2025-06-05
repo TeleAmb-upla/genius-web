@@ -119,6 +119,46 @@ export async function createOpacitySlider(map, layers, currentLayerTypeRef) {
         font-size: 14px;
         color: #333;
       }
+
+      /* --- MOBILE VERSION --- */
+      @media (max-width: 600px) {
+        .wrapper {
+          width: 38px;
+          right: 10px;
+          top: 50%;
+          bottom: auto;
+          left: auto;
+          transform: translateY(-50%);
+        }
+        .map-slider {
+          width: 38px;
+          height: 180px;
+          font-size: 12px;
+        }
+        .buttons span {
+          height: 32px;
+          padding-top: 7px;
+          font-size: 18px;
+        }
+        .drag-line {
+          width: 6px;
+          height: 90px;
+          margin: 10px auto;
+        }
+        .line {
+          width: 6px;
+          height: 90px;
+        }
+        .draggable-button {
+          width: 18px;
+          height: 18px;
+          margin-left: -6px;
+        }
+        .percentage-display {
+          font-size: 11px;
+          top: calc(100% + 4px);
+        }
+      }
     `;
     if (style.styleSheet) {
       style.styleSheet.cssText = css;
@@ -141,6 +181,14 @@ export async function createOpacitySlider(map, layers, currentLayerTypeRef) {
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
     });
+    // Soporte para touch
+    draggableButton.addEventListener('touchstart', function(e) {
+      isDragging = true;
+      startY = e.touches[0].clientY;
+      startTop = parseInt(draggableButton.style.top || '0', 10);
+      document.addEventListener('touchmove', onTouchMove, { passive: false });
+      document.addEventListener('touchend', onTouchEnd);
+    });
 
     function onMouseMove(e) {
       if (!isDragging) return;
@@ -156,6 +204,23 @@ export async function createOpacitySlider(map, layers, currentLayerTypeRef) {
       isDragging = false;
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+    }
+
+    function onTouchMove(e) {
+      if (!isDragging) return;
+      e.preventDefault(); // Evita el scroll de la página
+      let deltaY = e.touches[0].clientY - startY;
+      let newTop = startTop + deltaY;
+      newTop = Math.max(0, Math.min(newTop, dragMax));
+      draggableButton.style.top = newTop + 'px';
+      updateLine(newTop);
+      updateOpacity(newTop);
+    }
+
+    function onTouchEnd() {
+      isDragging = false;
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
     }
 
     // Función para actualizar la línea
@@ -186,7 +251,7 @@ export async function createOpacitySlider(map, layers, currentLayerTypeRef) {
   
       // Actualizar el indicador de porcentaje
       const percentageValue = Math.round(opacity * 100);
-      percentageDisplay.textContent = `${percentageValue}%`;
+      percentageDisplay.textContent = `Opacidad: ${percentageValue}%`;
   }
 }
   

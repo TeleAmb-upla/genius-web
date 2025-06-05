@@ -1,37 +1,40 @@
 import * as d3 from 'https://cdn.skypack.dev/d3@7';
 
 export async function g_m_hu() {
-    // Set the dimensions and margins of the graph
-    var margin = { top: 80, right: 10, bottom: 60, left: 100 },
-        width = 550 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
-
     // Clear any existing SVG
     d3.select("#p48").selectAll("*").remove();
+
+    // Define dimensions and margins
+    const container = document.getElementById("p48");
+    const width = container ? (container.offsetWidth || 550) : 550;
+    const height = container ? (container.offsetHeight || 400) : 400;
+    const margin = { top: 40, right: 20, bottom: 40, left: 60 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
 
     // Append the svg object to the div with id "p48"
     var svg = d3.select("#p48")
         .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
+        .attr("width", width)
+        .attr("height", height)
         .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        .attr("transform", `translate(${margin.left},${margin.top})`);
 
     // Add title
     svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", -margin.top / 2)
+        .attr("x", innerWidth / 2)
+        .attr("y", -15)
         .attr("text-anchor", "middle")
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial")
-        .text("Huella Urbana interanual Distrito Urbano");
+        .text("Huella Urbana interanual Área Urbana");
 
     // Títulos de los ejes
     svg.append("text")
         .attr("text-anchor", "end")
-        .attr("x", width / 2 + margin.left - 60)
-        .attr("y", height + margin.top - 40)
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight + 35)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Años");
@@ -39,8 +42,8 @@ export async function g_m_hu() {
     svg.append("text")
         .attr("text-anchor", "end")
         .attr("transform", "rotate(-90)")
-        .attr("y", -margin.left + 60)
-        .attr("x", -margin.top - 30)
+        .attr("y", -margin.left + 15)
+        .attr("x", -innerHeight / 2)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Huella Urbana");
@@ -87,16 +90,16 @@ export async function g_m_hu() {
     // Add X axis
     var x = d3.scaleBand()
         .domain(groups)
-        .range([0, width])
+        .range([0, innerWidth])
         .padding([0.2]);
     svg.append("g")
-        .attr("transform", "translate(0," + height + ")")
+        .attr("transform", `translate(0,${innerHeight})`)
         .call(d3.axisBottom(x).tickFormat(d3.format("d")).tickSize(0));  // Formatear las etiquetas como enteros
 
     // Add Y axis
     var y = d3.scaleLinear()
         .domain([0, d3.max(data, d => +d.Area_DentroPRC + +d.Area_FueraPRC) * 1.1])  // Consideramos solo las áreas para el eje Y
-        .range([height, 0]);
+        .range([innerHeight, 0]);
     svg.append("g")
         .call(d3.axisLeft(y));
 
@@ -198,63 +201,64 @@ export async function g_m_hu() {
         .on("mousemove", mousemove)  // Evento para mover tooltip
         .on("mouseleave", mouseleave);  // Evento para esconder tooltip
 
-/// Create a group for the legend container
-var legendGroup = svg.append("g")
-.attr("transform", `translate(${width / 2 - 100}, ${-margin.top / 2 + 20})`);  // Centered below the title
+    // Legend group
+    var legendGroup = svg.append("g")
+        .attr("transform", `translate(${innerWidth / 2 - 100}, ${-margin.top / 2 + 20})`);
 
-// Legend for "Área Fuera PRC"
-legendGroup.append("rect")
-.attr("x", 0)
-.attr("y", 0)
-.attr("width", 12)  // Size of the rectangle
-.attr("height", 12)  // Size of the rectangle
-.style("fill", "url(#diagonalHatch)");
+    // Legend for "Área Fuera PRC"
+    legendGroup.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 12)  // Size of the rectangle
+        .attr("height", 12)  // Size of the rectangle
+        .style("fill", "url(#diagonalHatch)");
 
-legendGroup.append("text")
-.attr("x", 16)  // Positioned right after the rectangle
-.attr("y", 10)
-.attr("text-anchor", "start")
-.style("font-size", "10px")  // Smaller font size
-.style("font-family", "Arial")
-.text("Área Fuera PRC");
+    legendGroup.append("text")
+        .attr("x", 16)  // Positioned right after the rectangle
+        .attr("y", 10)
+        .attr("text-anchor", "start")
+        .style("font-size", "10px")  // Smaller font size
+        .style("font-family", "Arial")
+        .text("Área Fuera PRC");
 
-// Adjust position to move the second legend further to the right
-var secondLegendX = 100;  // Adjust this value to move further to the right
 
-// Create a group for the legend box with triangles next to "Área Fuera PRC"
-legendGroup.append("rect")
-.attr("x", secondLegendX)  // Positioned further right
-.attr("y", 0)
-.attr("width", 12)  // Size of the small legend box
-.attr("height", 12)  // Size of the small legend box
-.attr("stroke", "black")
-.attr("fill", "none");
+    // Adjust position to move the second legend further to the right
+    var secondLegendX = 100;  // Adjust this value to move further to the right
 
-// Define the coordinates for the triangular sections within the 12x12 square
-var smallTriangles = [
-{ points: `${secondLegendX},0 ${secondLegendX + 6},3 ${secondLegendX},12`, color: '#e41a1c' },  // Left triangle
-{ points: `${secondLegendX + 12},0 ${secondLegendX + 6},3 ${secondLegendX + 12},12`, color: '#377eb8' },  // Right triangle
-{ points: `${secondLegendX},0 ${secondLegendX + 6},0 ${secondLegendX + 6},3`, color: '#4daf4a' },  // Top left triangle
-{ points: `${secondLegendX + 6},0 ${secondLegendX + 12},0 ${secondLegendX + 6},3`, color: '#984ea3' },  // Top right triangle
-{ points: `${secondLegendX},12 ${secondLegendX + 6},3 ${secondLegendX + 6},12`, color: '#ff7f00' },  // Bottom left triangle
-{ points: `${secondLegendX + 6},3 ${secondLegendX + 12},12 ${secondLegendX + 6},12`, color: '#ffff33' }  // Bottom right triangle
-];
+    // Create a group for the legend box with triangles next to "Área Fuera PRC"
+    legendGroup.append("rect")
+        .attr("x", secondLegendX)  // Positioned further right
+        .attr("y", 0)
+        .attr("width", 12)  // Size of the small legend box
+        .attr("height", 12)  // Size of the small legend box
+        .attr("stroke", "black")
+        .attr("fill", "none");
 
-// Add the triangular sections to the legend
-smallTriangles.forEach(function(triangle) {
-legendGroup.append("polygon")
-    .attr("points", triangle.points)
-    .attr("fill", triangle.color)
-    .attr("stroke", "black");
-});
+    // Define the coordinates for the triangular sections within the 12x12 square
+    var smallTriangles = [
+        { points: `${secondLegendX},0 ${secondLegendX + 6},3 ${secondLegendX},12`, color: '#e41a1c' },  // Left triangle
+        { points: `${secondLegendX + 12},0 ${secondLegendX + 6},3 ${secondLegendX + 12},12`, color: '#377eb8' },  // Right triangle
+        { points: `${secondLegendX},0 ${secondLegendX + 6},0 ${secondLegendX + 6},3`, color: '#4daf4a' },  // Top left triangle
+        { points: `${secondLegendX + 6},0 ${secondLegendX + 12},0 ${secondLegendX + 6},3`, color: '#984ea3' },  // Top right triangle
+        { points: `${secondLegendX},12 ${secondLegendX + 6},3 ${secondLegendX + 6},12`, color: '#ff7f00' },  // Bottom left triangle
+        { points: `${secondLegendX + 6},3 ${secondLegendX + 12},12 ${secondLegendX + 6},12`, color: '#ffff33' }  // Bottom right triangle
+    ];
 
-// Add the text for the triangle legend
-legendGroup.append("text")
-.attr("x", secondLegendX + 16)  // Positioned further right after the small legend box
-.attr("y", 10)
-.attr("text-anchor", "start")
-.style("font-size", "10px")
-.style("font-family", "Arial")
-.text("Área Dentro PRC por Año");
+    // Add the triangular sections to the legend
+    smallTriangles.forEach(function(triangle) {
+        legendGroup.append("polygon")
+            .attr("points", triangle.points)
+            .attr("fill", triangle.color)
+            .attr("stroke", "black");
+    });
+
+    // Add the text for the triangle legend
+    legendGroup.append("text")
+        .attr("x", secondLegendX + 16)  // Positioned further right after the small legend box
+        .attr("y", 10)
+        .attr("text-anchor", "start")
+        .style("font-size", "10px")
+        .style("font-family", "Arial")
+        .text("Área Dentro PRC por Año");
 
 }

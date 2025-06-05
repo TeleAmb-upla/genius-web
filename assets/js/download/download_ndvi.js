@@ -1,6 +1,6 @@
 
 const startYear = 2017;
-const endYear = 2023;
+const endYear = 2024;
 
 // Definir las rutas de archivos TIF específicos de NDVI
 const ndviMonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
@@ -23,9 +23,11 @@ const ndviYearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, 
 
 const ndviTrendFiles_tif = [
     { url: '/assets/vec/raster/NDVI_pixel/NDVI_Trend/NDVI_Yearly_Trend.tif', name: 'NDVI_Trend.tif' },
-    { url:'/assets/vec/raster/NDVI_pixel/NDVI_StdDev/NDVI_Monthly_StdDev_2022-2024.tif', name: 'NDVI_StdDev_2022-2024.tif' },
-    { url: '/assets/vec/raster/NDVI_pixel/NDVI_Monthly/NDVI_Monthly.csv', name: 'NDVI_Monthly.csv' },
-    { url: '/assets/vec/raster/NDVI_pixel/NDVI_Yearly/NDVI_Anual.csv', name: 'NDVI_Anual.csv' }
+    { url:'/assets/vec/raster/NDVI_pixel/NDVI_StdDev/NDVI_Monthly_StdDev_2024_2025.tif', name: 'NDVI_StdDev_2024_2025.tif' },
+    { url: '/assets/csv/NDVI_m_urban.csv', name: 'NDVI_Monthly.csv' },
+    { url: '/assets/csv/NDVI_y_urban.csv', name: 'NDVI_Anual.csv' },
+     { url: '/assets/csv/NDVI_m_av.csv', name: 'NDVI_Monthly_AV.csv' },
+    { url: '/assets/csv/NDVI_y_av.csv', name: 'NDVI_Anual_AV.csv' }
  ];
 
 //////////////////////// BARRIO
@@ -49,8 +51,10 @@ const ndviYearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1
 
 const ndviTrendFiles_json_Barrio = [
     { url: '/assets/vec/vectoriales/NDVI_Yearly_ZonalStats_Barrios/Trend_NDVI_ZonalStats_Barrios.geojson', name: 'NDVI_Trend.geojson' },
-    { url: '/assets/vec/raster/NDVI_pixel/NDVI_Monthly/NDVI_Monthly.csv', name: 'NDVI_Monthly.csv' },
-    { url: '/assets/vec/raster/NDVI_pixel/NDVI_Yearly/NDVI_Anual.csv', name: 'NDVI_Anual.csv' },
+    { url: '/assets/csv/NDVI_m_urban.csv', name: 'NDVI_Monthly.csv' },
+    { url: '/assets/csv/NDVI_y_urban.csv', name: 'NDVI_Anual.csv' },
+     { url: '/assets/csv/NDVI_m_av.csv', name: 'NDVI_Monthly_AV.csv' },
+    { url: '/assets/csv/NDVI_y_av.csv', name: 'NDVI_Anual_AV.csv' }
 ];
 ///
 const ndviMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
@@ -72,8 +76,10 @@ const ndviYearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear +
 
 const ndviTrendFiles_json_Manzanas = [
     { url: '/assets/vec/vectoriales/NDVI_Yearly_ZonalStats_Manzanas/Trend_NDVI_ZonalStats_Manzanas.geojson', name: 'NDVI_Trend.geojson' },
-    { url: '/assets/vec/raster/NDVI_pixel/NDVI_Monthly/NDVI_Monthly.csv', name: 'NDVI_Monthly.csv' },
-    { url: '/assets/vec/raster/NDVI_pixel/NDVI_Yearly/NDVI_Anual.csv', name: 'NDVI_Anual.csv' },
+ { url: '/assets/csv/NDVI_m_urban.csv', name: 'NDVI_Monthly.csv' },
+    { url: '/assets/csv/NDVI_y_urban.csv', name: 'NDVI_Anual.csv' },
+     { url: '/assets/csv/NDVI_m_av.csv', name: 'NDVI_Monthly_AV.csv' },
+    { url: '/assets/csv/NDVI_y_av.csv', name: 'NDVI_Anual_AV.csv' }
 ];
 
 

@@ -117,4 +117,4 @@ export async function updateMapLayerYear_isla(map, sourceId, layerId, year) {
 
 // Ejemplo de uso
 // Asegúrate de que `map` esté inicializado previamente
-// updateMapLayerYear_isla(map, 'lst_suhi_source', 'lst_suhi_layer', 2023);
+// updateMapLayerYear_isla(map, 'lst_suhi_source', 'lst_suhi_layer', 2024);

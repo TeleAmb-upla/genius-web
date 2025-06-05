@@ -1,26 +1,28 @@
 import * as d3 from 'https://cdn.skypack.dev/d3@7';
 
 export async function g_a_ndvi_stdev() {
-    // Set the dimensions and margins of the graph
-    var margin = { top: 80, right: 10, bottom: 60, left: 100 },
-        width = 550 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
-
+    // Usa el tamaño del contenedor definido por CSS
+    const container = document.getElementById("p68");
+    const width = container.offsetWidth || 550;
+    const height = container.offsetHeight || 400;
+    const margin = { top: 40, right: 20, bottom: 40, left: 60 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
     // Clear any existing SVG
     d3.select("#p68").selectAll("*").remove();
 
     // Append the svg object to the div with id "p68"
     var svg = d3.select("#p68")
         .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet");
 
     // Add title
     svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", -margin.top / 2)
+        .attr("x", width * 0.5)
+        .attr("y", 30)
         .attr("text-anchor", "middle")
         .style("font-size", "14px")
         .style("font-weight", "bold")
@@ -33,12 +35,9 @@ export async function g_a_ndvi_stdev() {
         { label: "NDVI Gestión", color: "green" },
         { label: "NDVI Planificación", color: "orange" }
     ];
-
-    // Calculate total width of the legend to center it
-    const legendWidth = legendData.length * 120 - 20; // 120 px per item, adjust for spacing
-
+    const legendWidth = legendData.length * 120 - 20;
     const legend = svg.append("g")
-        .attr("transform", `translate(${(width - legendWidth) / 2}, ${-margin.top / 2 + 20})`);
+        .attr("transform", `translate(${(width - legendWidth) / 2}, 50)`);
 
     legend.selectAll("rect")
         .data(legendData)
@@ -60,28 +59,36 @@ export async function g_a_ndvi_stdev() {
         .style("font-family", "Arial")
         .text(d => d.label);
 
-    // Titles for axes
+    // Eje X label
     svg.append("text")
-        .attr("text-anchor", "end")
-        .attr("x", width / 2 + margin.left - 60)
-        .attr("y", height + margin.top - 40)
+        .attr("text-anchor", "middle")
+        .attr("x", width * 0.5)
+        .attr("y", height - 10)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Años");
 
+    // Eje Y label
     svg.append("text")
-        .attr("text-anchor", "end")
+        .attr("text-anchor", "middle")
         .attr("transform", "rotate(-90)")
-        .attr("y", -margin.left + 60)
-        .attr("x", -margin.top - 30)
+        .attr("x", -height * 0.5)
+        .attr("y", 15)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("NDVI");
 
-    // Parse the data
-    const data = await d3.csv("/assets/csv/NDVI_Anual_AV.csv");
 
-    // Format the data
+
+
+
+
+
+
+        
+    // Parse the data
+    const data = await d3.csv("/assets/csv/NDVI_y_av.csv");
+
     data.forEach(d => {
         d.Year = +d.Year;
         d.NDVI_Urbano = +d.NDVI_Urbano;
@@ -93,28 +100,29 @@ export async function g_a_ndvi_stdev() {
     const minNDVI = d3.min(data, d => Math.min(d.NDVI_Urbano, d.NDVI_Gestion, d.NDVI_Planificacion));
     const maxNDVI = d3.max(data, d => Math.max(d.NDVI_Urbano, d.NDVI_Gestion, d.NDVI_Planificacion));
 
+    // Ejes (deja espacio para labels)
+    const left = 60, right = 30, top = 80, bottom = 40;
+    const plotWidth = width - left - right;
+    const plotHeight = height - top - bottom;
+
     // Add X axis
     var x = d3.scaleBand()
         .domain(data.map(d => d.Year))
-        .range([0, width]);
+        .range([left, left + plotWidth])
+        .padding(0.2);
 
     svg.append("g")
-        .attr("transform", "translate(0," + height + ")")
+        .attr("transform", `translate(0,${top + plotHeight})`)
         .call(d3.axisBottom(x).tickFormat(d3.format("d")));
 
     // Add Y axis
     var y = d3.scaleLinear()
         .domain([minNDVI - 0.01, maxNDVI + 0.01])
-        .range([height, 0]);
+        .range([top + plotHeight, top]);
 
     svg.append("g")
+        .attr("transform", `translate(${left},0)`)
         .call(d3.axisLeft(y));
-
-    // Line generator function
-    var line = d3.line()
-        .x(d => x(d.Year) + x.bandwidth() / 2)
-        .y(d => y(d.NDVI_Urbano))
-        .curve(d3.curveCatmullRom.alpha(0.5));
 
     // Define colors for each line
     const colors = {

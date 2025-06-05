@@ -1,10 +1,14 @@
 import * as d3 from 'https://cdn.skypack.dev/d3@7';
 
 export async function g_a_hu() {
-    // Set the dimensions and margins of the graph
-    var margin = { top: 80, right: 10, bottom: 60, left: 100 },
-        width = 550 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
+
+    // Define dimensions and margins
+    const container = document.getElementById("p49");
+    const width = container ? (container.offsetWidth || 550) : 550;
+    const height = container ? (container.offsetHeight || 400) : 400;
+    const margin = { top: 40, right: 20, bottom: 40, left: 60 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
 
     // Clear any existing SVG
     d3.select("#p49").selectAll("*").remove();
@@ -12,14 +16,14 @@ export async function g_a_hu() {
     // Append the svg object to the div with id "p49"
     var svg = d3.select("#p49")
         .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
+        .attr("width", width)
+        .attr("height", height)
         .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        .attr("transform", `translate(${margin.left},${margin.top})`);
 
     // Add title
     svg.append("text")
-        .attr("x", width / 2)
+        .attr("x", innerWidth / 2)
         .attr("y", -margin.top / 2)
         .attr("text-anchor", "middle")
         .style("font-size", "14px")
@@ -30,8 +34,8 @@ export async function g_a_hu() {
     // Titles for axes
     svg.append("text")
         .attr("text-anchor", "end")
-        .attr("x", width / 2 + margin.left - 60)
-        .attr("y", height + margin.top - 40)
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight + 35)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Hectáreas");
@@ -39,8 +43,8 @@ export async function g_a_hu() {
     svg.append("text")
         .attr("text-anchor", "end")
         .attr("transform", "rotate(-90)")
-        .attr("y", -margin.left + 60)
-        .attr("x", -margin.top - 30)
+        .attr("y", -margin.left + 15)
+        .attr("x", -innerHeight / 2)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Años");
@@ -66,12 +70,12 @@ export async function g_a_hu() {
     // Add X axis
     var x = d3.scaleLinear()
         .domain([0, d3.max(data, d => d.Hectareas)])
-        .range([0, width]);
+        .range([0, innerWidth]);
 
     // Add Y axis
     var y = d3.scaleBand()
         .domain(data.map(d => d.Year))
-        .range([0, height])
+        .range([0, innerHeight])
         .padding(0.1);
 
 
@@ -127,7 +131,7 @@ d3.select(this)
 
     // Add X axis
     svg.append("g")
-        .attr("transform", `translate(0,${height})`)
+        .attr("transform", `translate(0,${innerHeight})`)
         .call(d3.axisBottom(x));
 
     // Add Y axis

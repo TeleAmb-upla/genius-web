@@ -21,6 +21,7 @@ import { map_2020 } from './js_anual/year_2020.js';
 import { map_2021 } from './js_anual/year_2021.js';
 import { map_2022 } from './js_anual/year_2022.js';
 import { map_2023 } from './js_anual/year_2023.js';
+import { map_2024 } from './js_anual/year_2024.js';
 
 const Loaders = [
     map_2001,
@@ -45,7 +46,8 @@ const Loaders = [
     map_2020,
     map_2021,
     map_2022,
-    map_2023
+    map_2023,
+    map_2024
 ];
 
 
@@ -53,7 +55,7 @@ export async function loadLayersyear(map) {
     const years = [
         2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 
         2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 
-        2019, 2020, 2021, 2022, 2023
+        2019, 2020, 2021, 2022, 2023, 2024
     ];
   
     const Layers = {};

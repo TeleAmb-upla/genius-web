@@ -1,7 +1,7 @@
 // Definir las rutas de archivos TIF específicos de NDVI
 
 const startYear = 2001;
-const endYear = 2023;
+const endYear = 2024;
 
 // Definir las rutas de archivos TIF específicos de lst
 const aodMonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
@@ -20,12 +20,12 @@ const aodYearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, i
         name: `AOD_Yearly_${year}.tif`
     };
 });
-
+ 
 
 const aodTrendFiles_tif = [
     { url: '/assets/vec/raster/aod_pixel/AOD_Trend/AOD_Yearly_Trend.tif', name: 'AOD_Trend.tif' },
-    { url: '/assets/vec/raster/aod_pixel/AOD_Monthly/AOD_Mensual.csv', name: 'AOD_Monthly.csv' },
-    { url: '/assets/vec/raster/aod_pixel/AOD_Yearly/AOD_Anual.csv', name: 'AOD_Anual.csv' }
+    { url: '/assets/csv/AOD_Yearly_Urbano.csv', name: 'AOD_Anual.csv' },
+    { url: '/assets/csv/AOD_Mensual_Urbano.csv', name: 'AOD_Monthly.csv' }
  ];
 
 
@@ -49,8 +49,8 @@ const aodYearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 
 
 const aodTrendFiles_json_Barrio = [
     { url: '/assets/vec/vectoriales/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Barrios/Trend_AOD_ZonalStats_Barrios.geojson', name: 'AOD_Trend.geojson' },
-    { url: '/assets/vec/raster/aod_pixel/AOD_Monthly/AOD_Mensual.csv', name: 'AOD_Monthly.csv' },
-    { url: '/assets/vec/raster/aod_pixel/AOD_Yearly/AOD_Anual.csv', name: 'AOD_Anual.csv' }
+    { url: '/assets/csv/AOD_Yearly_Urbano.csv', name: 'AOD_Anual.csv' },
+    { url: '/assets/csv/AOD_Mensual_Urbano.csv', name: 'AOD_Monthly.csv' }
 ];
 
 
@@ -72,8 +72,8 @@ const aodYearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 
 
 const aodTrendFiles_json_Manzanas = [
     { url: '/assets/vec/vectoriales/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Manzanas/Trend_AOD_ZonalStats_Manzanas.geojson', name: 'AOD_Trend.geojson' },
-    { url: '/assets/vec/raster/aod_pixel/AOD_Monthly/AOD_Mensual.csv', name: 'AOD_Monthly.csv' },
-    { url: '/assets/vec/raster/aod_pixel/AOD_Yearly/AOD_Anual.csv', name: 'AOD_Anual.csv' }
+    { url: '/assets/csv/AOD_Yearly_Urbano.csv', name: 'AOD_Anual.csv' },
+    { url: '/assets/csv/AOD_Mensual_Urbano.csv', name: 'AOD_Monthly.csv' }
 ];
 
 const textFiles = [

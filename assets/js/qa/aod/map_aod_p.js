@@ -23,7 +23,7 @@ let trendGeoraster = null;
 let currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
 
 let currentLeftYear = "2021";
-let currentRightYear = "2023";
+let currentRightYear = "2024";
 
 let currentLeftMonth = "01";
 let currentRightMonth = "12";
@@ -96,7 +96,7 @@ export async function map_aod_p() {
    
 
     // Actualizar el título del mapa
-    addCenteredTitle(currentMap, "AOD Área Urbana (píxel)");
+    addCenteredTitle(currentMap, "AOD Área Regional (píxel)");
 
     // Cargar capa de infraestructura crítica
     const infCriticaData = await loadinf_critica(currentMap);

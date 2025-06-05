@@ -2522,8 +2522,9 @@ section {
 .button-container img {
   margin: 0; /* Elimina el margen específico */
   cursor: pointer;
-  max-width: 150px; /* Limita el ancho máximo para hacerlas más consistentes */
-  height: 100%; /* Asegura que las imágenes llenen el contenedor verticalmente */
+  /* Estas propiedades controlan el tamaño de los íconos principales */
+  width: 150px;   /* Cambia este valor para ajustar el ancho máximo */
+  height: 200px;       /* Hace que la imagen llene el alto del contenedor */
   object-fit: contain; /* Mantiene la proporción de las imágenes */
   transition: transform 0.3s, box-shadow 0.3s; /* Transición para transformación y sombra */
   border-radius: 10px; /* Redondea las esquinas */
@@ -2558,7 +2559,8 @@ section {
 }
 
 .button-container3 button {
-  width: auto;
+  width: 100px;
+  height: 100px;
   padding: 10px 20px;
   font-size: 16px;
   cursor: pointer;
@@ -2574,7 +2576,8 @@ section {
 
 
 .button-container2 button {
-  width: auto;
+  width: 100px;
+  height: 100px;
   padding: 10px 20px;
   font-size: 16px;
   cursor: pointer;
@@ -2583,7 +2586,8 @@ section {
 
 
 .button-container4 button {
-  width: auto;
+  width: 100px;
+  height: 100px;
   padding: 10px 20px;
   font-size: 16px;
   cursor: pointer;
@@ -2689,7 +2693,6 @@ section {
 
 
 /* Otros estilos de capas y mapas aquí se mantienen sin cambios... */
-
 
 
 /* NDVI */
@@ -2833,49 +2836,54 @@ button {
   height: 150px; /* Altura personalizada para los botones de calidad de aire */
 }
 
-.button-air-quality:hover,
-.button-air-quality.selected {
-  border: 2px solid #007bff; /* Borde azul al pasar el ratón o al seleccionar */
+/* Estilo para los botones de calidad de aire - PNG */
+#AireButtonAOD,
+#AireButtonNO2,
+#AireButtonSO2 {
+  width: 100px !important;
+  height: 100px !important;
+  min-width: 100px !important;
+  min-height: 100px !important;
+  max-width: 100px !important;
+  max-height: 100px !important;
+  border-radius: 16px !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  border: 3px solid #2196f3 !important;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: border 0.2s;
+  padding: 0;
+  background-color: #fff !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: inline-block;
 }
 
-/* Estilos para sub-botones específicos */
-.sub-button-aod,
-.sub-button-no2,
-.sub-button-so2 {
-  width: 100px; /* Tamaño de sub-botones */
-  height: 100px;
-  border: none; /* Sin borde inicial */
+/* Hover y seleccionado para PNG */
+#AireButtonAOD:hover, #AireButtonAOD.selected {
+  border: 2.5px solid deepskyblue !important;
+}
+#AireButtonNO2:hover, #AireButtonNO2.selected {
+  border: 2.5px solid lightblue !important;
+}
+#AireButtonSO2:hover, #AireButtonSO2.selected {
+  border: 2.5px solid darkblue !important;
 }
 
-/* Colores de borde específicos para cada tipo de sub-botón */
-.sub-button-aod:hover,
-.sub-button-aod.selected {
-  border: 2px solid deepskyblue; /* Borde azul medio al pasar el ratón o al seleccionar */
-}
-
-.sub-button-no2:hover,
-.sub-button-no2.selected {
-  border: 2px solid lightblue; /* Borde azul claro al pasar el ratón o al seleccionar */
-}
-
-.sub-button-so2:hover,
-.sub-button-so2.selected {
-  border: 2px solid darkblue; /* Borde azul oscuro al pasar el ratón o al seleccionar */
-}
-
-
-/* Estilos comunes para contenedores de sub-botones */
-.sub-button-container {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.sub-button-container div {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* Ajuste para que los botones no se deformen en móvil */
+@media (max-width: 768px) {
+  #AireButtonAOD,
+  #AireButtonNO2,
+  #AireButtonSO2 {
+    width: 70px !important;
+    height: 70px !important;
+    min-width: 70px !important;
+    min-height: 70px !important;
+    max-width: 70px !important;
+    max-height: 70px !important;
+    border-radius: 10px !important;
+  }
 }
 
 /* Mostrar textos cuando el contenedor está activo */
@@ -2959,5 +2967,221 @@ button {
   font-size: 14px;
   font-weight: bold;
   color: black;
+}
+
+/* Tamaños por defecto (escritorio) */
+.map-container {
+  width: 1500px;
+  height: 800px;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-container {
+  width: 550px;
+  height: 400px;
+}
+
+
+/* map-container2 */
+.map-container2 {
+  width: 1800px;
+  height: 800px;
+}
+
+/* Responsive para móvil */
+@media (max-width: 768px) {
+  .map-container {
+    width: 100vw;
+    height: 150vw;
+    min-height: 250px;
+    max-width: 100%;
+  }
+  .chart-container {
+    width: 100vw;
+    height: 100vw;
+    min-height: 250px;
+    max-width: 100%;
+  }
+  .map-container2 {
+    width: 100vw;
+    height: 150vw;
+    min-height: 250px;
+    max-width: 100%;
+  }
+  table {
+    width: 100vw !important;
+    display: block;
+    overflow-x: auto;
+  }
+  td, tr {
+    display: block;
+    width: 100% !important;
+  }
+}
+
+/* Logo Genius - escritorio */
+.logo img[src*="GENIUS-vector-01.png"] {
+  min-height: 150px;
+  max-height: 180px;
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Logo Genius - móvil */
+@media (max-width: 768px) {
+  .logo img[src*="GENIUS-vector-01.png"] {
+    min-height: 60px;
+    max-height: 80px;
+    width: auto;
+    height: auto;
+  }
+}
+
+/* Asegura que la sección features tenga suficiente espacio y no se corte */
+#features,
+.features,
+.Centre,
+.section-header,
+.button-container {
+  overflow: visible !important;
+  height: auto !important;
+}
+
+/* Evita solapamiento con la sección #team */
+#features {
+  margin-bottom: 40px;
+  z-index: 1;
+  position: relative;
+}
+
+/* Ajusta el padding para separar visualizadores de la siguiente sección */
+.features {
+  padding-bottom: 40px;
+}
+
+/* Corrige el display de los botones para que no se corten en móvil */
+.button-container {
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  display: flex;
+}
+
+/* Asegura que las imágenes de los botones no se corten */
+.button-container img {
+  max-width: 300px;
+  max-height: 100px;
+
+  display: block;
+}
+
+/* Responsive: en móvil, los botones se apilan */
+@media (max-width: 768px) {
+  .button-container {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .button-container img {
+    max-width: 100px;
+    max-height: 100px;
+  }
+  #features, .features {
+    padding-bottom: 24px;
+    margin-bottom: 24px;
+  }
+}
+
+/* Botón columna para alineación vertical */
+.button-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 8px 12px 8px;
+}
+
+/* Botones NDVI */
+#ndviButtonB { background-image: url('../img/butom/barrios.gif'); }
+#ndviButtonM { background-image: url('../img/butom/manzanas.gif'); }
+#ndviButton { background-image: url('../img/butom/pixel.gif'); }
+#ndviButtonstdev { background-image: url('../img/butom/stdev.gif'); }
+
+/* Botones Islas de Calor */
+#tButtonBarrios { background-image: url('../img/butom/barrios.gif'); }
+#tButtonManzanas { background-image: url('../img/butom/manzanas.gif'); }
+#tButtonPixel { background-image: url('../img/butom/pixel.gif'); }
+#tButtonIslas { background-image: url('../img/butom/isla_calor.gif'); }
+
+/* Botones Calidad de Aire */
+#AireButtonAOD { background-image: url('../img/butom/AOD.png'); }
+
+#AireButtonNO2 { background-image: url('../img/butom/NO2.png'); }
+#AireButtonSO2 { background-image: url('../img/butom/SO2.png'); }
+
+/* Sub-botones AOD */
+#AODButton_B { background-image: url('../img/butom/barrios.gif'); }
+#AODButton_M { background-image: url('../img/butom/manzanas.gif'); }
+#AODButton { background-image: url('../img/butom/pixel.gif'); }
+
+/* Sub-botones NO2 */
+#NO2Button_B { background-image: url('../img/butom/barrios.gif'); }
+#NO2Button_M { background-image: url('../img/butom/manzanas.gif'); }
+#NO2Button { background-image: url('../img/butom/pixel.gif'); }
+
+/* Sub-botones SO2 */
+#SO2Button_B { background-image: url('../img/butom/barrios.gif'); }
+#SO2Button_M { background-image: url('../img/butom/manzanas.gif'); }
+#SO2Button { background-image: url('../img/butom/pixel.gif'); }
+
+/* Botón base: sin borde visible por defecto */
+.button-green-border,
+.button-orange-border,
+.button-air-quality,
+.sub-button-aod,
+.sub-button-no2,
+.sub-button-so2 {
+  border: 2px solid transparent !important;
+  width: 100px;
+  height: 100px;
+  background-size: cover;
+  background-position: center;
+  border-radius: 16px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: border 0.2s;
+}
+
+/* Mostrar borde solo cuando está seleccionado o hover */
+.button-green-border.selected,
+.button-green-border:hover {
+  border-color: #3cb371 !important;
+}
+
+.button-orange-border.selected,
+.button-orange-border:hover {
+  border-color: #ff9800 !important;
+}
+
+.button-air-quality.selected,
+.button-air-quality:hover {
+  border-color: #2196f3 !important;
+}
+
+.sub-button-aod.selected,
+.sub-button-aod:hover {
+  border-color: #2196f3 !important;
+}
+
+.sub-button-no2.selected,
+.sub-button-no2:hover {
+  border-color: #9c27b0 !important;
+}
+
+.sub-button-so2.selected,
+.sub-button-so2:hover {
+  border-color: #607d8b !important;
 }
 
