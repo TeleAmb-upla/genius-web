@@ -1,6 +1,8 @@
 """FeatureCollections de Earth Engine (mismos IDs que los scripts JS)."""
 import ee
 
+from . import paths
+
 
 def region_valparaiso() -> ee.FeatureCollection:
     return ee.FeatureCollection(
@@ -53,3 +55,19 @@ def ndvi_yearmonth_collection() -> ee.ImageCollection:
     return ee.ImageCollection(
         "users/plataformagenius/Areas_Verdes/NDVI/NDVI_YearMonth"
     )
+
+
+def aod_yearmonth_collection() -> ee.ImageCollection:
+    return ee.ImageCollection(paths.ASSET_AOD_YEARMONTH)
+
+
+def no2_yearmonth_collection() -> ee.ImageCollection:
+    return ee.ImageCollection(paths.ASSET_NO2_YEARMONTH)
+
+
+def so2_yearmonth_collection() -> ee.ImageCollection:
+    return ee.ImageCollection(paths.ASSET_SO2_YEARMONTH)
+
+
+def lst_yearmonth_collection() -> ee.ImageCollection:
+    return ee.ImageCollection(paths.ASSET_LST_YEARMONTH)

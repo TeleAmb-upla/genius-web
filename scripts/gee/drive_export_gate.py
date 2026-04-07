@@ -89,6 +89,7 @@ def report_drive_vs_local(service: Any, sync_keys: list[str]) -> None:
     """Lista archivos en Drive vs locales por cada clave de sincronización."""
     from .download_drive_to_repo import (
         SYNC_REGISTRY,
+        _file_matches_sync_spec,
         _filter_drive_files,
         _find_folder_id,
         _list_files,
@@ -122,20 +123,28 @@ def report_drive_vs_local(service: Any, sync_keys: list[str]) -> None:
                 print(f"    Solo en local (no en esas carpetas Drive): {len(only_local)} archivo(s)")
             continue
 
-        drive_folder, dest, exts = SYNC_REGISTRY[key]
-        exts_n = _normalize_exts(exts)
+        spec = SYNC_REGISTRY[key]
+        exts_n = _normalize_exts(spec.extensions)
         try:
-            fid = _find_folder_id(service, drive_folder)
+            fid = _find_folder_id(service, spec.drive_folder)
             raw = _list_files(service, fid)
-            drive_names = {f["name"] for f in _filter_drive_files(raw, exts_n) if f.get("name")}
+            drive_names = {
+                f["name"]
+                for f in _filter_drive_files(raw, exts_n)
+                if f.get("name") and _file_matches_sync_spec(f["name"], spec)
+            }
         except FileNotFoundError:
-            print(f"  [{key}] Carpeta Drive inexistente: {drive_folder}")
+            print(f"  [{key}] Carpeta Drive inexistente: {spec.drive_folder}")
             continue
 
-        local_names = _local_basenames(Path(dest), exts_n)
+        local_names = {
+            n
+            for n in _local_basenames(Path(spec.dest_dir), exts_n)
+            if _file_matches_sync_spec(n, spec)
+        }
         only_drive = sorted(drive_names - local_names)
         only_local = sorted(local_names - drive_names)
-        print(f"  [{key}] {drive_folder} -> {dest}")
+        print(f"  [{key}] {spec.drive_folder} -> {spec.dest_dir}")
         print(f"    En Drive: {len(drive_names)} | En local: {len(local_names)}")
         if only_drive:
             print(f"    A descargar / faltan en local ({len(only_drive)}): {', '.join(only_drive[:10])}{'…' if len(only_drive) > 10 else ''}")

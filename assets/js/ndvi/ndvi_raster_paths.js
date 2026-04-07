@@ -1,6 +1,8 @@
 /**
  * Rutas candidatas para GeoTIFF NDVI en el mapa píxel.
- * Mensual: solo climatología NDVI_Monthly_*.tif (la serie año-mes va por CSV, no por raster).
+ * Anual: solo NDVI_Yearly/NDVI_Yearly_*.tif. Tendencia: solo NDVI_Trend/ (un .tif).
+ * En Google Drive las exportaciones usan carpetas distintas (NDVI_Yearly vs NDVI_Trend).
+ * Mensual: climatología NDVI_Monthly_*.tif (serie año-mes en CSV, no raster).
  */
 const base = 'assets/data/raster/NDVI';
 

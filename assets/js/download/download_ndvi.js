@@ -1,6 +1,23 @@
 ﻿
 const startYear = 2017;
-const endYear = 2024;
+/** Último año civil cerrado UTC (alineado con pipeline GEE). */
+const endYear = new Date().getUTCFullYear() - 1;
+
+const _nowUtc = new Date();
+const _lastCompleteMonthEndMs = Date.UTC(
+    _nowUtc.getUTCFullYear(),
+    _nowUtc.getUTCMonth(),
+    0,
+    23,
+    59,
+    59,
+    999
+);
+const _stdStartMs = _lastCompleteMonthEndMs - 730 * 86400000;
+const _stdYHi = new Date(_lastCompleteMonthEndMs).getUTCFullYear();
+const _stdYLo = new Date(_stdStartMs).getUTCFullYear();
+const ndviStdDevY0 = Math.min(_stdYLo, _stdYHi);
+const ndviStdDevY1 = Math.max(_stdYLo, _stdYHi);
 
 // Definir las rutas de archivos TIF específicos de NDVI
 const ndviMonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
@@ -23,7 +40,7 @@ const ndviYearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, 
 
 const ndviTrendFiles_tif = [
     { url: '/assets/data/raster/NDVI/NDVI_Trend/NDVI_Yearly_Trend.tif', name: 'NDVI_Trend.tif' },
-    { url:'/assets/data/raster/NDVI/NDVI_SD/NDVI_Monthly_StdDev_2024_2025.tif', name: 'NDVI_StdDev_2024_2025.tif' },
+    { url:`/assets/data/raster/NDVI/NDVI_SD/NDVI_Monthly_StdDev_${ndviStdDevY0}_${ndviStdDevY1}.tif`, name: `NDVI_StdDev_${ndviStdDevY0}_${ndviStdDevY1}.tif` },
     { url: '/assets/data/csv/NDVI_m_urban.csv', name: 'NDVI_Monthly.csv' },
     { url: '/assets/data/csv/NDVI_y_urban.csv', name: 'NDVI_Anual.csv' },
      { url: '/assets/data/csv/NDVI_m_av.csv', name: 'NDVI_Monthly_AV.csv' },

@@ -2,7 +2,12 @@
 Descarga archivos exportados por Earth Engine desde Google Drive hacia el repositorio local.
 
 Usa las mismas credenciales que `earthengine authenticate` (~/.config/earthengine/credentials)
-y la API de Drive (solo lectura). Las carpetas deben coincidir con `scripts.gee.paths` (DRIVE_*).
+y la API de Drive. El alcance OAuth debe coincidir con el del cliente EE (auth/drive, no
+drive.readonly: el refresh falla con restricted_client si se pide un alcance no registrado).
+El script solo lista y descarga; no modifica ni borra en Drive.
+
+Carpetas raster NDVI en Drive (alineadas a ``scripts/gee/paths.py``): ``NDVI_Monthly``,
+``NDVI_Yearly`` (solo anuales), ``NDVI_Trend`` (solo tendencia), ``NDVI_StdDev``.
 
 Por cada clave de sincronización, la **primera** vez se hace espejo completo: se eliminan en
 local los archivos con las extensiones gestionadas y se descarga todo lo que haya en la carpeta
@@ -27,6 +32,7 @@ import io
 import json
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
@@ -42,6 +48,28 @@ from . import paths
 
 
 STATE_FILENAME = "drive_sync_keys_state.json"
+
+
+@dataclass(frozen=True)
+class DriveSyncSpec:
+    """Carpeta Drive → destino local, con filtro opcional por prefijo de nombre de archivo."""
+
+    drive_folder: str
+    dest_dir: Path
+    extensions: tuple[str, ...]
+    stem_prefixes: tuple[str, ...] | None = None
+    stem_exclude_substrings: tuple[str, ...] = ()
+
+
+def _file_matches_sync_spec(filename: str, spec: DriveSyncSpec) -> bool:
+    if spec.stem_prefixes:
+        if not any(filename.startswith(p) for p in spec.stem_prefixes):
+            return False
+    lower = filename.lower()
+    for sub in spec.stem_exclude_substrings:
+        if sub.lower() in lower:
+            return False
+    return True
 
 
 def _drive_sync_state_path() -> Path:
@@ -79,7 +107,9 @@ def _load_drive_credentials():
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
 
-    scope = ["https://www.googleapis.com/auth/drive.readonly"]
+    # Mismo alcance que `ee.oauth.SCOPES` (auth/drive). drive.readonly provoca RefreshError
+    # restricted_client con el OAuth client de Earth Engine al refrescar el token.
+    scope = ["https://www.googleapis.com/auth/drive"]
     cred_path = next((p for p in _ee_credential_paths() if p.is_file()), None)
     if cred_path is None:
         raise FileNotFoundError(
@@ -88,6 +118,23 @@ def _load_drive_credentials():
         )
 
     data = json.loads(cred_path.read_text(encoding="utf-8"))
+    # El JSON de `earthengine authenticate` a veces no incluye client_id/client_secret;
+    # google.oauth2.credentials lo exige para refrescar. Mismos defaults que `ee.oauth`.
+    if not data.get("client_id") or not data.get("client_secret"):
+        try:
+            from ee import oauth as ee_oauth
+        except ImportError as e:
+            raise RuntimeError(
+                "En credentials faltan client_id/client_secret. "
+                "Instale earthengine-api o vuelva a ejecutar: earthengine authenticate"
+            ) from e
+        if not data.get("client_id"):
+            data["client_id"] = ee_oauth.CLIENT_ID
+        if not data.get("client_secret"):
+            data["client_secret"] = ee_oauth.CLIENT_SECRET
+        if not data.get("token_uri"):
+            data["token_uri"] = ee_oauth.TOKEN_URI
+
     creds = Credentials.from_authorized_user_info(data, scope)
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
@@ -149,7 +196,7 @@ def _list_files(service, folder_id: str) -> list[dict]:
             .list(
                 q=q,
                 spaces="drive",
-                fields="nextPageToken, files(id, name, mimeType, size)",
+                fields="nextPageToken, files(id, name, mimeType, size, modifiedTime)",
                 pageToken=page_token,
                 pageSize=100,
             )
@@ -193,9 +240,7 @@ def _filter_drive_files(files: list[dict], exts: tuple[str, ...]) -> list[dict]:
 
 def _sync_folder(
     service,
-    drive_folder_name: str,
-    dest_dir: Path,
-    extensions: Iterable[str],
+    spec: DriveSyncSpec,
     *,
     dry_run: bool,
     full_replace: bool,
@@ -207,14 +252,22 @@ def _sync_folder(
     todo lo que haya en Drive (espejo). full_replace False: solo descarga si el archivo
     no existe en dest_dir.
     """
+    drive_folder_name = spec.drive_folder
+    dest_dir = spec.dest_dir
+    exts = _normalize_exts(spec.extensions)
     fid = _find_folder_id(service, drive_folder_name)
     files = _list_files(service, fid)
-    exts = _normalize_exts(extensions)
-    candidates = _filter_drive_files(files, exts)
+    raw_candidates = _filter_drive_files(files, exts)
+    candidates = [
+        f for f in raw_candidates if _file_matches_sync_spec(f.get("name") or "", spec)
+    ]
+    skipped_filter = len(raw_candidates) - len(candidates)
     print(
         f"  Disponible en Drive '{drive_folder_name}': "
-        f"{len(candidates)} archivo(s) ({', '.join(exts)})"
+        f"{len(candidates)} archivo(s) tras filtro ({', '.join(exts)})"
     )
+    if skipped_filter:
+        print(f"  (Excluidos por prefijo/exclusión: {skipped_filter})")
 
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -224,6 +277,8 @@ def _sync_folder(
             if not p.is_file():
                 continue
             if p.suffix.lower() not in exts:
+                continue
+            if not _file_matches_sync_spec(p.name, spec):
                 continue
             if dry_run:
                 print(f"  [dry-run] eliminar local {p.name}")
@@ -349,71 +404,368 @@ def _sync_ndvi_csv_bundle(
     return n_down
 
 
-# Clave -> (carpeta Drive, ruta local, extensiones)
-SYNC_REGISTRY: dict[str, tuple[str, Path, tuple[str, ...]]] = {
-    "raster_monthly": (
+def _sync_key_is_raster_phase(key: str) -> bool:
+    if key.startswith("raster_"):
+        return True
+    return (
+        "_raster_monthly" in key
+        or "_raster_yearly" in key
+        or "_raster_trend" in key
+    )
+
+
+# Clave → especificación Drive → repo (``DriveSyncSpec``).
+# AOD/NO2/SO2/LST: anuales y tendencia comparten carpeta Drive en el JS; se separan por prefijo.
+SYNC_REGISTRY: dict[str, DriveSyncSpec] = {
+    "raster_monthly": DriveSyncSpec(
         paths.DRIVE_RASTER_MONTHLY,
         paths.REPO_RASTER_NDVI_MONTHLY,
         (".tif", ".tiff"),
     ),
-    "raster_yearly": (
+    "raster_yearly": DriveSyncSpec(
         paths.DRIVE_RASTER_YEARLY,
         paths.REPO_RASTER_NDVI_YEARLY,
         (".tif", ".tiff"),
     ),
-    "raster_trend": (
+    "raster_trend": DriveSyncSpec(
         paths.DRIVE_RASTER_TREND,
         paths.REPO_RASTER_NDVI_TREND,
         (".tif", ".tiff"),
     ),
-    "raster_sd": (
+    "raster_sd": DriveSyncSpec(
         paths.DRIVE_RASTER_SD,
         paths.REPO_RASTER_NDVI_SD,
         (".tif", ".tiff"),
     ),
-    # El primer campo no se usa; la sync real pasa por _sync_ndvi_csv_bundle (monthly+yearly).
-    "csv": (paths.DRIVE_CSV_MONTHLY, paths.REPO_CSV, (".csv",)),
-    "csv_yearmonth": (
+    # El drive_folder de csv no se usa; la sync pasa por _sync_ndvi_csv_bundle.
+    "csv": DriveSyncSpec(
+        paths.DRIVE_CSV_MONTHLY,
+        paths.REPO_CSV,
+        (".csv",),
+    ),
+    "csv_yearmonth": DriveSyncSpec(
         paths.DRIVE_CSV_YEARMONTH,
         paths.REPO_NDVI_YEARMONTH_CSV,
         (".csv",),
     ),
-    "geo_monthly_b": (
+    "geo_monthly_b": DriveSyncSpec(
         paths.DRIVE_GEO_MONTHLY_B,
         paths.REPO_GEOJSON_NDVI_MONTHLY_B,
         (".geojson", ".json"),
     ),
-    "geo_monthly_m": (
+    "geo_monthly_m": DriveSyncSpec(
         paths.DRIVE_GEO_MONTHLY_M,
         paths.REPO_GEOJSON_NDVI_MONTHLY_M,
         (".geojson", ".json"),
     ),
-    "geo_yearly_b": (
+    "geo_yearly_b": DriveSyncSpec(
         paths.DRIVE_GEO_YEARLY_B,
         paths.REPO_GEOJSON_NDVI_YEARLY_B,
         (".geojson", ".json"),
     ),
-    "geo_yearly_m": (
+    "geo_yearly_m": DriveSyncSpec(
         paths.DRIVE_GEO_YEARLY_M,
         paths.REPO_GEOJSON_NDVI_YEARLY_M,
         (".geojson", ".json"),
     ),
-    "geo_sd_av": (
+    "geo_sd_av": DriveSyncSpec(
         paths.DRIVE_GEO_SD_AV,
         paths.REPO_GEOJSON_NDVI_SD,
         (".geojson", ".json"),
     ),
-    "geo_trend_b": (
+    "geo_trend_b": DriveSyncSpec(
         paths.DRIVE_GEO_TREND_B,
         paths.REPO_GEOJSON_NDVI_TREND_B,
         (".geojson", ".json"),
     ),
-    "geo_trend_m": (
+    "geo_trend_m": DriveSyncSpec(
         paths.DRIVE_GEO_TREND_M,
         paths.REPO_GEOJSON_NDVI_TREND_M,
         (".geojson", ".json"),
     ),
+    # --- AOD ---
+    "aod_raster_monthly": DriveSyncSpec(
+        paths.DRIVE_AOD_RASTER_MONTHLY,
+        paths.REPO_RASTER_AOD_MONTHLY,
+        (".tif", ".tiff"),
+    ),
+    "aod_raster_yearly": DriveSyncSpec(
+        paths.DRIVE_AOD_RASTER_YEARLY,
+        paths.REPO_RASTER_AOD_YEARLY,
+        (".tif", ".tiff"),
+        stem_prefixes=("AOD_Yearly_",),
+        stem_exclude_substrings=("Trend",),
+    ),
+    "aod_raster_trend": DriveSyncSpec(
+        paths.DRIVE_AOD_RASTER_YEARLY,
+        paths.REPO_RASTER_AOD_TREND,
+        (".tif", ".tiff"),
+        stem_prefixes=("AOD_Yearly_Trend",),
+    ),
+    "aod_csv_monthly": DriveSyncSpec(
+        paths.DRIVE_AOD_CSV_MONTHLY,
+        paths.REPO_RASTER_AOD_MONTHLY,
+        (".csv",),
+    ),
+    "aod_csv_yearly": DriveSyncSpec(
+        paths.DRIVE_AOD_CSV_YEARLY,
+        paths.REPO_RASTER_AOD_YEARLY,
+        (".csv",),
+    ),
+    "aod_geo_monthly_b": DriveSyncSpec(
+        paths.DRIVE_AOD_GEO_MONTHLY_B,
+        paths.REPO_GEOJSON_AOD_MONTHLY_B,
+        (".geojson", ".json"),
+    ),
+    "aod_geo_monthly_m": DriveSyncSpec(
+        paths.DRIVE_AOD_GEO_MONTHLY_M,
+        paths.REPO_GEOJSON_AOD_MONTHLY_M,
+        (".geojson", ".json"),
+    ),
+    "aod_geo_yearly_b": DriveSyncSpec(
+        paths.DRIVE_AOD_GEO_YEARLY_B,
+        paths.REPO_GEOJSON_AOD_YEARLY_B,
+        (".geojson", ".json"),
+        stem_prefixes=("AOD_Yearly_ZonalStats_Barrios_",),
+    ),
+    "aod_geo_yearly_m": DriveSyncSpec(
+        paths.DRIVE_AOD_GEO_YEARLY_M,
+        paths.REPO_GEOJSON_AOD_YEARLY_M,
+        (".geojson", ".json"),
+        stem_prefixes=("AOD_Yearly_ZonalStats_Manzanas_",),
+    ),
+    "aod_geo_trend_b": DriveSyncSpec(
+        paths.DRIVE_AOD_GEO_TREND_B,
+        paths.REPO_GEOJSON_AOD_YEARLY_B,
+        (".geojson", ".json"),
+        stem_prefixes=("Trend_AOD_ZonalStats_Barrios",),
+    ),
+    "aod_geo_trend_m": DriveSyncSpec(
+        paths.DRIVE_AOD_GEO_TREND_M,
+        paths.REPO_GEOJSON_AOD_YEARLY_M,
+        (".geojson", ".json"),
+        stem_prefixes=("Trend_AOD_ZonalStats_Manzanas",),
+    ),
+    # --- NO2 ---
+    "no2_raster_monthly": DriveSyncSpec(
+        paths.DRIVE_NO2_RASTER_MONTHLY,
+        paths.REPO_RASTER_NO2_MONTHLY,
+        (".tif", ".tiff"),
+    ),
+    "no2_raster_yearly": DriveSyncSpec(
+        paths.DRIVE_NO2_RASTER_YEARLY,
+        paths.REPO_RASTER_NO2_YEARLY,
+        (".tif", ".tiff"),
+        stem_prefixes=("NO2_Yearly_",),
+        stem_exclude_substrings=("Trend",),
+    ),
+    "no2_raster_trend": DriveSyncSpec(
+        paths.DRIVE_NO2_RASTER_YEARLY,
+        paths.REPO_RASTER_NO2_TREND,
+        (".tif", ".tiff"),
+        stem_prefixes=("NO2_Yearly_Trend",),
+    ),
+    "no2_csv_monthly": DriveSyncSpec(
+        paths.DRIVE_NO2_CSV_MONTHLY,
+        paths.REPO_RASTER_NO2_MONTHLY,
+        (".csv",),
+    ),
+    "no2_csv_yearly": DriveSyncSpec(
+        paths.DRIVE_NO2_CSV_YEARLY,
+        paths.REPO_RASTER_NO2_YEARLY,
+        (".csv",),
+    ),
+    "no2_geo_monthly_b": DriveSyncSpec(
+        paths.DRIVE_NO2_GEO_MONTHLY_B,
+        paths.REPO_GEOJSON_NO2_MONTHLY_B,
+        (".geojson", ".json"),
+    ),
+    "no2_geo_monthly_m": DriveSyncSpec(
+        paths.DRIVE_NO2_GEO_MONTHLY_M,
+        paths.REPO_GEOJSON_NO2_MONTHLY_M,
+        (".geojson", ".json"),
+    ),
+    "no2_geo_yearly_b": DriveSyncSpec(
+        paths.DRIVE_NO2_GEO_YEARLY_B,
+        paths.REPO_GEOJSON_NO2_YEARLY_B,
+        (".geojson", ".json"),
+        stem_prefixes=("NO2_Yearly_ZonalStats_Barrios_",),
+    ),
+    "no2_geo_yearly_m": DriveSyncSpec(
+        paths.DRIVE_NO2_GEO_YEARLY_M,
+        paths.REPO_GEOJSON_NO2_YEARLY_M,
+        (".geojson", ".json"),
+        stem_prefixes=("NO2_Yearly_ZonalStats_Manzanas_",),
+    ),
+    "no2_geo_trend_b": DriveSyncSpec(
+        paths.DRIVE_NO2_GEO_TREND_B,
+        paths.REPO_GEOJSON_NO2_YEARLY_B,
+        (".geojson", ".json"),
+        stem_prefixes=("Trend_NO2_ZonalStats_Barrios",),
+    ),
+    "no2_geo_trend_m": DriveSyncSpec(
+        paths.DRIVE_NO2_GEO_TREND_M,
+        paths.REPO_GEOJSON_NO2_YEARLY_M,
+        (".geojson", ".json"),
+        stem_prefixes=("Trend_NO2_ZonalStats_Manzanas",),
+    ),
+    # --- SO2 ---
+    "so2_raster_monthly": DriveSyncSpec(
+        paths.DRIVE_SO2_RASTER_MONTHLY,
+        paths.REPO_RASTER_SO2_MONTHLY,
+        (".tif", ".tiff"),
+    ),
+    "so2_raster_yearly": DriveSyncSpec(
+        paths.DRIVE_SO2_RASTER_YEARLY,
+        paths.REPO_RASTER_SO2_YEARLY,
+        (".tif", ".tiff"),
+        stem_prefixes=("SO2_Yearly_",),
+        stem_exclude_substrings=("Trend",),
+    ),
+    "so2_raster_trend": DriveSyncSpec(
+        paths.DRIVE_SO2_RASTER_YEARLY,
+        paths.REPO_RASTER_SO2_TREND,
+        (".tif", ".tiff"),
+        stem_prefixes=("SO2_Yearly_Trend",),
+    ),
+    "so2_csv_monthly": DriveSyncSpec(
+        paths.DRIVE_SO2_CSV_MONTHLY,
+        paths.REPO_RASTER_SO2_MONTHLY,
+        (".csv",),
+    ),
+    "so2_csv_yearly": DriveSyncSpec(
+        paths.DRIVE_SO2_CSV_YEARLY,
+        paths.REPO_RASTER_SO2_YEARLY,
+        (".csv",),
+    ),
+    "so2_geo_monthly_b": DriveSyncSpec(
+        paths.DRIVE_SO2_GEO_MONTHLY_B,
+        paths.REPO_GEOJSON_SO2_MONTHLY_B,
+        (".geojson", ".json"),
+    ),
+    "so2_geo_monthly_m": DriveSyncSpec(
+        paths.DRIVE_SO2_GEO_MONTHLY_M,
+        paths.REPO_GEOJSON_SO2_MONTHLY_M,
+        (".geojson", ".json"),
+    ),
+    "so2_geo_yearly_b": DriveSyncSpec(
+        paths.DRIVE_SO2_GEO_YEARLY_B,
+        paths.REPO_GEOJSON_SO2_YEARLY_B,
+        (".geojson", ".json"),
+        stem_prefixes=("SO2_Yearly_ZonalStats_Barrios_",),
+    ),
+    "so2_geo_yearly_m": DriveSyncSpec(
+        paths.DRIVE_SO2_GEO_YEARLY_M,
+        paths.REPO_GEOJSON_SO2_YEARLY_M,
+        (".geojson", ".json"),
+        stem_prefixes=("SO2_Yearly_ZonalStats_Manzanas_",),
+    ),
+    "so2_geo_trend_b": DriveSyncSpec(
+        paths.DRIVE_SO2_GEO_TREND_B,
+        paths.REPO_GEOJSON_SO2_YEARLY_B,
+        (".geojson", ".json"),
+        stem_prefixes=("Trend_SO2_ZonalStats_Barrios",),
+    ),
+    "so2_geo_trend_m": DriveSyncSpec(
+        paths.DRIVE_SO2_GEO_TREND_M,
+        paths.REPO_GEOJSON_SO2_YEARLY_M,
+        (".geojson", ".json"),
+        stem_prefixes=("Trend_SO2_ZonalStats_Manzanas",),
+    ),
+    # --- LST ---
+    "lst_raster_monthly": DriveSyncSpec(
+        paths.DRIVE_LST_RASTER_MONTHLY,
+        paths.REPO_RASTER_LST_MONTHLY,
+        (".tif", ".tiff"),
+    ),
+    "lst_raster_yearly": DriveSyncSpec(
+        paths.DRIVE_LST_RASTER_YEARLY,
+        paths.REPO_RASTER_LST_YEARLY,
+        (".tif", ".tiff"),
+        stem_prefixes=("LST_Yearly_",),
+        stem_exclude_substrings=("Trend",),
+    ),
+    "lst_raster_trend": DriveSyncSpec(
+        paths.DRIVE_LST_RASTER_YEARLY,
+        paths.REPO_RASTER_LST_TREND,
+        (".tif", ".tiff"),
+        stem_prefixes=("LST_Yearly_Trend",),
+    ),
+    "lst_csv_monthly": DriveSyncSpec(
+        paths.DRIVE_LST_CSV_MONTHLY,
+        paths.REPO_RASTER_LST_MONTHLY,
+        (".csv",),
+    ),
+    "lst_csv_yearly": DriveSyncSpec(
+        paths.DRIVE_LST_CSV_YEARLY,
+        paths.REPO_RASTER_LST_YEARLY,
+        (".csv",),
+    ),
+    "lst_geo_monthly_b": DriveSyncSpec(
+        paths.DRIVE_LST_GEO_MONTHLY_B,
+        paths.REPO_GEOJSON_LST_MONTHLY_B,
+        (".geojson", ".json"),
+    ),
+    "lst_geo_monthly_m": DriveSyncSpec(
+        paths.DRIVE_LST_GEO_MONTHLY_M,
+        paths.REPO_GEOJSON_LST_MONTHLY_M,
+        (".geojson", ".json"),
+    ),
+    "lst_geo_yearly_b": DriveSyncSpec(
+        paths.DRIVE_LST_GEO_YEARLY_B,
+        paths.REPO_GEOJSON_LST_YEARLY_B,
+        (".geojson", ".json"),
+        stem_prefixes=("LST_Yearly_ZonalStats_Barrios_",),
+    ),
+    "lst_geo_yearly_m": DriveSyncSpec(
+        paths.DRIVE_LST_GEO_YEARLY_M,
+        paths.REPO_GEOJSON_LST_YEARLY_M,
+        (".geojson", ".json"),
+        stem_prefixes=("LST_Yearly_ZonalStats_Manzanas_",),
+    ),
+    "lst_geo_trend_b": DriveSyncSpec(
+        paths.DRIVE_LST_GEO_TREND_B,
+        paths.REPO_GEOJSON_LST_YEARLY_B,
+        (".geojson", ".json"),
+        stem_prefixes=("Trend_LST_ZonalStats_Barrios",),
+    ),
+    "lst_geo_trend_m": DriveSyncSpec(
+        paths.DRIVE_LST_GEO_TREND_M,
+        paths.REPO_GEOJSON_LST_YEARLY_M,
+        (".geojson", ".json"),
+        stem_prefixes=("Trend_LST_ZonalStats_Manzanas",),
+    ),
 }
+
+SYNC_KEYS_RASTER_PHASE: frozenset[str] = frozenset(
+    k for k in SYNC_REGISTRY if _sync_key_is_raster_phase(k)
+)
+SYNC_KEYS_TABLE_PHASE: frozenset[str] = frozenset(SYNC_REGISTRY.keys()) - SYNC_KEYS_RASTER_PHASE
+
+
+def sync_keys_for_export_categories(only: set[str] | None) -> list[str]:
+    """
+    Claves SYNC_REGISTRY alineadas con --only de pipeline/export (asset,raster,csv,geojson).
+    Sirve cuando no se encoló nada a Drive pero igual hay que rellenar el repo desde Drive.
+    """
+    if only is None:
+        return sorted(SYNC_REGISTRY.keys())
+    keys: set[str] = set()
+    if "raster" in only:
+        keys.update(k for k in SYNC_REGISTRY if _sync_key_is_raster_phase(k))
+    if "csv" in only:
+        keys.update(
+            k
+            for k in SYNC_REGISTRY
+            if k in ("csv", "csv_yearmonth")
+            or k.endswith("_csv_monthly")
+            or k.endswith("_csv_yearly")
+        )
+    if "geojson" in only:
+        keys.update(
+            k for k in SYNC_REGISTRY if k.startswith("geo_") or "_geo_" in k
+        )
+    return sorted(keys)
 
 
 def parse_sync_keys(only_raw: str) -> list[str]:
@@ -433,6 +785,7 @@ def run_drive_sync(
     *,
     dry_run: bool = False,
     full_replace: bool | None = None,
+    full_replace_keys: set[str] | frozenset[str] | None = None,
 ) -> int:
     """
     Descarga las carpetas indicadas desde Drive hacia REPO_*.
@@ -442,6 +795,9 @@ def run_drive_sync(
         dry_run: Si True, no escribe ni elimina archivos.
         full_replace: None = primera vez por clave es espejo completo, luego incremental;
             True = forzar espejo completo para todas las claves; False = solo incremental.
+        full_replace_keys: Subconjunto de ``keys`` que se sincronizan en espejo completo
+            aunque ``full_replace`` sea False o el modo guardado sea incremental (p. ej.
+            tras reexportar NDVI_Monthly en Drive con el mismo nombre de archivo).
 
     Returns:
         Suma de archivos descargados (o contados en dry-run) en todas las claves.
@@ -451,34 +807,38 @@ def run_drive_sync(
     modes = _load_key_modes()
     total = 0
 
+    fr_keys = full_replace_keys or frozenset()
     for key in keys:
-        drive_name, dest, exts = SYNC_REGISTRY[key]
-        if full_replace is None:
-            use_full = modes.get(key) != "incremental"
+        spec = SYNC_REGISTRY[key]
+        force_key = key in fr_keys
+        if full_replace is True:
+            use_full = True
+        elif force_key:
+            use_full = True
+        elif full_replace is False:
+            use_full = False
         else:
-            use_full = full_replace
+            use_full = modes.get(key) != "incremental"
 
         if key == "csv":
             folders = ", ".join(_ndvi_csv_drive_folder_names())
-            print(f"Sincronizando [csv] Drive: {folders} -> {dest}")
+            print(f"Sincronizando [csv] Drive: {folders} -> {spec.dest_dir}")
         else:
-            print(f"Sincronizando [{key}] {drive_name} -> {dest}")
+            print(f"Sincronizando [{key}] {spec.drive_folder} -> {spec.dest_dir}")
         print(f"  Modo: {'espejo completo (reemplaza gestionados en local)' if use_full else 'incremental (solo faltantes)'}")
         try:
             if key == "csv":
                 total += _sync_ndvi_csv_bundle(
                     service,
-                    dest,
-                    exts,
+                    spec.dest_dir,
+                    spec.extensions,
                     dry_run=dry_run,
                     full_replace=use_full,
                 )
             else:
                 total += _sync_folder(
                     service,
-                    drive_name,
-                    dest,
-                    exts,
+                    spec,
                     dry_run=dry_run,
                     full_replace=use_full,
                 )
@@ -496,7 +856,7 @@ def run_drive_sync(
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        description="Descargar exportaciones NDVI de Google Drive al repo local."
+        description="Descargar exportaciones GEE (NDVI, AOD, NO2, SO2, LST) de Google Drive al repo local."
     )
     parser.add_argument(
         "--dry-run",

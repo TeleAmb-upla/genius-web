@@ -1,0 +1,1 @@
+"""Producto NDVI (vegetación)."""

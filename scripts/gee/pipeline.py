@@ -1,13 +1,21 @@
 """
-Flujo unificado NDVI: (1) listar Drive y omitir exports EE si el archivo ya existe;
-(2) encolar solo lo faltante; (3) esperar tareas a Drive; (4) listar Drive otra vez y
-comparar con el repo local; (5) sincronizar Drive -> repositorio.
+Flujo unificado por producto: (1) plan incremental GEE (huecos asset); (2) auditoría
+asset año-mes vs último mes civil cerrado UTC; (3) auditoría Drive por ``modifiedTime``
+y anual según año civil cerrado reloj; (4) encolar derivados; (5) esperar; (6) comparar
+Drive vs repo; (7) espejo local (``full_replace_keys``).
 
-Las tareas de export a **Asset** no bloquean la descarga desde Drive.
+Por defecto en **dos fases**: asset+rasters (espera, incl. exports a Asset) y sync de
+rasters; luego CSV+GeoJSON (espera y sync). Usa `--single-pass` para el flujo antiguo
+(una sola tanda). Las tareas a **Asset** se esperan junto a la fase 1.
+
+Rasters en Drive: ``NDVI_Yearly`` solo ``NDVI_Yearly_*.tif``; ``NDVI_Trend`` solo
+``NDVI_Yearly_Trend.tif``. Con ``--include-yearly``, la tendencia se recalcula si hay
+meses nuevos en el delta o un año civil completo nuevo (estado ``last_trend_raster_full_year``).
 
 Uso (desde la raíz del repositorio):
 
     python -m scripts.gee.pipeline
+    python -m scripts.gee.pipeline --single-pass
     python -m scripts.gee.pipeline --include-yearly
     python -m scripts.gee.pipeline --enqueue-only
     python -m scripts.gee.pipeline --download-only --sync-only all
@@ -30,8 +38,154 @@ if __name__ == "__main__" and not __package__:
         sys.path.insert(0, _repo_str)
     __package__ = "scripts.gee"
 
-from .download_drive_to_repo import get_drive_service, parse_sync_keys, run_drive_sync
+from .download_drive_to_repo import (
+    SYNC_KEYS_RASTER_PHASE,
+    SYNC_KEYS_TABLE_PHASE,
+    get_drive_service,
+    parse_sync_keys,
+    run_drive_sync,
+    sync_keys_for_export_categories,
+)
+from .drive_audit import compute_drive_freshness_hints
 from .drive_export_gate import DriveExportGate, report_drive_vs_local
+from .lib import yearmonth as ym_lib
+
+
+PRODUCT_ORDER = ("ndvi", "aod", "no2", "so2", "lst")
+
+
+def _parse_products(raw: str | None) -> list[str]:
+    if not raw or not raw.strip():
+        return ["ndvi"]
+    s = raw.strip().lower()
+    if s == "all":
+        return list(PRODUCT_ORDER)
+    allowed = set(PRODUCT_ORDER)
+    if s not in allowed:
+        print(
+            f"--product no válido: {raw!r}. Use: {', '.join(PRODUCT_ORDER)} o all.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    return [s]
+
+
+def _plan_for_product(product: str, force_full: bool):
+    if product == "ndvi":
+        from .products.ndvi import incremental as inc
+
+        missing = inc.list_missing_ndvi_yearmonth_months()
+        plan = inc.plan_derivative_exports(
+            missing_asset_months=missing,
+            force_full=force_full,
+        )
+        return missing, plan
+    if product == "aod":
+        from .products.atmosphere.aod import incremental as inc
+
+        missing = inc.list_missing_aod_yearmonth_months()
+        plan = inc.plan_derivative_exports(
+            missing_asset_months=missing,
+            force_full=force_full,
+        )
+        return missing, plan
+    if product == "lst":
+        from .products.lst import incremental as inc
+
+        missing = inc.list_missing_lst_yearmonth_months()
+        plan = inc.plan_derivative_exports(
+            missing_asset_months=missing,
+            force_full=force_full,
+        )
+        return missing, plan
+    if product == "no2":
+        from .products.atmosphere import tasks_core as tc
+        from .products.atmosphere.spec import no2_spec
+
+        spec = no2_spec()
+        missing = tc.list_missing_ym(spec)
+        plan = tc.plan_derivative_exports(
+            spec,
+            missing_asset_months=missing,
+            force_full=force_full,
+        )
+        return missing, plan
+    if product == "so2":
+        from .products.atmosphere import tasks_core as tc
+        from .products.atmosphere.spec import so2_spec
+
+        spec = so2_spec()
+        missing = tc.list_missing_ym(spec)
+        plan = tc.plan_derivative_exports(
+            spec,
+            missing_asset_months=missing,
+            force_full=force_full,
+        )
+        return missing, plan
+    raise ValueError(product)
+
+
+def _yearmonth_ic_for_product(product: str):
+    """ImageCollection año-mes en GEE (asset) para auditoría y cobertura anual."""
+    import ee
+
+    from . import vectors
+    from .products.atmosphere.spec import no2_spec, so2_spec
+
+    if product == "ndvi":
+        return vectors.ndvi_yearmonth_collection()
+    if product == "aod":
+        return vectors.aod_yearmonth_collection()
+    if product == "lst":
+        return vectors.lst_yearmonth_collection()
+    if product == "no2":
+        return ee.ImageCollection(no2_spec().asset_ym)
+    if product == "so2":
+        return ee.ImageCollection(so2_spec().asset_ym)
+    raise ValueError(product)
+
+
+def _enqueue_for_product(
+    product: str,
+    *,
+    only: set[str] | None,
+    skip_yearly: bool,
+    force_full: bool,
+    drive_gate,
+    persist_state: bool,
+    tables_run_override: bool | None = None,
+    drive_freshness=None,
+):
+    kw: dict = dict(
+        only=only,
+        skip_yearly=skip_yearly,
+        force_full=force_full,
+        drive_gate=drive_gate,
+        persist_state=persist_state,
+        tables_run_override=tables_run_override,
+        drive_freshness=drive_freshness,
+    )
+    if product == "ndvi":
+        from .products.ndvi.enqueue import enqueue_ndvi_exports
+
+        return enqueue_ndvi_exports(**kw)
+    if product == "aod":
+        from .products.atmosphere.aod.enqueue import enqueue_aod_exports
+
+        return enqueue_aod_exports(**kw)
+    if product == "lst":
+        from .products.lst.enqueue import enqueue_lst_exports
+
+        return enqueue_lst_exports(**kw)
+    if product == "no2":
+        from .products.atmosphere.enqueue import enqueue_no2_exports
+
+        return enqueue_no2_exports(**kw)
+    if product == "so2":
+        from .products.atmosphere.enqueue import enqueue_so2_exports
+
+        return enqueue_so2_exports(**kw)
+    raise ValueError(product)
 
 
 def _parse_export_only(raw: str | None) -> set[str] | None:
@@ -52,8 +206,18 @@ def _parse_export_only(raw: str | None) -> set[str] | None:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Encolar export NDVI en Earth Engine, esperar tareas a Drive y sincronizar al repo local."
+            "Encolar exportaciones GEE (NDVI, AOD, NO2, SO2, LST), esperar tareas y sincronizar Drive → repo."
         )
+    )
+    parser.add_argument(
+        "--product",
+        default="ndvi",
+        metavar="ID",
+        help=(
+            "Producto: ndvi | aod | no2 | so2 | lst | all. "
+            "Con «all» se ejecutan en ese orden (cada uno con el mismo --only / fases). "
+            "Por defecto ndvi."
+        ),
     )
     parser.add_argument(
         "--only",
@@ -131,6 +295,14 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="No consultar Drive antes de encolar (equivale a desactivar la omisión por archivos existentes).",
     )
+    parser.add_argument(
+        "--single-pass",
+        action="store_true",
+        help=(
+            "Encolar todo junto y una sola espera/descarga (comportamiento antiguo). "
+            "Por defecto: fase 1 asset+rasters → espera y sync; fase 2 CSV+GeoJSON."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.enqueue_only and args.download_only:
@@ -161,11 +333,11 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     from .ee_init import initialize_ee
-    from .enqueue_exports import enqueue_ndvi_exports
     from .task_wait import wait_for_tasks
 
     only = _parse_export_only(args.only)
     skip_yearly = not args.include_yearly
+    products = _parse_products(args.product)
 
     initialize_ee()
 
@@ -179,68 +351,21 @@ def main(argv: list[str] | None = None) -> None:
     elif args.skip_drive_preflight:
         print("Pre-flight Drive omitido (--skip-drive-preflight).")
 
-    result = enqueue_ndvi_exports(
-        only=only,
-        skip_yearly=skip_yearly,
-        force_full=args.force_full,
-        drive_gate=drive_gate,
-    )
-    plan = result.plan
-
-    print(f"[incremental] {plan.reason}")
-    if plan.max_ym:
-        print(
-            f"[incremental] Máximo (año-mes) en colección: "
-            f"{plan.max_ym[0]}-{plan.max_ym[1]:02d}"
-        )
-    for line in result.messages:
-        print(line)
-
-    if result.state_saved and result.state_path_msg and plan.max_ym:
-        print(
-            f"[incremental] Estado actualizado: último derivado procesado hasta "
-            f"{plan.max_ym[0]}-{plan.max_ym[1]:02d} ({result.state_path_msg})."
-        )
-
-    print("Listo: revisa las tareas en https://code.earthengine.google.com/tasks")
-
-    if args.enqueue_only:
-        return
-
-    drive_tasks = result.drive_tasks
-    if drive_tasks:
-        timeout = None if args.wait_timeout <= 0 else args.wait_timeout
-        if args.skip_wait:
-            print(
-                "Aviso: --skip-wait: se continúa sin esperar a que las tareas terminen.",
-                file=sys.stderr,
-            )
-        else:
-            wait_for_tasks(
-                drive_tasks,
-                poll_seconds=args.poll,
-                timeout_seconds=timeout,
-            )
+    p1_names = frozenset({"asset", "raster"})
+    p2_names = frozenset({"csv", "geojson"})
+    if only is None:
+        phase1_only: set[str] | None = set(p1_names)
+        phase2_only: set[str] | None = set(p2_names)
     else:
-        print(
-            "No se encolaron tareas nuevas a Drive (todo omitido en pre-flight o sin exports); "
-            "se sigue con comprobación y descarga local si aplica."
-        )
+        phase1_only = only & p1_names
+        phase2_only = only & p2_names
 
-    sync_keys = sorted(result.sync_keys)
+    use_phased = (
+        not args.single_pass
+        and bool(phase1_only)
+        and bool(phase2_only)
+    )
 
-    if not sync_keys:
-        print("No hay claves de sincronización; omitiendo descarga local.")
-        return
-
-    if drive_service is None:
-        print("Conectando a Google Drive (post-export y comparación con local)…")
-        drive_service = get_drive_service()
-    if drive_gate is not None:
-        drive_gate.invalidate()
-    report_drive_vs_local(drive_service, sync_keys)
-
-    print(f"Descargando hacia el repositorio: {', '.join(sync_keys)}")
     dr_dl2: bool | None
     if args.full_sync_download:
         dr_dl2 = True
@@ -248,7 +373,176 @@ def main(argv: list[str] | None = None) -> None:
         dr_dl2 = False
     else:
         dr_dl2 = None
-    run_drive_sync(sync_keys, dry_run=args.dry_run_download, full_replace=dr_dl2)
+
+    def _wait_and_sync(
+        result,
+        *,
+        sync_keys_hint: set[str],
+        only_for_fallback: set[str] | None,
+        phase_label: str,
+        product_tag: str,
+    ) -> None:
+        nonlocal drive_service, drive_gate
+        for line in result.messages:
+            print(line)
+        rp = result.plan
+        if result.state_saved and result.state_path_msg and rp.max_ym:
+            print(
+                f"[incremental {product_tag}] Estado actualizado: último derivado procesado hasta "
+                f"{rp.max_ym[0]}-{rp.max_ym[1]:02d} ({result.state_path_msg})."
+            )
+        print("Listo: revisa las tareas en https://code.earthengine.google.com/tasks")
+        if args.enqueue_only:
+            return
+        to_wait = list(result.asset_tasks) + list(result.drive_tasks)
+        if to_wait:
+            timeout = None if args.wait_timeout <= 0 else args.wait_timeout
+            if args.skip_wait:
+                print(
+                    "Aviso: --skip-wait: se continúa sin esperar a que las tareas terminen.",
+                    file=sys.stderr,
+                )
+            else:
+                wait_for_tasks(
+                    to_wait,
+                    poll_seconds=args.poll,
+                    timeout_seconds=timeout,
+                )
+        else:
+            print(
+                f"[{phase_label}] No se encolaron tareas nuevas; "
+                "se sigue con comprobación y descarga local si aplica."
+            )
+        sync_keys = sorted(k for k in result.sync_keys if k in sync_keys_hint)
+        if not sync_keys:
+            fb = sync_keys_for_export_categories(only_for_fallback)
+            sync_keys = sorted(k for k in fb if k in sync_keys_hint)
+            if sync_keys:
+                scope = (
+                    "todas las categorías"
+                    if only_for_fallback is None
+                    else ", ".join(sorted(only_for_fallback))
+                )
+                print(
+                    f"[pipeline] {phase_label}: sincronizando repo (alcance --only: {scope})."
+                )
+        if not sync_keys:
+            print(f"[{phase_label}] Sin claves de sincronización para esta fase.")
+            return
+        if drive_service is None:
+            print("Conectando a Google Drive (post-export y comparación con local)…")
+            drive_service = get_drive_service()
+        if drive_gate is not None:
+            drive_gate.invalidate()
+        report_drive_vs_local(drive_service, sync_keys)
+        print(f"[{phase_label}] Descargando: {', '.join(sync_keys)}")
+        mirror_keys = frozenset(
+            k for k in result.sync_full_mirror_keys if k in sync_keys
+        )
+        if mirror_keys:
+            print(
+                f"[{phase_label}] Espejo completo forzado para: {', '.join(sorted(mirror_keys))} "
+                "(sustituir locales tras reexport en Drive)."
+            )
+        run_drive_sync(
+            sync_keys,
+            dry_run=args.dry_run_download,
+            full_replace=dr_dl2,
+            full_replace_keys=mirror_keys,
+        )
+
+    for product in products:
+        print(f"\n========== Producto: {product.upper()} ==========\n")
+        _missing_assets, plan = _plan_for_product(product, args.force_full)
+        print(f"[incremental {product}] {plan.reason}")
+        if plan.max_ym:
+            print(
+                f"[incremental {product}] Máximo (año-mes) en colección: "
+                f"{plan.max_ym[0]}-{plan.max_ym[1]:02d}"
+            )
+
+        ic_audit = _yearmonth_ic_for_product(product)
+        for line in ym_lib.audit_asset_yearmonth_vs_wall_clock_messages(
+            ic_audit, product=product
+        ):
+            print(line)
+
+        drive_freshness = None
+        if use_gate and drive_service is not None:
+            max_ym = ym_lib.get_collection_max_ym(ic_audit)
+            ty_wall = ym_lib.last_completed_wall_clock_calendar_year()
+            cover = ym_lib.assets_cover_full_calendar_year(max_ym, ty_wall)
+            drive_freshness = compute_drive_freshness_hints(
+                product,
+                drive_service,
+                target_yearly_year=ty_wall,
+                assets_cover_target_year=cover,
+            )
+            for line in drive_freshness.audit_messages:
+                print(line)
+
+        if use_phased:
+            print(
+                "\n=== Fase 1: asset + rasters (Earth Engine → Drive; luego sync local) ===\n"
+            )
+            r1 = _enqueue_for_product(
+                product,
+                only=phase1_only,
+                skip_yearly=skip_yearly,
+                force_full=args.force_full,
+                drive_gate=drive_gate,
+                persist_state=False,
+                tables_run_override=None,
+                drive_freshness=drive_freshness,
+            )
+            _wait_and_sync(
+                r1,
+                sync_keys_hint=SYNC_KEYS_RASTER_PHASE,
+                only_for_fallback=phase1_only,
+                phase_label="Fase 1",
+                product_tag=product,
+            )
+            phase1_work = bool(r1.asset_tasks or r1.drive_tasks)
+            tables_override = plan.run or phase1_work
+            print(
+                "\n=== Fase 2: CSV + GeoJSON (tras rasters; luego sync local) ===\n"
+            )
+            r2 = _enqueue_for_product(
+                product,
+                only=phase2_only,
+                skip_yearly=skip_yearly,
+                force_full=args.force_full,
+                drive_gate=drive_gate,
+                persist_state=True,
+                tables_run_override=tables_override,
+                drive_freshness=drive_freshness,
+            )
+            _wait_and_sync(
+                r2,
+                sync_keys_hint=SYNC_KEYS_TABLE_PHASE,
+                only_for_fallback=phase2_only,
+                phase_label="Fase 2",
+                product_tag=product,
+            )
+            continue
+
+        result = _enqueue_for_product(
+            product,
+            only=only,
+            skip_yearly=skip_yearly,
+            force_full=args.force_full,
+            drive_gate=drive_gate,
+            persist_state=True,
+            tables_run_override=None,
+            drive_freshness=drive_freshness,
+        )
+        _wait_and_sync(
+            result,
+            sync_keys_hint=set(SYNC_KEYS_RASTER_PHASE | SYNC_KEYS_TABLE_PHASE),
+            only_for_fallback=only,
+            phase_label="Pipeline",
+            product_tag=product,
+        )
 
 
 if __name__ == "__main__":

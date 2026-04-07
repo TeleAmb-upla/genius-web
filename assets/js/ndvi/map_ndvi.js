@@ -172,8 +172,9 @@ export async function map_ndvi() {
                 <span class="map-raster-data-notice__title">Sin archivos raster NDVI</span>
                 <p class="map-raster-data-notice__text">El mapa píxel solo carga rutas y nombres fijos. Revise la consola (F12): verá <code>[GeoTIFF] HTTP …</code> con la URL exacta que falló.</p>
                 <ul class="map-raster-data-notice__list">
-                    <li><strong>Anual:</strong> <code>NDVI_Yearly/NDVI_Yearly_2017.tif</code> … <code>_2024.tif</code> (también se prueba <code>.TIF</code> y <code>NDVI_Yearly/2024.tif</code>).</li>
-                    <li><strong>Mensual:</strong> <code>NDVI_Monthly/NDVI_Monthly_01.tif</code> … <code>_12.tif</code> (variantes <code>.TIF</code> y mes sin cero a la izquierda). La serie por año-mes en gráficos usa CSV, no rasters YearMonth.</li>
+                    <li><strong>Anual (composito por año):</strong> solo <code>NDVI_Yearly/NDVI_Yearly_YYYY.tif</code> (no mezclar con tendencia).</li>
+                    <li><strong>Tendencia (Mann–Kendall + Sen):</strong> un solo raster <code>NDVI_Trend/NDVI_Yearly_Trend.tif</code> (en Drive la exportación va a la carpeta <code>NDVI_Trend</code>, distinta de <code>NDVI_Yearly</code>).</li>
+                    <li><strong>Mensual (climatología):</strong> <code>NDVI_Monthly/NDVI_Monthly_01.tif</code> … <code>_12.tif</code>. La serie año-mes en gráficos usa CSV, no rasters YearMonth.</li>
                     <li><strong>Servidor:</strong> use HTTP (Live Server, etc.); <code>file://</code> suele bloquear los <code>fetch</code> a los .tif.</li>
                 </ul>
             `;
