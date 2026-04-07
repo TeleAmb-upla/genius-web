@@ -1,0 +1,120 @@
+﻿import { map_2018 } from './funtion/year_2018.js';
+import { map_2019 } from './funtion/year_2019.js';
+import { map_2020 } from './funtion/year_2020.js';
+import { map_2021 } from './funtion/year_2021.js';
+import { map_2022 } from './funtion/year_2022.js';
+import { map_2023 } from './funtion/year_2023.js';
+import { addCenteredTitle, createLegendSVG } from './funtion/map_utilities_p.js';
+import { loadinf_critica } from '../inf_critica_leaflet.js';
+import { attachMapOpacityPanel } from '../slider_opacity.js';
+
+let currentMap = null;
+let currentLayers = {};
+let legendDiv = null;
+let mapTitleDiv = null;
+
+export async function map_hu() {
+    if (currentMap) {
+        currentMap.remove();
+        currentMap = null;
+        currentLayers = {};
+
+        if (mapTitleDiv) {
+            mapTitleDiv.remove();
+            mapTitleDiv = null;
+        }
+
+        if (legendDiv) {
+            legendDiv.remove();
+            legendDiv = null;
+        }
+    }
+
+    currentMap = L.map("p47").setView([-33.04752000, -71.44249000], 12.6);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+        minZoom: 0,
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
+    }).addTo(currentMap);
+
+    L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
+
+    currentLayers["Huella Urbana 2023"] = await map_2023(currentMap);
+    currentLayers["Huella Urbana 2022"] = await map_2022(currentMap);
+    currentLayers["Huella Urbana 2021"] = await map_2021(currentMap);
+    currentLayers["Huella Urbana 2020"] = await map_2020(currentMap);
+    currentLayers["Huella Urbana 2019"] = await map_2019(currentMap);
+    currentLayers["Huella Urbana 2018"] = await map_2018(currentMap);
+
+    const baseLayers = {
+        "Huella Urbana 2023": currentLayers["Huella Urbana 2023"],
+        "Huella Urbana 2022": currentLayers["Huella Urbana 2022"],
+        "Huella Urbana 2021": currentLayers["Huella Urbana 2021"],
+        "Huella Urbana 2020": currentLayers["Huella Urbana 2020"],
+        "Huella Urbana 2019": currentLayers["Huella Urbana 2019"],
+        "Huella Urbana 2018": currentLayers["Huella Urbana 2018"]
+    };
+
+    const infCriticaData = await loadinf_critica(currentMap);
+    const overlayOnly = {};
+    if (infCriticaData && typeof infCriticaData === 'object') {
+        const layersArray = Object.values(infCriticaData);
+        overlayOnly["Infraestructura crítica (vectores)"] = L.layerGroup(layersArray);
+    }
+
+    fetch(resolveAssetUrl('assets/data/vectores/PRC_Quilpue.geojson'))
+        .then(response => response.json())
+        .then(geojsonData => {
+            const geojsonLayer = L.geoJSON(geojsonData, {
+                style: {
+                    color: "black",
+                    weight: 1,
+                    fillOpacity: 0
+                },
+                pointToLayer: function () {
+                    return null;
+                }
+            }).addTo(currentMap);
+            currentLayers["GeoJSON Layer"] = geojsonLayer;
+        })
+        .catch(error => console.error('Error cargando el GeoJSON:', error));
+
+    const layerControl = L.control.layers(baseLayers, overlayOnly).addTo(currentMap);
+    const layersList = layerControl.getContainer().querySelector('.leaflet-control-layers-list');
+    const title = document.createElement('h4');
+    title.innerHTML = 'Huella — año';
+    title.classList.add('leaflet-control-title');
+    const separator = document.createElement('div');
+    separator.classList.add('leaflet-control-layers-separator');
+    layersList.prepend(separator);
+    layersList.prepend(title);
+
+    currentMap.addLayer(currentLayers["Huella Urbana 2023"]);
+
+    addCenteredTitle(currentMap);
+
+    if (legendDiv) {
+        legendDiv.remove();
+    }
+
+    legendDiv = document.createElement('div');
+    legendDiv.id = 'legend';
+    legendDiv.className = 'map-legend-panel';
+    currentMap.getContainer().appendChild(legendDiv);
+
+    legendDiv.innerHTML = createLegendSVG();
+
+    attachMapOpacityPanel(
+        currentMap.getContainer(),
+        (opacity) => {
+            Object.entries(currentLayers).forEach(([name, layer]) => {
+                if (!name.startsWith('Huella Urbana ')) return;
+                if (layer && currentMap.hasLayer(layer) && typeof layer.setOpacity === 'function') {
+                    layer.setOpacity(opacity);
+                }
+            });
+        },
+        { leafletMap: currentMap },
+    );
+}
