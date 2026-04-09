@@ -1,0 +1,887 @@
+================================================================================
+  GENIUS UPLA — Full Architecture & System Documentation
+================================================================================
+
+Table of Contents
+─────────────────
+  1.  Project Overview
+  2.  Repository Structure
+  3.  Front-End (Static Web Application)
+  4.  Data Products (Environmental Indicators)
+  5.  Python Pipeline Overview (scripts/gee/)
+  6.  Incremental Processing — Concepts & Mechanics
+  7.  Enqueue System — How Earth Engine Tasks Are Submitted
+  8.  The Two-Phase Pipeline
+  9.  Google Drive Sync (Drive ↔ Local Repository)
+ 10.  Drive Export Gate (Pre-flight Checks)
+ 11.  Drive Freshness Audit
+ 12.  State Files (JSON Persistence)
+ 13.  Product-Specific Details
+ 14.  Utility Scripts
+ 15.  Configuration Reference
+ 16.  CLI Commands Reference
+ 17.  External Dependencies & Services
+ 18.  End-to-End Data Flow Summary
+
+
+================================================================================
+ 1.  PROJECT OVERVIEW
+================================================================================
+
+genius_upla is an urban environmental monitoring platform for Huancayo, Peru.
+It has two main components:
+
+  A) A STATIC WEB FRONT-END (index.html + assets/) that visualizes
+     environmental indicators on interactive maps using Leaflet and MapLibre.
+
+  B) A PYTHON DATA PIPELINE (scripts/gee/) that uses Google Earth Engine (GEE)
+     to compute satellite-derived environmental products, exports them to
+     Google Drive, and then mirrors the files into the repository so the
+     website can display them.
+
+There is no application database. All pipeline state is stored in JSON files.
+There is no REST API — the site is purely client-side with static data files.
+
+
+================================================================================
+ 2.  REPOSITORY STRUCTURE
+================================================================================
+
+genius_upla/
+├── index.html                    Main web application (single-page site)
+├── CNAME                         Custom domain for GitHub Pages hosting
+├── README.md                     Project description
+├── requirements-gee.txt          Python dependency: earthengine-api
+│
+├── assets/
+│   ├── css/                      Compiled stylesheets
+│   ├── scss/                     SCSS source files
+│   ├── img/                      Logos, favicons, icons
+│   ├── vendor/                   Third-party JS/CSS (Bootstrap, AOS, Leaflet, etc.)
+│   ├── js/
+│   │   ├── lib/                  MapLibre helpers, compare controls
+│   │   ├── ndvi/                 NDVI map visualization modules
+│   │   │   ├── js_anual/         One JS file per year (year_YYYY.js)
+│   │   │   └── js_month/         One JS file per month (month_MM.js)
+│   │   ├── atm/                  Atmospheric products (AOD, NO2, SO2)
+│   │   ├── temp/                 LST / temperature visualizations
+│   │   ├── hu/                   Huella Urbana (urban footprint) UI
+│   │   ├── lum/                  Luminosity-related maps
+│   │   ├── multi/                Multi-layer / RGB overlays
+│   │   └── download/             Download helpers per pollutant
+│   └── data/
+│       ├── csv/                  Summary CSV tables (monthly, yearly, urban, regional)
+│       ├── geojson/              Zonal statistics GeoJSON per product and zone type
+│       ├── raster/               GeoTIFF outputs organized by product
+│       │   ├── NDVI/             NDVI_Monthly/, NDVI_Yearly/, NDVI_Trend/, NDVI_SD/
+│       │   ├── AOD/              AOD_Monthly/, AOD_Yearly/, AOD_Trend/
+│       │   ├── NO2/              NO2_Monthly/, NO2_Yearly/, NO2_Trend/
+│       │   ├── SO2/              SO2_Monthly/, SO2_Yearly/, SO2_Trend/
+│       │   ├── LST/              LST_Monthly/, LST_Yearly/, LST_Trend/
+│       │   ├── Huella_Urbana/    Yearly urban footprint rasters
+│       │   └── Multicapa/        Drone / multi-layer imagery
+│       └── vectores/             Vector data used by front-end maps
+│
+├── scripts/
+│   ├── convert_illumination.py   Imagery conversion utility
+│   ├── convert_multicapa.py      Drone TIF → COG/WEBP for web
+│   ├── optimize_rasters.py       Raster optimization helper
+│   └── gee/                      *** EARTH ENGINE PIPELINE (see sections 5-12) ***
+│       ├── pipeline.py           Main orchestrator (plan → enqueue → wait → sync)
+│       ├── export_all.py         Enqueue-only variant (no wait/download)
+│       ├── audit_terminal.py     Terminal formatting / audit display
+│       ├── audit_gee_assets.py   GEE asset collection auditing
+│       ├── credentials_env.py    EE credential environment setup
+│       │
+│       ├── config/
+│       │   ├── paths.py          All paths: project root, GEE assets, Drive folders, repo dirs
+│       │   └── enqueue_types.py  EnqueueResult dataclass
+│       │
+│       ├── lib/
+│       │   ├── state.py          JSON read/merge helpers for state files
+│       │   ├── incremental_plan.py  DerivativePlan + plan_derivative_exports()
+│       │   ├── incremental_base.py  IncrementalStateManager base class
+│       │   ├── yearmonth.py      Calendar/month logic, asset audits, missing-month detection
+│       │   ├── mk_sen.py         Mann-Kendall / Sen's slope trend computation
+│       │   ├── zonal_geojson.py  Zonal statistics GeoJSON export helpers
+│       │   ├── csv_export.py     CSV export helpers
+│       │   ├── raster_export.py  Raster export helpers
+│       │   └── product_enqueue.py  Shared enqueue utilities
+│       │
+│       ├── earth_engine_init/
+│       │   ├── ee_init.py        initialize_ee() — authenticates with GEE
+│       │   ├── vectors.py        ImageCollection accessors (NDVI, AOD, etc.)
+│       │   └── task_wait.py      wait_for_tasks() — polls EE task status
+│       │
+│       ├── drive/
+│       │   ├── download_drive_to_repo.py  SYNC_REGISTRY + full mirror/incremental download
+│       │   ├── drive_audit.py             DriveFreshnessHints (modifiedTime checks)
+│       │   ├── drive_export_gate.py       DriveExportGate (skip redundant exports)
+│       │   └── audit_drive_yearly_completeness.py  Drive yearly completeness audits
+│       │
+│       └── products/
+│           ├── ndvi/
+│           │   ├── incremental.py   NDVI incremental state (climatology, trend year)
+│           │   ├── enqueue.py       enqueue_ndvi_exports()
+│           │   ├── raster_tasks.py  Start EE raster export tasks
+│           │   ├── csv_tasks.py     Start EE CSV export tasks
+│           │   ├── geojson_tasks.py Start EE GeoJSON export tasks
+│           │   └── mk_trend.py      NDVI Mann-Kendall trend raster logic
+│           │
+│           ├── atmosphere/
+│           │   ├── spec.py          PollutantSpec + no2_spec() / so2_spec()
+│           │   ├── tasks_core.py    Shared S5P task logic (missing months, derivatives)
+│           │   ├── enqueue.py       _enqueue_s5p() — shared NO2/SO2 enqueue core
+│           │   ├── aod/
+│           │   │   ├── incremental.py  AOD incremental state
+│           │   │   ├── enqueue.py      enqueue_aod_exports()
+│           │   │   └── *_tasks.py      AOD-specific export tasks
+│           │   ├── no2/
+│           │   │   ├── incremental.py  NO2 incremental state
+│           │   │   └── enqueue.py      enqueue_no2_exports() → delegates to _enqueue_s5p
+│           │   └── so2/
+│           │       ├── incremental.py  SO2 incremental state
+│           │       └── enqueue.py      enqueue_so2_exports() → delegates to _enqueue_s5p
+│           │
+│           ├── lst/
+│           │   ├── incremental.py   LST incremental state (yearly-based)
+│           │   ├── enqueue.py       enqueue_lst_exports()
+│           │   └── *_tasks.py       LST-specific export tasks
+│           │
+│           └── urban/
+│               ├── incremental.py   Huella Urbana incremental state (year-based)
+│               ├── enqueue.py       enqueue_hu_exports()
+│               └── *_tasks.py       HU classification export tasks
+│
+├── forms/
+│   ├── contact.php               Contact form template (PHP, optional)
+│   └── Readme.txt                Template notes
+│
+└── secrets/
+    └── README.md                 Instructions for placing EE OAuth credentials
+
+
+================================================================================
+ 3.  FRONT-END (STATIC WEB APPLICATION)
+================================================================================
+
+The front-end is a single-page application built on:
+
+  - Leaflet + MapLibre GL JS for interactive maps
+  - GeoTIFF.js / georaster-layer for client-side raster rendering
+  - Bootstrap 5 for layout and components
+  - AOS (Animate On Scroll) for scroll animations
+  - Swiper for carousels
+  - Google Analytics (gtag/GTM) for usage tracking
+
+index.html loads:
+  - CSS from assets/css/ and assets/vendor/
+  - Map visualization modules from assets/js/ (organized by product)
+  - Static data from assets/data/ (raster GeoTIFFs, CSVs, GeoJSONs)
+
+Each environmental product has its own JS module folder:
+  - assets/js/ndvi/     → NDVI vegetation index maps
+  - assets/js/atm/      → Atmospheric pollutants (AOD, NO2, SO2)
+  - assets/js/temp/     → Land Surface Temperature
+  - assets/js/hu/       → Urban Footprint
+  - assets/js/lum/      → Nighttime luminosity
+  - assets/js/multi/    → Multi-layer / drone imagery
+
+Per-year and per-month JS files (e.g., js_anual/year_2023.js, js_month/month_06.js)
+configure map layers for specific time periods. This pattern repeats across all
+product folders.
+
+
+================================================================================
+ 4.  DATA PRODUCTS (ENVIRONMENTAL INDICATORS)
+================================================================================
+
+The system tracks six primary environmental products:
+
+┌─────────┬──────────────────────────────────────────────────────────────┐
+│ Product │ Description                                                  │
+├─────────┼──────────────────────────────────────────────────────────────┤
+│ NDVI    │ Normalized Difference Vegetation Index (Sentinel-2/Landsat). │
+│         │ Measures vegetation health and coverage.                     │
+│         │ Monthly + yearly + trend (Mann-Kendall/Sen) + climatology.   │
+│         │ Temporal resolution: monthly year-month composites.          │
+├─────────┼──────────────────────────────────────────────────────────────┤
+│ AOD     │ Aerosol Optical Depth (MODIS MCD19A2).                      │
+│         │ Measures atmospheric aerosol loading/air quality.            │
+│         │ Monthly + yearly + trend rasters.                            │
+│         │ Temporal resolution: monthly year-month composites.          │
+├─────────┼──────────────────────────────────────────────────────────────┤
+│ NO2     │ Nitrogen Dioxide (Sentinel-5P TROPOMI).                      │
+│         │ Tropospheric column density — traffic/industry pollution.    │
+│         │ Monthly + yearly + trend. Uses PollutantSpec shared with SO2.│
+├─────────┼──────────────────────────────────────────────────────────────┤
+│ SO2     │ Sulfur Dioxide (Sentinel-5P TROPOMI).                        │
+│         │ Tropospheric column density — volcanic/industrial emissions. │
+│         │ Monthly + yearly + trend. Uses PollutantSpec shared with NO2.│
+├─────────┼──────────────────────────────────────────────────────────────┤
+│ LST     │ Land Surface Temperature (Landsat 8/9).                      │
+│         │ Thermal environmental indicator / urban heat island.         │
+│         │ Yearly-based asset collection (not monthly year-month).      │
+│         │ Monthly + yearly + trend rasters.                            │
+├─────────┼──────────────────────────────────────────────────────────────┤
+│ HU      │ Huella Urbana / Urban Footprint (Sentinel-1 + Sentinel-2).  │
+│         │ Random Forest classification of urban vs non-urban land.     │
+│         │ Year-based processing (not month-based).                     │
+│         │ Generates yearly classification rasters + area CSVs.         │
+└─────────┴──────────────────────────────────────────────────────────────┘
+
+For each product (except HU), the pipeline produces:
+  - RASTERS: Monthly GeoTIFF composites, yearly GeoTIFF composites,
+             trend raster (Mann-Kendall + Sen's slope), and sometimes
+             standard deviation / climatology rasters.
+  - CSV:     Summary tables (regional average, urban average, monthly, yearly).
+  - GeoJSON: Zonal statistics per administrative zone (Barrios and Manzanas),
+             both monthly and yearly aggregates.
+
+
+================================================================================
+ 5.  PYTHON PIPELINE OVERVIEW (scripts/gee/)
+================================================================================
+
+The pipeline automates the entire data lifecycle:
+
+  1. AUTHENTICATE with Google Earth Engine
+  2. AUDIT the GEE asset collections to find what's up-to-date vs missing
+  3. PLAN incremental exports (only process what's new)
+  4. PRE-FLIGHT CHECK Google Drive (avoid re-exporting files that already exist)
+  5. ENQUEUE Earth Engine export tasks (to Drive and/or to Asset)
+  6. WAIT for EE tasks to complete (polling every N seconds)
+  7. SYNC files from Google Drive to the local repository
+  8. UPDATE incremental state so next run skips completed work
+
+The pipeline processes products in a fixed order:
+  NDVI → AOD → NO2 → SO2 → LST → HU
+
+Each product goes through the same steps but with product-specific logic
+for computing composites, trends, and zonal statistics.
+
+
+================================================================================
+ 6.  INCREMENTAL PROCESSING — CONCEPTS & MECHANICS
+================================================================================
+
+The incremental system ensures the pipeline only does work when new satellite
+data has arrived, making re-runs fast and cheap.
+
+─── Core Concept: Year-Month Watermark ───
+
+For month-based products (NDVI, AOD, NO2, SO2):
+
+  The "watermark" is the last (year, month) pair that was successfully processed
+  for derivative products (rasters, CSVs, GeoJSONs). This is stored in JSON
+  state files as "last_derivative_ym".
+
+  On each run:
+    a) The pipeline queries the GEE ImageCollection to find its max (year, month).
+    b) It loads the last_derivative_ym from the state file.
+    c) If max > last → new months exist → compute the delta → process only
+       those new months.
+    d) If max <= last → nothing to do.
+    e) If no prior state → treat as first run → full export.
+
+For year-based products (LST, HU):
+
+  The watermark is year-based. The pipeline compares expected years (from
+  start_year through last completed calendar year) against what exists
+  locally or in the GEE asset collection.
+
+─── DerivativePlan Dataclass ───
+
+  Every product's incremental check produces a DerivativePlan:
+
+    run: bool                   Whether derivatives need to run
+    reason: str                 Human-readable explanation
+    max_ym: (year, month)       Latest year-month in the GEE collection
+    month_subset: set[int]      Specific calendar months to re-export (1-12)
+    years_touched: set[int]     Years affected by new data
+    is_full_refresh: bool       Whether this is a complete reprocessing
+    new_pairs: [(y, m), ...]    The specific new year-month pairs
+
+─── Decision Logic (plan_derivative_exports) ───
+
+  1. If there are MISSING ASSET MONTHS (gaps in the GEE collection):
+     → run=False. You must fill the asset gaps first before processing
+       derivatives. This prevents generating incomplete monthly/yearly composites.
+
+  2. If the collection is EMPTY:
+     → run=False.
+
+  3. If --force-full flag is set:
+     → run=True, is_full_refresh=True. Reprocess everything.
+
+  4. If NO PRIOR STATE (first run):
+     → run=True, is_full_refresh=True. Export all derivatives.
+
+  5. If max_ym <= last_derivative_ym:
+     → run=False. No new data since last processing.
+
+  6. Otherwise (new months detected):
+     → run=True. Compute the list of new (year, month) pairs between
+       last_derivative_ym and max_ym. Only those months are processed.
+
+─── IncrementalStateManager Base Class ───
+
+  Shared base for all products. Each product subclass configures:
+    - state_filename: e.g. "ndvi_export_state.json"
+    - root_asset_path: GEE asset ID
+    - start_year: when data begins (e.g. 2016 for NDVI)
+
+  Methods:
+    - load_last_processed_ym() → reads watermark from JSON
+    - save_last_processed_ym() → writes watermark after successful processing
+    - load_last_trend_raster_full_year() → for trend raster tracking
+    - save_last_trend_raster_full_year() → marks trend year as done
+    - plan_derivative_exports() → creates a DerivativePlan
+
+─── Product-Specific Incremental Extensions ───
+
+  NDVI adds:
+    - last_climatology_target_ym: tracks when the 12-month climatology rasters
+      were last regenerated (these are long-term monthly averages).
+    - last_trend_raster_full_year: tracks when the Mann-Kendall/Sen trend
+      raster was last computed (only recalculated when a new full calendar
+      year of data becomes available).
+
+  Huella Urbana:
+    - Year-based, not month-based. Compares expected years vs. existing
+      local rasters named Huella_Urbana_Yearly_YYYY.tif. Missing years
+      trigger classification export.
+
+  LST:
+    - Year-based asset collection. Uses list_missing_yearly() to find
+      years without assets, then plan_derivative_exports for raster/table
+      derivatives.
+
+
+================================================================================
+ 7.  ENQUEUE SYSTEM — HOW EARTH ENGINE TASKS ARE SUBMITTED
+================================================================================
+
+"Enqueue" in this codebase means SUBMITTING EXPORT TASKS TO GOOGLE EARTH ENGINE.
+It does NOT use a message queue (Redis, RabbitMQ, etc.). The Earth Engine Task
+API queues the work on Google's infrastructure.
+
+─── EnqueueResult Dataclass ───
+
+  Every enqueue_*_exports() function returns an EnqueueResult:
+
+    plan: DerivativePlan         The incremental plan that drove this enqueue
+    drive_tasks: [task, ...]     EE tasks exporting TO Google Drive
+    asset_tasks: [task, ...]     EE tasks exporting TO GEE Asset collections
+    sync_keys: set[str]          Which SYNC_REGISTRY keys to download after
+    sync_full_mirror_keys:       Keys that need full local replacement
+      set[str]
+    ran_derivative: bool         Whether derivative exports were actually submitted
+    messages: [str, ...]         Audit/status messages for terminal display
+    state_saved: bool            Whether state JSON was updated
+    state_path_msg: str          Human-readable state file path info
+
+─── Enqueue Flow per Product ───
+
+  Each product has an enqueue module:
+
+    enqueue_ndvi_exports()       → scripts/gee/products/ndvi/enqueue.py
+    enqueue_aod_exports()        → scripts/gee/products/atmosphere/aod/enqueue.py
+    enqueue_no2_exports()        → scripts/gee/products/atmosphere/no2/enqueue.py
+    enqueue_so2_exports()        → scripts/gee/products/atmosphere/so2/enqueue.py
+    enqueue_lst_exports()        → scripts/gee/products/lst/enqueue.py
+    enqueue_hu_exports()         → scripts/gee/products/urban/enqueue.py
+
+  NO2 and SO2 share a common core: _enqueue_s5p() in atmosphere/enqueue.py
+  parameterized by PollutantSpec (which defines asset paths, band names,
+  regression parameters, scale, etc.).
+
+─── The "only" Parameter ───
+
+  Each enqueue function accepts an "only" parameter that restricts which
+  export categories to submit:
+
+    "asset"    → Export year-month composites to GEE Asset collection
+    "raster"   → Export monthly/yearly/trend GeoTIFFs to Drive
+    "csv"      → Export summary CSV tables to Drive
+    "geojson"  → Export zonal statistics GeoJSON to Drive
+
+  When only=None (default), all categories are exported.
+
+─── Drive Export Gate Integration ───
+
+  Before submitting each task, the enqueue function checks the DriveExportGate:
+    - If the expected output file already exists on Google Drive, the task
+      is SKIPPED (not submitted).
+    - This prevents redundant computation when re-running the pipeline.
+    - Can be disabled with --force-gee-export or --skip-drive-preflight.
+
+─── What Happens After Enqueue ───
+
+  1. The pipeline collects all EE task handles (asset_tasks + drive_tasks).
+  2. wait_for_tasks() polls EE every N seconds (default 30) until all
+     tasks reach COMPLETED or FAILED status.
+  3. The sync phase downloads completed files from Drive to the repository.
+  4. State is updated to record the new watermark.
+
+
+================================================================================
+ 8.  THE TWO-PHASE PIPELINE
+================================================================================
+
+By default, the pipeline runs in TWO PHASES per product (can be overridden
+with --single-pass for the legacy single-phase behavior):
+
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │                        PHASE 1: Rasters                             │
+  │                                                                     │
+  │  Enqueue: "asset" + "raster" tasks only                             │
+  │  Wait:    Poll EE until all Phase 1 tasks complete                  │
+  │  Sync:    Download raster files from Drive → local repo             │
+  │                                                                     │
+  │  Why separate? CSVs and GeoJSONs often depend on raster outputs     │
+  │  being available first (e.g., zonal stats computed from rasters).   │
+  ├──────────────────────────────────────────────────────────────────────┤
+  │                        PHASE 2: Tables                              │
+  │                                                                     │
+  │  Enqueue: "csv" + "geojson" tasks only                              │
+  │  Wait:    Poll EE until all Phase 2 tasks complete                  │
+  │  Sync:    Download table files from Drive → local repo              │
+  │  State:   Save the incremental watermark (persist_state=True)       │
+  │                                                                     │
+  │  tables_run_override: If Phase 1 produced work OR the plan says     │
+  │  derivatives should run, tables are generated even if the plan      │
+  │  alone wouldn't trigger them.                                       │
+  └──────────────────────────────────────────────────────────────────────┘
+
+This phased approach ensures data consistency: rasters land on disk before
+tables that reference them are computed.
+
+
+================================================================================
+ 9.  GOOGLE DRIVE SYNC (DRIVE ↔ LOCAL REPOSITORY)
+================================================================================
+
+─── SYNC_REGISTRY ───
+
+  The central mapping from "sync keys" to Drive folders and local destinations
+  lives in download_drive_to_repo.py as SYNC_REGISTRY: dict[str, DriveSyncSpec].
+
+  Each DriveSyncSpec defines:
+    drive_folder: str           Name of the Google Drive folder
+    dest_dir: Path              Local repository directory
+    extensions: tuple[str, ...] File extensions to sync (e.g. ".tif", ".csv")
+    stem_prefixes: tuple | None Only sync files whose name starts with these
+    stem_exclude_substrings     Exclude files containing these substrings
+
+  Example sync keys:
+    "raster_monthly"       NDVI_Monthly/*.tif → assets/data/raster/NDVI/NDVI_Monthly/
+    "raster_yearly"        NDVI_Yearly/*.tif  → assets/data/raster/NDVI/NDVI_Yearly/
+    "csv"                  NDVI CSV files     → assets/data/csv/
+    "geo_monthly_b"        Barrio GeoJSON     → assets/data/geojson/NDVI/.../Barrios/
+    "aod_raster_monthly"   AOD monthly TIFs   → assets/data/raster/AOD/AOD_Monthly/
+    (and many more for each product × output type × zone type)
+
+─── Sync Modes ───
+
+  FIRST TIME (per sync key):
+    Full mirror — delete all managed local files with matching extensions,
+    then download everything from Drive. The key is marked as "synced" in
+    drive_sync_keys_state.json.
+
+  SUBSEQUENT RUNS (incremental mode):
+    Only download files that exist on Drive but not locally.
+    Local-only files are NOT deleted (safe incremental sync).
+
+  Override flags:
+    --full-sync-download        Force full mirror (replace all local files)
+    --incremental-download      Force incremental only (never delete locals)
+    --dry-run-download          Show what would be downloaded without doing it
+
+─── Credentials ───
+
+  Uses the same OAuth credentials as `earthengine authenticate`. The Drive
+  API scope (auth/drive) is included in the EE OAuth flow. The token is
+  typically at ~/.config/earthengine/credentials.
+
+
+================================================================================
+10.  DRIVE EXPORT GATE (PRE-FLIGHT CHECKS)
+================================================================================
+
+Before enqueuing an Earth Engine export task, the DriveExportGate checks
+whether the expected output file already exists on Google Drive.
+
+  DriveExportGate:
+    - Maintains a cache of file listings per Drive folder
+    - should_skip_export(folder, file_stem, extensions):
+        Returns True if file_stem + any extension already exists in folder.
+        When True, the task is NOT submitted to EE.
+    - clear_before_reexport(folder, ...):
+        Deletes matching files from Drive before re-exporting (used when
+        climatology or trend rasters need refreshing).
+    - invalidate():
+        Clears the cache (used after new exports complete).
+
+  This prevents wasting EE compute budget on files that are already done.
+
+
+================================================================================
+11.  DRIVE FRESHNESS AUDIT
+================================================================================
+
+The DriveFreshnessHints system (drive_audit.py) checks whether existing
+Drive files are CURRENT ENOUGH or need refreshing:
+
+  Monthly freshness:
+    If the newest modifiedTime among monthly rasters in Drive is from a
+    calendar year strictly before the last completed calendar year, the
+    entire monthly climatology is considered stale and should be re-exported.
+
+  Yearly freshness:
+    Checks whether the yearly composite raster for the target year
+    (last completed calendar year by wall clock) exists on Drive.
+    If missing AND the GEE asset covers that full year → force re-export.
+
+  Yearly tables freshness:
+    Same check for yearly CSVs and yearly zonal GeoJSONs.
+
+  The hints feed into the enqueue functions to:
+    - Skip Drive pre-flight for files that need refreshing
+    - Add sync keys to sync_full_mirror_keys (for full local replacement)
+    - Trigger yearly export even if --include-yearly wasn't specified
+
+
+================================================================================
+12.  STATE FILES (JSON PERSISTENCE)
+================================================================================
+
+All state is stored as JSON files under scripts/gee/:
+
+  ndvi_export_state.json:
+    {
+      "last_derivative_ym": [2025, 12],
+      "last_trend_raster_full_year": 2024,
+      "last_climatology_target_ym": [2025, 12]
+    }
+
+  aod_export_state.json:
+    {
+      "last_derivative_ym": [2025, 11]
+    }
+
+  no2_export_state.json:
+    {
+      "last_derivative_ym": [2025, 10]
+    }
+
+  so2_export_state.json:
+    {
+      "last_derivative_ym": [2025, 10]
+    }
+
+  lst_export_state.json:
+    {
+      "last_derivative_ym": [2025, 12],
+      "last_trend_raster_full_year": 2024
+    }
+
+  hu_export_state.json:
+    {
+      "last_hu_year": 2024
+    }
+
+  drive/drive_sync_keys_state.json:
+    {
+      "keys": {
+        "raster_monthly": "incremental",
+        "raster_yearly": "incremental",
+        "csv": "incremental",
+        ...
+      }
+    }
+
+State files use a merge strategy: when saving, only the specified keys
+are updated; existing keys are preserved. The state_lib module handles
+read_state() and merge_state() for all products.
+
+
+================================================================================
+13.  PRODUCT-SPECIFIC DETAILS
+================================================================================
+
+─── NDVI (Normalized Difference Vegetation Index) ───
+
+  Source:         Sentinel-2 / Landsat (pre-computed in GEE)
+  GEE Asset:      users/plataformagenius/Areas_Verdes/NDVI/NDVI_YearMonth
+  Start Year:     2016
+  Temporal Unit:  Monthly year-month composites
+
+  Derivatives produced:
+    - Monthly climatology rasters (12 files: NDVI_Monthly_01..12.tif)
+    - Yearly composite rasters (NDVI_Yearly_YYYY.tif)
+    - Trend raster (Mann-Kendall + Sen's slope: NDVI_Yearly_Trend.tif)
+    - Standard deviation rasters
+    - Monthly & yearly CSVs (regional + urban averages)
+    - Monthly & yearly zonal GeoJSON (Barrios + Manzanas)
+
+  Special incremental logic:
+    - Climatology (monthly averages over all years) is re-exported when
+      last_climatology_target_ym is behind the collection max.
+    - Trend raster is re-exported only when a new full calendar year
+      completes (tracked via last_trend_raster_full_year).
+
+─── AOD (Aerosol Optical Depth) ───
+
+  Source:         MODIS MCD19A2
+  GEE Asset:      users/plataformagenius/Calidad_de_Aire/AOD/AOD_YearMonth
+  Start Year:     2001
+  Temporal Unit:  Monthly year-month composites
+
+  Follows the standard incremental pattern. Monthly + yearly + trend rasters,
+  CSV tables, and zonal GeoJSONs for Barrios and Manzanas.
+
+─── NO2 & SO2 (Sentinel-5P TROPOMI) ───
+
+  Source:         Copernicus Sentinel-5P TROPOMI
+  GEE Assets:     users/plataformagenius/Calidad_de_Aire/NO2/NO2_YearMonth
+                  users/plataformagenius/Calidad_de_Aire/SO2/SO2_YearMonth
+  Start Year:     2019 (Sentinel-5P operational)
+  Temporal Unit:  Monthly year-month composites
+
+  NO2 and SO2 share a common architecture via PollutantSpec (spec.py):
+    - Defines asset paths, band names, regression parameters, scale
+    - _enqueue_s5p() in atmosphere/enqueue.py handles both gases
+    - Each has its own thin enqueue wrapper that passes the correct spec
+
+─── LST (Land Surface Temperature) ───
+
+  Source:         Landsat 8 + Landsat 9
+  GEE Asset:      users/plataformagenius/Temperatura_Superficial/LST_V2/LST_Yearly
+  Start Year:     2013
+  Temporal Unit:  Yearly composites (asset is yearly, not year-month)
+
+  Uses list_missing_yearly() instead of list_missing_yearmonth_months().
+  Still produces monthly/yearly rasters, trend, CSVs, and zonal GeoJSONs.
+
+─── HU (Huella Urbana / Urban Footprint) ───
+
+  Source:         Sentinel-1 (SAR) + Sentinel-2 (optical)
+  GEE Asset:      users/plataformagenius/Huella_Urbana/Huella_Urbana_Yearly
+  Start Year:     2017
+  Temporal Unit:  Yearly classification
+
+  Uses Random Forest classification to distinguish urban vs. non-urban land.
+  Incremental check compares expected years vs. existing local rasters
+  (Huella_Urbana_Yearly_YYYY.tif). No year-month granularity. Produces
+  yearly rasters and area statistics CSVs.
+
+
+================================================================================
+14.  UTILITY SCRIPTS
+================================================================================
+
+  scripts/convert_multicapa.py:
+    Converts drone-captured TIF files to Cloud-Optimized GeoTIFF (COG) and
+    WEBP format for efficient web display. Used for the multi-layer /
+    drone imagery section of the site.
+
+  scripts/convert_illumination.py:
+    Processes illumination/luminosity imagery for the nighttime lights
+    visualization layer.
+
+  scripts/optimize_rasters.py:
+    General raster optimization (compression, tiling) for faster web loading.
+
+
+================================================================================
+15.  CONFIGURATION REFERENCE
+================================================================================
+
+  scripts/gee/config/paths.py:
+    - PROJECT_ROOT:              Repository root (auto-detected)
+    - EE_CLOUD_PROJECT:          GEE project (default "ee-plataformagenius")
+    - EE_OAUTH_CREDENTIALS_FILE: Path to OAuth JSON in secrets/
+    - ASSET_*:                   GEE asset collection paths per product
+    - REPO_*:                    Local repository paths per product/output
+    - DRIVE_*:                   Google Drive folder names per product/output
+
+  Environment variables:
+    EARTH_ENGINE_PROJECT:        Override GEE project (optional)
+    EARTHENGINE_CREDENTIALS:     Override credentials path (optional)
+
+
+================================================================================
+16.  CLI COMMANDS REFERENCE
+================================================================================
+
+  Full pipeline (plan → enqueue → wait → sync):
+    python -m scripts.gee.pipeline
+
+  Single product only:
+    python -m scripts.gee.pipeline --product ndvi
+
+  Force full reprocessing:
+    python -m scripts.gee.pipeline --force-full
+
+  Include yearly composites:
+    python -m scripts.gee.pipeline --include-yearly
+
+  Enqueue tasks without waiting or downloading:
+    python -m scripts.gee.pipeline --enqueue-only
+
+  Download from Drive only (no GEE processing):
+    python -m scripts.gee.pipeline --download-only --sync-only all
+
+  Dry-run download (show what would be synced):
+    python -m scripts.gee.pipeline --dry-run-download
+
+  Force all GEE exports (ignore Drive pre-flight):
+    python -m scripts.gee.pipeline --force-gee-export
+
+  Skip Drive pre-flight check:
+    python -m scripts.gee.pipeline --skip-drive-preflight
+
+  Legacy single-pass mode (no phases):
+    python -m scripts.gee.pipeline --single-pass
+
+  Restrict to specific export types:
+    python -m scripts.gee.pipeline --only raster,csv
+
+  Download-only with specific sync keys:
+    python -m scripts.gee.pipeline --download-only --sync-only raster_monthly,csv
+
+  Full sync (replace local files):
+    python -m scripts.gee.pipeline --download-only --full-sync-download
+
+  Incremental sync (only download missing):
+    python -m scripts.gee.pipeline --download-only --incremental-download
+
+  Enqueue-only variant:
+    python -m scripts.gee.export_all
+
+  Drive-only download:
+    python -m scripts.gee.download_drive_to_repo
+    python -m scripts.gee.download_drive_to_repo --dry-run
+    python -m scripts.gee.download_drive_to_repo --only raster_monthly,csv
+
+
+================================================================================
+17.  EXTERNAL DEPENDENCIES & SERVICES
+================================================================================
+
+  Python packages:
+    - earthengine-api          (requirements-gee.txt)
+    - google-auth, google-api-python-client  (transitive deps for Drive API)
+
+  External services:
+    - Google Earth Engine       Satellite data processing & export
+    - Google Drive              Intermediate file storage between EE and repo
+    - Google Cloud project      ee-plataformagenius (or custom via env var)
+
+  Front-end CDNs:
+    - Google Tag Manager / gtag  Analytics
+    - Google Fonts               Typography
+    - MapLibre GL JS             Vector map rendering (also bundled locally)
+    - Leaflet                    Raster map rendering (bundled in vendor/)
+
+  Authentication:
+    Run `earthengine authenticate` once to generate OAuth credentials.
+    The token covers both EE API access and Google Drive API access.
+    Optionally place the credentials JSON in secrets/earthengine_credentials.json.
+
+
+================================================================================
+18.  END-TO-END DATA FLOW SUMMARY
+================================================================================
+
+  ┌────────────────────────────────────────────────────────────────────────┐
+  │                                                                        │
+  │   SATELLITE DATA                                                       │
+  │   (Sentinel-2, Landsat, MODIS, Sentinel-5P, Sentinel-1)               │
+  │                        │                                               │
+  │                        ▼                                               │
+  │   ┌──────────────────────────────────────────────┐                     │
+  │   │        Google Earth Engine (GEE)              │                    │
+  │   │                                               │                    │
+  │   │   ImageCollections (year-month composites)    │                    │
+  │   │   stored as GEE Assets                        │                    │
+  │   └──────────────────┬───────────────────────────┘                     │
+  │                      │                                                 │
+  │             pipeline.py reads                                          │
+  │             collection metadata                                        │
+  │                      │                                                 │
+  │                      ▼                                                 │
+  │   ┌──────────────────────────────────────────────┐                     │
+  │   │     Incremental Plan (DerivativePlan)         │                    │
+  │   │                                               │                    │
+  │   │   Compare max(year, month) in GEE vs          │                    │
+  │   │   last_derivative_ym in state JSON             │                    │
+  │   │   → Determine new months to process           │                    │
+  │   └──────────────────┬───────────────────────────┘                     │
+  │                      │                                                 │
+  │                      ▼                                                 │
+  │   ┌──────────────────────────────────────────────┐                     │
+  │   │     Drive Export Gate (pre-flight)            │                    │
+  │   │                                               │                    │
+  │   │   Check if output files already exist on      │                    │
+  │   │   Google Drive → skip redundant exports       │                    │
+  │   └──────────────────┬───────────────────────────┘                     │
+  │                      │                                                 │
+  │                      ▼                                                 │
+  │   ┌──────────────────────────────────────────────┐                     │
+  │   │     Enqueue EE Export Tasks                   │                    │
+  │   │                                               │                    │
+  │   │   Phase 1: asset + raster tasks               │                    │
+  │   │   Phase 2: csv + geojson tasks                │                    │
+  │   │                                               │                    │
+  │   │   Returns: EnqueueResult with task handles    │                    │
+  │   └──────────────────┬───────────────────────────┘                     │
+  │                      │                                                 │
+  │                      ▼                                                 │
+  │   ┌──────────────────────────────────────────────┐                     │
+  │   │     Wait for EE Tasks                         │                    │
+  │   │                                               │                    │
+  │   │   Poll every 30s until COMPLETED/FAILED       │                    │
+  │   │   (task_wait.py)                              │                    │
+  │   └──────────────────┬───────────────────────────┘                     │
+  │                      │                                                 │
+  │                      ▼                                                 │
+  │   ┌──────────────────────────────────────────────┐                     │
+  │   │        Google Drive                           │                    │
+  │   │                                               │                    │
+  │   │   Product folders: NDVI_Monthly, AOD_Yearly,  │                    │
+  │   │   NO2_Trend, LST_Monthly_ZonalStats_Barrios,  │                    │
+  │   │   Huella_Urbana_Yearly, etc.                  │                    │
+  │   └──────────────────┬───────────────────────────┘                     │
+  │                      │                                                 │
+  │             download_drive_to_repo                                     │
+  │             (SYNC_REGISTRY mapping)                                    │
+  │                      │                                                 │
+  │                      ▼                                                 │
+  │   ┌──────────────────────────────────────────────┐                     │
+  │   │        Local Repository (assets/data/)        │                    │
+  │   │                                               │                    │
+  │   │   raster/  → GeoTIFF files                    │                    │
+  │   │   csv/     → Summary tables                   │                    │
+  │   │   geojson/ → Zonal statistics                 │                    │
+  │   └──────────────────┬───────────────────────────┘                     │
+  │                      │                                                 │
+  │             State JSON updated                                         │
+  │             (last_derivative_ym = max_ym)                              │
+  │                      │                                                 │
+  │                      ▼                                                 │
+  │   ┌──────────────────────────────────────────────┐                     │
+  │   │     Static Web Front-End (index.html)         │                    │
+  │   │                                               │                    │
+  │   │   Leaflet / MapLibre loads rasters, CSVs,     │                    │
+  │   │   GeoJSONs directly from assets/data/         │                    │
+  │   │                                               │                    │
+  │   │   Interactive maps, charts, download buttons  │                    │
+  │   └──────────────────────────────────────────────┘                     │
+  │                                                                        │
+  └────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+  END OF DOCUMENT
+================================================================================

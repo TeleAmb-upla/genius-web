@@ -85,6 +85,7 @@ class DriveExportGate:
         stem_prefixes: tuple[str, ...] | None = None,
         file_stems: tuple[str, ...] | None = None,
         stem_exclude_substrings: tuple[str, ...] = (),
+        reason: str = "",
     ) -> int:
         """
         Delete matching files on Drive before re-exporting.
@@ -102,6 +103,7 @@ class DriveExportGate:
             stem_prefixes=stem_prefixes,
             file_stems=file_stems,
             stem_exclude_substrings=stem_exclude_substrings,
+            reason=reason,
         )
         if n:
             self.invalidate(folder)

@@ -1,4 +1,8 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { getProductYears } from '../../map_data_catalog.js';
+
+const lstYears = getProductYears('lst');
+const lstRangeLabel = `${lstYears[0]} - ${lstYears[lstYears.length - 1]}`;
 function valueToSTColor(value) {
     const domain = [0, 0.44]; // mínimo y máximo
     // Paleta de colores invertida que representa los diferentes valores de NDVI
@@ -106,7 +110,7 @@ export function createSTLegendSVG() {
             <text x="5" y="20" font-size="12" font-family="Arial" font-weight="bold">Tendencia LST(°C)</text>
     
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="5" y="40" font-size="10" font-family="Arial">1995 - 2024</text>
+            <text x="5" y="40" font-size="10" font-family="Arial">${lstRangeLabel}</text>
     
             <!-- Bloques de colores -->
             ${legendItems}

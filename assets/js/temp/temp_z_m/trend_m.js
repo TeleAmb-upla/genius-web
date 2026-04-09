@@ -1,4 +1,8 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { getProductYears } from '../../map_data_catalog.js';
+
+const lstYears = getProductYears('lst');
+const lstRangeLabel = `${lstYears[0]} - ${lstYears[lstYears.length - 1]}`;
 
 // Función para asignar colores a los valores según el rango definido
 function valueToSTColor(value) {
@@ -70,7 +74,7 @@ export async function map_trend(map) {
         new maplibregl.Popup()
             .setLngLat(e.lngLat)
             .setHTML(`
-                <strong>Rango de años:</strong> 1995 - 2024<br>
+                <strong>Rango de años:</strong> ${lstRangeLabel}<br>
                 <strong>Cantidad de Personas:</strong> ${properties.TOTAL_PERS || 'No disponible'}<br>
                 <strong>Tendencia LST:</strong> ${trendValue}<br>
             `)
@@ -100,7 +104,7 @@ export function createTrendLegend() {
     legendContent.appendChild(title);
 
     const subtitle = document.createElement('div');
-    subtitle.textContent = '1995 - 2024';
+    subtitle.textContent = lstRangeLabel;
     subtitle.className = 'map-legend-panel__subtitle';
     legendContent.appendChild(subtitle);
 

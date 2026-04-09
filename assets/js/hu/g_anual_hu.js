@@ -72,7 +72,7 @@ export async function g_a_hu() {
 
     // Add X axis
     var x = d3.scaleLinear()
-        .domain([800, d3.max(data, d => d.Hectareas) * 1.02])
+        .domain([1000, d3.max(data, d => d.Hectareas) * 1.02])
         .range([0, innerWidth]);
 
     // Add Y axis

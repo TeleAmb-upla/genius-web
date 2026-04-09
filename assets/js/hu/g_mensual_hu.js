@@ -101,7 +101,7 @@ export async function g_m_hu() {
 
     // Add Y axis
     var y = d3.scaleLinear()
-        .domain([800, d3.max(data, d => +d.Area_DentroPRC + +d.Area_FueraPRC) * 1.1])
+        .domain([1000, d3.max(data, d => +d.Area_DentroPRC + +d.Area_FueraPRC) * 1.1])
         .range([innerHeight, 0]);
     svg.append("g")
         .call(d3.axisLeft(y));

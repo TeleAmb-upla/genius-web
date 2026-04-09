@@ -103,38 +103,32 @@ export async function loadGeoJSONAndSetupLayers(currentMap) {
     }
 }
 
-// Función para crear y posicionar el selector de capas de áreas verdes
+const CATEGORY_SWATCH_COLORS = {
+    "AV_ComunalesPúblicas_EsteroQuilpué":              "#4a90d9",
+    "AV_ComunalesPúblicas_Quebradas":                  "#6aaa64",
+    "AV_ComunalesPrivadas_Agrestes":                   "#8bc34a",
+    "AV_Consolidadas":                                 "#2e7d32",
+    "AV_IntComunalesPrivadas_Agrestes":                "#cddc39",
+    "AV_IntComunalesPrivadas_Recreativas":             "#ffeb3b",
+    "AV_IntComunalesPrivadas_ResguardoPatrimonial":    "#ff9800",
+    "AV_IntComunalesPúblicas_ParqueIntercomunal":      "#00bcd4",
+    "AV_ParqueUrbano":                                 "#9c27b0",
+    "Mantencion_General":                              "#795548",
+};
+
 export function createAvSelector(id, categoryLayers, currentMap) {
-    // Contenedor principal para el cuadro de texto de activación y opciones
     const mainContainer = document.createElement('div');
     mainContainer.id = id;
-    mainContainer.style.position = 'absolute';
-    mainContainer.style.zIndex = '1000';
+    mainContainer.className = 'av-selector-panel';
 
-    // Cuadro de texto inicial que funciona como el activador
-    const toggleBox = document.createElement('div');
-    toggleBox.innerText = 'Categorías de Áreas Verdes';
-    toggleBox.style.cursor = 'pointer';
-    toggleBox.style.backgroundColor = '#fff';
-    toggleBox.style.padding = '8px';
-    toggleBox.style.borderRadius = '5px';
-    toggleBox.style.boxShadow = '0 0 15px rgba(0,0,0,0.2)';
-    toggleBox.style.border = '1px solid #ccc';
-    toggleBox.style.display = 'inline-block';
-    toggleBox.style.marginBottom = '5px';
+    const header = document.createElement('div');
+    header.className = 'av-selector-panel__header';
+    header.innerHTML = '<span>&#9660;</span> Categorías de Áreas Verdes';
 
-    // Contenedor para los tres grupos (inicialmente oculto)
-    const groupContainer = document.createElement('div');
-    groupContainer.style.backgroundColor = 'white';
-    groupContainer.style.padding = '8px';
-    groupContainer.style.borderRadius = '5px';
-    groupContainer.style.boxShadow = '0 0 15px rgba(0,0,0,0.2)';
-    groupContainer.style.border = '1px solid #ccc';
-    groupContainer.style.display = 'none';  // Inicialmente oculto
-    groupContainer.style.marginTop = '5px';
-    groupContainer.style.position = 'relative';
+    const body = document.createElement('div');
+    body.className = 'av-selector-panel__body';
+    body.style.display = 'none';
 
-    // Orden de categorías y sus grupos
     const categoryGroups = [
         {
             title: "Plan Regulador Comunal",
@@ -151,126 +145,79 @@ export function createAvSelector(id, categoryLayers, currentMap) {
         },
         {
             title: "MINVU",
-            categories: [
-                "AV_ParqueUrbano"
-            ]
+            categories: ["AV_ParqueUrbano"]
         },
         {
             title: "Municipalidad Quilpué",
-            categories: [
-                "Mantencion_General"
-            ]
+            categories: ["Mantencion_General"]
         }
     ];
 
-    // Crear toggleBox para cada grupo
     categoryGroups.forEach(group => {
-        const groupToggleBox = document.createElement('div');
-        groupToggleBox.innerText = group.title;
-        groupToggleBox.style.cursor = 'pointer';
-groupToggleBox.addEventListener('mouseover', () => {
-    groupToggleBox.style.border = '1px solid #bbb';
-});
-groupToggleBox.addEventListener('mouseout', () => {
-    if (groupOptionsContainer.style.display === 'none') {
-        groupToggleBox.style.border = '1px solid transparent';
-    }
-});
-        groupToggleBox.style.backgroundColor = '#f0f0f0';
-        groupToggleBox.style.padding = '6px';
-        groupToggleBox.style.borderRadius = '3px';
-        groupToggleBox.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
-        groupToggleBox.style.border = '1px solid transparent';
-        groupToggleBox.style.display = 'inline-block';
-        groupToggleBox.style.marginBottom = '5px';
-        groupToggleBox.style.marginTop = '5px';
+        const groupTitle = document.createElement('div');
+        groupTitle.className = 'av-selector-panel__group-title';
+        groupTitle.textContent = group.title;
+        body.appendChild(groupTitle);
 
-        // Contenedor para las opciones de cada grupo (inicialmente oculto)
-        const groupOptionsContainer = document.createElement('div');
-        groupOptionsContainer.style.backgroundColor = 'white';
-        groupOptionsContainer.style.padding = '6px';
-        groupOptionsContainer.style.borderRadius = '3px';
-        groupOptionsContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
-        groupOptionsContainer.style.border = '1px solid #bbb';
-        groupOptionsContainer.style.display = 'none';
-        groupOptionsContainer.style.marginTop = '5px';
-
-        // Crear checkboxes para cada categoría en el grupo
         group.categories.forEach(categoryKey => {
-            if (categoryLayers[categoryNames[categoryKey]]) {
-                const layerName = categoryNames[categoryKey] || categoryKey;
-                const checkboxContainer = document.createElement('div');
-                checkboxContainer.style.display = 'flex';
-                checkboxContainer.style.alignItems = 'center';
-                checkboxContainer.style.marginBottom = '5px';
+            const layerName = categoryNames[categoryKey] || categoryKey;
+            if (!categoryLayers[layerName]) return;
 
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = `${id}-${layerName}`;
-                checkbox.value = layerName;
-                checkbox.style.marginRight = '8px';
+            const row = document.createElement('label');
+            row.className = 'av-selector-panel__item';
 
-                const checkboxLabel = document.createElement('label');
-                checkboxLabel.htmlFor = checkbox.id;
-                checkboxLabel.innerText = layerName;
-                checkboxLabel.style.fontFamily = 'Arial, sans-serif';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = layerName;
 
-                checkboxContainer.appendChild(checkbox);
-                checkboxContainer.appendChild(checkboxLabel);
-                groupOptionsContainer.appendChild(checkboxContainer);
+            const swatch = document.createElement('span');
+            swatch.className = 'av-selector-panel__swatch';
+            swatch.style.backgroundColor = CATEGORY_SWATCH_COLORS[categoryKey] || '#94a3b8';
 
-                // Manejar la selección de capas
-                checkbox.addEventListener('change', () => {
-                    if (checkbox.checked) {
-                        currentMap.addLayer(categoryLayers[layerName]); // Agregar capa al mapa
-                    } else {
-                        currentMap.removeLayer(categoryLayers[layerName]); // Quitar capa del mapa
-                    }
-                });
-            }
+            const labelText = document.createElement('span');
+            labelText.textContent = layerName;
+
+            row.appendChild(checkbox);
+            row.appendChild(swatch);
+            row.appendChild(labelText);
+            body.appendChild(row);
+
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    currentMap.addLayer(categoryLayers[layerName]);
+                } else {
+                    currentMap.removeLayer(categoryLayers[layerName]);
+                }
+            });
         });
-
-        // Mostrar/ocultar las opciones del grupo al hacer clic en el toggle
-        groupToggleBox.addEventListener('mouseover', () => {
-            groupToggleBox.style.border = '1px solid transparent';
-        });
-        groupToggleBox.addEventListener('mouseout', () => {
-            groupToggleBox.style.border = '1px solid transparent';
-        });
-        groupToggleBox.addEventListener('click', () => {
-    groupToggleBox.style.border = '1px solid #bbb';
-            groupOptionsContainer.style.display = groupOptionsContainer.style.display === 'none' ? 'block' : 'none';
-        });
-
-        groupContainer.appendChild(groupToggleBox);
-        groupContainer.appendChild(groupOptionsContainer);
     });
 
-    // Mostrar el contenedor de grupos al hacer clic en el cuadro de texto principal
-    toggleBox.addEventListener('click', () => {
-        groupContainer.style.display = groupContainer.style.display === 'none' ? 'block' : 'none';
+    header.addEventListener('click', () => {
+        const isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : 'block';
+        header.querySelector('span').textContent = isOpen ? '\u25BC' : '\u25B2';
     });
 
-    // Ocultar las opciones cuando se hace clic fuera del contenedor
     document.addEventListener('click', (e) => {
         if (!mainContainer.contains(e.target)) {
-            groupContainer.style.display = 'none';
+            body.style.display = 'none';
+            header.querySelector('span').textContent = '\u25BC';
         }
     });
 
-    // Agregar el cuadro de texto y el contenedor de grupos al contenedor principal
-    mainContainer.appendChild(toggleBox);
-    mainContainer.appendChild(groupContainer);
-
-    // Añadir el contenedor principal al mapa
+    mainContainer.appendChild(header);
+    mainContainer.appendChild(body);
     currentMap.getContainer().appendChild(mainContainer);
 
-    return mainContainer; // Devolver el contenedor principal que incluye el toggle y las opciones
+    return mainContainer;
 }
 
 export function positionAvSelector(container, position, offsetX = 0, offsetY = 0) {
-    // La posición se pasa como string, por ejemplo, 'top-right'
-    if (position === 'top-left') {
+    if (position === 'top-center') {
+        container.style.top = (10 + offsetY) + 'px';
+        container.style.left = '50%';
+        container.style.transform = 'translateX(-50%)';
+    } else if (position === 'top-left') {
         container.style.top = (10 + offsetY) + 'px';
         container.style.left = (10 + offsetX) + 'px';
     } else if (position === 'top-right') {
@@ -284,10 +231,9 @@ export function positionAvSelector(container, position, offsetX = 0, offsetY = 0
         container.style.right = (10 + offsetX) + 'px';
     }
 
-    // Asegúrate de que el contenedor esté dentro del mapa
     const mapElement = document.getElementById('p67');
     if (mapElement) {
-        mapElement.appendChild(container); // Asegurar que el contenedor esté en el mapa
+        mapElement.appendChild(container);
     }
 }
 

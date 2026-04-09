@@ -59,15 +59,19 @@ export async function multi_capa() {
     }
 
     Object.values(currentLayers).forEach(layer => {
-        if (layer && layer.getBounds) {
-            const layerBounds = layer.getBounds();
-            bounds = bounds ? bounds.extend(layerBounds) : layerBounds;
-        } else if (layer && layer.georaster) {
-            const { xmin, ymin, xmax, ymax } = layer.georaster;
-            const rasterBounds = L.latLngBounds(
-                [ymin, xmin],
-                [ymax, xmax]
-            );
+        if (!layer) return;
+        if (typeof layer.getBounds === 'function') {
+            try {
+                const layerBounds = layer.getBounds();
+                if (layerBounds && layerBounds.isValid()) {
+                    bounds = bounds ? bounds.extend(layerBounds) : layerBounds;
+                }
+            } catch (_) { /* layer may not be ready yet */ }
+        }
+        const gr = layer.georaster || (layer.options && layer.options.georaster);
+        if (!bounds && gr) {
+            const { xmin, ymin, xmax, ymax } = gr;
+            const rasterBounds = L.latLngBounds([ymin, xmin], [ymax, xmax]);
             bounds = bounds ? bounds.extend(rasterBounds) : rasterBounds;
         }
     });

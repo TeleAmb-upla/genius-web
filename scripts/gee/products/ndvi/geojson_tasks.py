@@ -78,14 +78,24 @@ def start_ndvi_m_geojson_tasks(
 def start_ndvi_y_geojson_tasks(
     s2_ym: ee.ImageCollection | None = None,
     *,
+    year_numbers: list[int] | None = None,
     drive_gate: DriveExportGate | None = None,
 ) -> list[ee.batch.Task]:
     s2_ym = s2_ym or vectors.ndvi_yearmonth_collection()
     barrios = vectors.barrios_quilpue()
     manzanas = vectors.manzanas_quilpue()
 
-    last_year = ym_lib.effective_yearly_export_year(s2_ym)
-    years_list = [last_year]
+    if year_numbers:
+        years_list = sorted(year_numbers)
+    else:
+        years_list = [ym_lib.effective_yearly_export_year(s2_ym)]
+
+    # Fetch year values directly from the collection to preserve their
+    # original server-side type (avoids Python int vs GEE property mismatch).
+    all_years_raw = (
+        s2_ym.aggregate_array("year").distinct().sort().getInfo() or []
+    )
+    year_lookup: dict[int, object] = {int(y): y for y in all_years_raw}
 
     tasks: list[ee.batch.Task] = []
 
@@ -97,9 +107,17 @@ def start_ndvi_y_geojson_tasks(
             (".geojson", ".json"),
         ):
             return None
+        orig_y = year_lookup.get(y, y)
         selected = s2_ym.select("NDVI_median").filter(
-            ee.Filter.calendarRange(y, y, "year")
+            ee.Filter.eq("year", orig_y)
         )
+        n_images = selected.size().getInfo()
+        if n_images == 0:
+            print(
+                f"  [WARN] Year {y}: 0 images with NDVI_median in collection "
+                f"— skipping GeoJSON export ({prefijo})"
+            )
+            return None
         ndvi_median = selected.median().rename("NDVI")
         image_return = ee.Image([ndvi_median]).clip(unidad_fc).set("year", y)
         triplets = (

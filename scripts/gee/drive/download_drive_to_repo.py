@@ -246,6 +246,7 @@ def clear_drive_folder_files(
     file_stems: tuple[str, ...] | None = None,
     stem_exclude_substrings: tuple[str, ...] = (),
     dry_run: bool = False,
+    reason: str = "",
 ) -> int:
     """Trash all matching files in a Drive folder. Returns count of trashed files."""
     exts = _normalize_exts(extensions)
@@ -284,7 +285,8 @@ def clear_drive_folder_files(
                 trashed += 1
     if trashed:
         mode = " (dry-run)" if dry_run else ""
-        print(f"  [Drive] Eliminados {trashed} archivo(s) de '{folder_name}'{mode}")
+        why = f" ({reason})" if reason else ""
+        print(f"  [Drive] Eliminados {trashed} archivo(s) de '{folder_name}'{why}{mode}")
     return trashed
 
 
@@ -801,6 +803,12 @@ SYNC_REGISTRY: dict[str, DriveSyncSpec] = {
         (".geojson", ".json"),
         stem_prefixes=("Trend_LST_ZonalStats_Manzanas",),
     ),
+    "lst_suhi_yearly": DriveSyncSpec(
+        paths.DRIVE_LST_SUHI_YEARLY,
+        paths.REPO_GEOJSON_LST_SUHI_YEARLY,
+        (".geojson",),
+        stem_prefixes=("LST_SUHI_Yearly_",),
+    ),
     # --- Huella Urbana ---
     "hu_raster_yearly": DriveSyncSpec(
         paths.DRIVE_HU_YEARLY,
@@ -920,7 +928,16 @@ def run_drive_sync(
         else:
             print(f"  ▸ [{key}] {summary}")
             print(f"Sincronizando [{key}] {spec.drive_folder} -> {spec.dest_dir}")
-        print(f"  Modo: {'espejo completo (reemplaza gestionados en local)' if use_full else 'incremental (solo faltantes)'}")
+        if use_full:
+            if full_replace is True:
+                _reason = "global --full-sync"
+            elif force_key:
+                _reason = "forzado por drive_freshness (datos actualizados en Drive)"
+            else:
+                _reason = "primera sincronización para esta clave"
+            print(f"  Modo: espejo completo (reemplaza gestionados en local) — {_reason}")
+        else:
+            print(f"  Modo: incremental (solo faltantes)")
         try:
             if key == "csv":
                 total += _sync_ndvi_csv_bundle(

@@ -115,41 +115,51 @@ def start_aod_monthly_raster_tasks(
     return tasks
 
 
-def start_aod_yearly_raster_last_year_task(
+def start_aod_yearly_raster_tasks(
     ic: ee.ImageCollection | None = None,
     *,
+    year_numbers: list[int] | None = None,
     drive_gate: DriveExportGate | None = None,
     bypass_drive_gate: bool = False,
-) -> ee.batch.Task | None:
-    """Un solo año: último año civil cerrado por reloj si el asset lo cubre; si no, último completo en colección."""
+) -> list[ee.batch.Task]:
+    """
+    Export AOD_Yearly_{YYYY}.tif for each year in *year_numbers*.
+    When *year_numbers* is ``None``, exports only ``effective_yearly_export_year``.
+    """
     ic = ic or vectors.aod_yearmonth_collection()
     region = vectors.region_valparaiso()
     geom = region.geometry()
-    y = ym_lib.effective_yearly_export_year(ic)
-    stem = f"AOD_Yearly_{y}"
-    if (
-        drive_gate
-        and not bypass_drive_gate
-        and drive_gate.should_skip_export(
-            paths.DRIVE_AOD_RASTER_YEARLY,
-            stem,
-            (".tif", ".tiff"),
+    tasks: list[ee.batch.Task] = []
+
+    if year_numbers is None:
+        years_loop = [ym_lib.effective_yearly_export_year(ic)]
+    else:
+        years_loop = sorted(year_numbers)
+
+    for y in years_loop:
+        stem = f"AOD_Yearly_{y}"
+        if (
+            drive_gate
+            and not bypass_drive_gate
+            and drive_gate.should_skip_export(
+                paths.DRIVE_AOD_RASTER_YEARLY, stem, (".tif", ".tiff"),
+            )
+        ):
+            continue
+        selected = ic.select("AOD_median").filter(ee.Filter.eq("year", y)).median()
+        t = ee.batch.Export.image.toDrive(
+            image=selected.clip(region),
+            description=stem,
+            folder=paths.DRIVE_AOD_RASTER_YEARLY,
+            fileNamePrefix=stem,
+            scale=1000,
+            region=geom,
+            crs="EPSG:4326",
+            maxPixels=1e13,
         )
-    ):
-        return None
-    selected = ic.select("AOD_median").filter(ee.Filter.eq("year", y)).median()
-    t = ee.batch.Export.image.toDrive(
-        image=selected.clip(region),
-        description=stem,
-        folder=paths.DRIVE_AOD_RASTER_YEARLY,
-        fileNamePrefix=stem,
-        scale=1000,
-        region=geom,
-        crs="EPSG:4326",
-        maxPixels=1e13,
-    )
-    t.start()
-    return t
+        t.start()
+        tasks.append(t)
+    return tasks
 
 
 def start_aod_trend_raster_task(

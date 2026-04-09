@@ -167,11 +167,11 @@ function addInfraLayers(map) {
         source: 'infraestructuraCritica',
         layout: {
             'icon-image': ['get', 'icon'],
-            'icon-size': 0.36,
+            'icon-size': 0.55,
             'icon-allow-overlap': true
         },
         paint: {
-            'icon-opacity': 0.68
+            'icon-opacity': 0.9
         }
     });
 

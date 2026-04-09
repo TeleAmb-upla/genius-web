@@ -37,7 +37,7 @@ export function createyearLegendSVG(isMobile = false) {
     return `
         <svg class="map-legend-svg" width="${width}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
             <text x="0" y="${fontSizeTitle + 2}" font-size="${fontSizeTitle}" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
-            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Anual · escala visual p5-p95</text>
+            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Anual</text>
             ${legendItems}
         </svg>
     `;
@@ -77,7 +77,7 @@ export function createmonthLegendSVG(isMobile = false) {
     return `
         <svg class="map-legend-svg" width="${width}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
             <text x="0" y="${fontSizeTitle + 2}" font-size="${fontSizeTitle}" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
-            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Mensual · escala visual p5-p95</text>
+            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Mensual</text>
             ${legendItems}
         </svg>
     `;

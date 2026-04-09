@@ -58,6 +58,7 @@ from .drive.download_drive_to_repo import (
 from .drive.drive_audit import compute_drive_freshness_hints
 from .drive.drive_export_gate import DriveExportGate, report_drive_vs_local
 from .lib import yearmonth as ym_lib
+from .products.lst.constants import LST_START_YEAR
 
 
 PRODUCT_ORDER = ("ndvi", "aod", "no2", "so2", "lst", "hu")
@@ -516,11 +517,17 @@ def main(argv: list[str] | None = None) -> None:
                 max_ym = ym_lib.get_collection_max_ym(ic_audit)
             ty_wall = ym_lib.last_completed_wall_clock_calendar_year()
             cover = ym_lib.assets_cover_full_calendar_year(max_ym, ty_wall)
+            avail_years = ym_lib.get_collection_distinct_years(
+                ic_audit, max_year=ty_wall,
+            )
+            if product == "lst":
+                avail_years = [y for y in avail_years if y >= LST_START_YEAR]
             drive_freshness = compute_drive_freshness_hints(
                 product,
                 drive_service,
                 target_yearly_year=ty_wall,
                 assets_cover_target_year=cover,
+                available_years=avail_years,
             )
             for line in drive_freshness.audit_messages:
                 print(f"  {line}")
@@ -547,8 +554,31 @@ def main(argv: list[str] | None = None) -> None:
                 phase_label="Fase 1",
                 product_tag=product,
             )
-            phase1_work = bool(r1.asset_tasks or r1.drive_tasks)
-            tables_override = plan.run or phase1_work
+            force_yearly_tables = bool(
+                drive_freshness and drive_freshness.yearly_tables_missing_or_stale
+            )
+            force_yearly_raster = bool(
+                drive_freshness and drive_freshness.yearly_raster_missing_or_stale
+            )
+            phase2_needed = (
+                plan.run
+                or force_yearly_tables
+                or force_yearly_raster
+            )
+            if phase2_needed:
+                reasons = []
+                if plan.run:
+                    reasons.append("datos nuevos en fuente GEE")
+                if force_yearly_tables:
+                    reasons.append("tablas anuales faltan o tienen datos inválidos")
+                if force_yearly_raster:
+                    n_missing = len(drive_freshness.missing_yearly_raster_years) if drive_freshness else 0
+                    reasons.append(f"faltan {n_missing} raster(s) anual(es) en Drive")
+                print(
+                    f"  [Fase 2 activa] Razón: {'; '.join(reasons)}."
+                )
+            else:
+                print("  [Fase 2] Sin cambios necesarios en tablas/GeoJSON.")
             print(
                 "\n=== Fase 2: CSV + GeoJSON (tras rasters; luego sync local) ===\n"
             )
@@ -559,7 +589,7 @@ def main(argv: list[str] | None = None) -> None:
                 force_full=args.force_full,
                 drive_gate=drive_gate,
                 persist_state=True,
-                tables_run_override=tables_override,
+                tables_run_override=None,
                 drive_freshness=drive_freshness,
             )
             print_enqueue_counters(r2)

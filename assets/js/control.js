@@ -1,5 +1,5 @@
 export class LayersControl {
-    constructor(onModeChange) {
+    constructor(onModeChange, onInfraToggle) {
         LayersControl._nextId = (LayersControl._nextId || 0) + 1;
         this._controlId = `layers-control-${LayersControl._nextId}`;
         this._container = document.createElement("div");
@@ -9,6 +9,7 @@ export class LayersControl {
             "layers-control"
         );
         this._onModeChange = onModeChange;
+        this._onInfraToggle = onInfraToggle || null;
         this._activeMode = null;
         this._infraEnabled = false;
         this._createModeSwitchButtons();
@@ -46,7 +47,9 @@ export class LayersControl {
         infraCb.id = `${this._controlId}-infra`;
         infraCb.addEventListener("change", () => {
             this._infraEnabled = infraCb.checked;
-            this._onModeChange(this._infraEnabled ? "infraestructura" : (this._activeMode || "yearly"));
+            if (this._onInfraToggle) {
+                this._onInfraToggle(this._infraEnabled);
+            }
         });
         this._infraCheckbox = infraCb;
         const infraLabel = document.createElement("span");
@@ -65,8 +68,6 @@ export class LayersControl {
         Object.entries(this._pillButtons).forEach(([k, btn]) => {
             btn.classList.toggle("layers-control__pill--active", k === key);
         });
-        if (this._infraCheckbox) this._infraCheckbox.checked = false;
-        this._infraEnabled = false;
         this._onModeChange(key);
     }
 

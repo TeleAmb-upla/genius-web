@@ -13,6 +13,7 @@ import ee
 from ...config import paths
 from ...earth_engine_init import vectors
 from ...drive.drive_export_gate import DriveExportGate
+from ...lib import yearmonth as ym_lib
 
 
 def _preparar_colecciones(areas_verdes: ee.FeatureCollection):
@@ -201,7 +202,11 @@ def start_ndvi_y_csv_tasks(
     area_urbana = vectors.area_urbana_as_collection()
     gestion_fc, planificacion_fc = _preparar_colecciones(areas_verdes)
 
-    years = ee.List(s2_ym.aggregate_array("year")).distinct().sort()
+    max_export_year = ym_lib.last_completed_wall_clock_calendar_year()
+    years = (
+        ee.List(s2_ym.aggregate_array("year")).distinct().sort()
+        .filter(ee.Filter.lte("item", max_export_year))
+    )
 
     def year_image(y):
         y = ee.Number(y)

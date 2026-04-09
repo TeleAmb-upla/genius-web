@@ -9,11 +9,12 @@ from ...lib import incremental_base as inc_base
 from ...lib import incremental_plan as incplan
 from ...lib import state as state_lib
 from ...lib import yearmonth as ym_lib
+from .constants import LST_START_YEAR
 
 _manager = inc_base.IncrementalStateManager(
     state_filename="lst_export_state.json",
     root_asset_path=paths.ASSET_LST_YEARLY,
-    start_year=2013,
+    start_year=LST_START_YEAR,
 )
 
 
@@ -23,7 +24,10 @@ def state_path() -> Path:
 
 def list_missing_lst_yearly() -> list[int]:
     """Years not yet in the LST_Yearly asset collection."""
-    return ym_lib.list_missing_yearly(paths.ASSET_LST_YEARLY, start_year=2013)
+    return ym_lib.list_missing_yearly(
+        paths.ASSET_LST_YEARLY,
+        start_year=LST_START_YEAR,
+    )
 
 
 def plan_derivative_exports(

@@ -1,9 +1,11 @@
 import { createYearSelector, positionYearSelector } from './isla_de_calor/ultis_isla_y.js';
-import { LayersControl } from './isla_de_calor/control_isla.js';
+import { LayersControl } from '../control.js';
 import { updateMapLayerYear_isla } from './isla_de_calor/layer_isla.js';
 import { legend_isla} from './isla_de_calor/legend_isla.js';
 import { attachMapOpacityPanel } from '../slider_opacity.js';
 import { applyOpacityToVectorTrendLayers } from '../maplibre_opacity_util.js';
+import { loadInfCriticaMapLibre } from '../inf_critica_map_libre.js';
+import { getDefaultYearPair } from '../map_data_catalog.js';
 
 export async function map_t_islas() {
     const container = document.getElementById('p71');
@@ -85,48 +87,58 @@ export async function map_t_islas() {
     const scaleControlAfter = new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' });
     afterMap.addControl(scaleControlAfter, 'top-right');
 
-    // Crear y posicionar selectores de años
+    const [defaultBefore, defaultAfter] = getDefaultYearPair('lst');
+
     const yearSelectors = document.createElement('div');
     const beforeYearSelector = createYearSelector('beforeYearSelector');
     const afterYearSelector = createYearSelector('afterYearSelector');
     positionYearSelector(beforeYearSelector, 'left');
     positionYearSelector(afterYearSelector, 'right');
-    yearSelectors.style.display = 'block'; // Mostrar selectores por defecto
     yearSelectors.appendChild(beforeYearSelector);
     yearSelectors.appendChild(afterYearSelector);
     container.appendChild(yearSelectors);
 
-    // Definir la función para actualizar el modo (solo yearly)
-    async function setMode(mode) {
-        if (mode === 'yearly') {
-            // Reiniciar selectores
-            beforeYearSelector.value = '';
-            afterYearSelector.value = '';
+    const beforeSelect = beforeYearSelector.querySelector('select') || beforeYearSelector;
+    const afterSelect = afterYearSelector.querySelector('select') || afterYearSelector;
 
-            // Agregar eventos de cambio
-            beforeYearSelector.addEventListener('change', async (event) => {
-                const year = event.target.value;
-                if (year) {
-                    await updateMapLayerYear_isla(beforeMap, 'vectorSourceBeforeYear', 'vectorLayerBeforeYear', year);
-                }
-            });
+    beforeYearSelector.addEventListener('change', async (event) => {
+        const year = event.target.value;
+        if (year) {
+            await updateMapLayerYear_isla(beforeMap, 'vectorSourceBeforeYear', 'vectorLayerBeforeYear', year);
+        }
+    });
 
-            afterYearSelector.addEventListener('change', async (event) => {
-                const year = event.target.value;
-                if (year) {
-                    await updateMapLayerYear_isla(afterMap, 'vectorSourceAfterYear', 'vectorLayerAfterYear', year);
-                }
-            });
+    afterYearSelector.addEventListener('change', async (event) => {
+        const year = event.target.value;
+        if (year) {
+            await updateMapLayerYear_isla(afterMap, 'vectorSourceAfterYear', 'vectorLayerAfterYear', year);
+        }
+    });
+
+    async function toggleInfra(enabled) {
+        for (const map of [beforeMap, afterMap]) {
+            if (enabled) {
+                await loadInfCriticaMapLibre(map);
+            } else {
+                if (map.getLayer('infra-layer')) map.removeLayer('infra-layer');
+                if (map.getSource('infra-source')) map.removeSource('infra-source');
+            }
         }
     }
 
-    // Crear y agregar controles
-    const controls = new LayersControl(setMode);
-    beforeMap.on('load', () => beforeMap.addControl(controls));
-    afterMap.on('load', () => afterMap.addControl(controls));
+    const controls = new LayersControl(
+        (mode) => {
+            yearSelectors.style.display = mode === 'yearly' ? 'block' : 'none';
+        },
+        (enabled) => toggleInfra(enabled)
+    );
+    controls._container.style.position = 'absolute';
+    controls._container.style.top = '10px';
+    controls._container.style.right = '10px';
+    controls._container.style.zIndex = '10';
+    container.appendChild(controls._container);
 
-    // Inicializar el modo por defecto
-    setMode('yearly');
+    controls.setMode('yearly');
 
     // Agregar comparación lado a lado (side by side)
     if (window.compareInstance) {
@@ -175,8 +187,16 @@ export async function map_t_islas() {
         afterMap.on('load', resolve);
     });
 
-    // Esperar a que ambos mapas se carguen antes de crear el slider de opacidad
     await Promise.all([beforeMapLoaded, afterMapLoaded]);
+
+    if (defaultBefore) {
+        beforeSelect.value = defaultBefore;
+        await updateMapLayerYear_isla(beforeMap, 'vectorSourceBeforeYear', 'vectorLayerBeforeYear', defaultBefore);
+    }
+    if (defaultAfter) {
+        afterSelect.value = defaultAfter;
+        await updateMapLayerYear_isla(afterMap, 'vectorSourceAfterYear', 'vectorLayerAfterYear', defaultAfter);
+    }
 
     attachMapOpacityPanel(container, (opacity) => {
       applyOpacityToVectorTrendLayers(beforeMap, opacity);

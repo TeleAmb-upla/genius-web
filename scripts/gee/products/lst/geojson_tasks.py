@@ -14,6 +14,7 @@ from ...drive.drive_export_gate import DriveExportGate
 from ...lib import mk_sen as mk_sen_lib
 from ...lib import yearmonth as ym_lib
 from ...lib import zonal_geojson
+from .constants import LST_START_YEAR
 from .raster_tasks import _build_lst_landsat_collection
 
 
@@ -74,10 +75,13 @@ def start_lst_m_geojson_tasks(
 def start_lst_y_geojson_tasks(
     ic: ee.ImageCollection | None = None,
     *,
+    year_numbers: list[int] | None = None,
     drive_gate: DriveExportGate | None = None,
 ) -> list[ee.batch.Task]:
     """Yearly zonal from asset LST_Yearly."""
-    ic = ic or vectors.lst_yearly_collection()
+    ic = (ic or vectors.lst_yearly_collection()).filter(
+        ee.Filter.gte("year", LST_START_YEAR)
+    )
     barrios = vectors.barrios_quilpue()
     manzanas = vectors.manzanas_quilpue()
     max_y = ym_lib.get_collection_max_year(ic)
@@ -92,6 +96,7 @@ def start_lst_y_geojson_tasks(
         value_property="LST_mean",
         stem_prefix="LST_Yearly_ZonalStats",
         last_year=ly,
+        year_numbers=year_numbers,
         unidad_fc=barrios,
         nombre_prefijo="Barrios",
         drive_folder=paths.DRIVE_LST_GEO_YEARLY_B,
@@ -105,6 +110,7 @@ def start_lst_y_geojson_tasks(
         value_property="LST_mean",
         stem_prefix="LST_Yearly_ZonalStats",
         last_year=ly,
+        year_numbers=year_numbers,
         unidad_fc=manzanas,
         nombre_prefijo="Manzanas",
         drive_folder=paths.DRIVE_LST_GEO_YEARLY_M,
@@ -121,7 +127,9 @@ def start_lst_t_geojson_tasks(
     drive_gate: DriveExportGate | None = None,
 ) -> list[ee.batch.Task]:
     """Trend zonal from asset LST_Yearly."""
-    ic = ic or vectors.lst_yearly_collection()
+    ic = (ic or vectors.lst_yearly_collection()).filter(
+        ee.Filter.gte("year", LST_START_YEAR)
+    )
     barrios = vectors.barrios_quilpue()
     manzanas = vectors.manzanas_quilpue()
     sens, pval = mk_sen_lib.mk_sen_slope_and_p_value_annual(

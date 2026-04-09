@@ -11,11 +11,17 @@ export function createYearSelector(id) {
 
     const selector = document.createElement('select');
     selector.id = id;
-    for (const year of getProductYears('lst')) {
+    const years = getProductYears('lst');
+    for (const year of years) {
         const option = document.createElement('option');
         option.value = year;
         option.text = year;
         selector.appendChild(option);
+    }
+    if (/right|after/i.test(id) && years.length) {
+        selector.value = String(years[years.length - 1]);
+    } else if (years.length > 1) {
+        selector.value = String(years[years.length - 2]);
     }
     container.appendChild(selector);
 

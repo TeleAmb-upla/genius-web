@@ -14,6 +14,7 @@ from ...earth_engine_init import vectors
 from ...drive.drive_export_gate import DriveExportGate
 from ...lib import mk_sen as mk_sen_lib
 from ...lib import yearmonth as ym_lib
+from .constants import LST_START_YEAR
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +104,8 @@ def start_lst_yearly_asset_tasks(
 
     if missing_years is None:
         missing_years = ym_lib.list_missing_yearly(
-            paths.ASSET_LST_YEARLY, start_year=2013
+            paths.ASSET_LST_YEARLY,
+            start_year=LST_START_YEAR,
         )
 
     tasks: list[ee.batch.Task] = []
@@ -196,47 +198,67 @@ def start_lst_monthly_raster_tasks(
 # Yearly raster to Drive (from asset LST_Yearly)
 # ---------------------------------------------------------------------------
 
-def start_lst_yearly_raster_last_year_task(
+def start_lst_yearly_raster_tasks(
     ic: ee.ImageCollection | None = None,
     *,
+    year_numbers: list[int] | None = None,
     drive_gate: DriveExportGate | None = None,
     bypass_drive_gate: bool = False,
-) -> ee.batch.Task | None:
-    """Export last complete year from the yearly asset to Drive."""
-    ic = ic or vectors.lst_yearly_collection()
+) -> list[ee.batch.Task]:
+    """
+    Export LST_Yearly_{YYYY}.tif for each year in *year_numbers*.
+    When *year_numbers* is ``None``, exports only the effective yearly year.
+    """
+    ic = (ic or vectors.lst_yearly_collection()).filter(
+        ee.Filter.gte("year", LST_START_YEAR)
+    )
     ugeom = vectors.area_urbana_quilpue_feature().geometry()
-    max_y = ym_lib.get_collection_max_year(ic)
-    if max_y is None:
-        return None
-    wall = ym_lib.last_completed_wall_clock_calendar_year()
-    y = min(max_y, wall)
-    stem = f"LST_Yearly_{y}"
-    if (
-        drive_gate
-        and not bypass_drive_gate
-        and drive_gate.should_skip_export(
-            paths.DRIVE_LST_RASTER_YEARLY, stem, (".tif", ".tiff")
+    tasks: list[ee.batch.Task] = []
+
+    if year_numbers is None:
+        max_y = ym_lib.get_collection_max_year(ic)
+        if max_y is None:
+            return tasks
+        wall = ym_lib.last_completed_wall_clock_calendar_year()
+        years_loop = [min(max_y, wall)]
+    else:
+        years_loop = sorted(y for y in year_numbers if y >= LST_START_YEAR)
+
+    all_years_raw = (
+        ic.aggregate_array("year").distinct().sort().getInfo() or []
+    )
+    year_lookup: dict[int, object] = {int(y): y for y in all_years_raw}
+
+    for y in years_loop:
+        stem = f"LST_Yearly_{y}"
+        if (
+            drive_gate
+            and not bypass_drive_gate
+            and drive_gate.should_skip_export(
+                paths.DRIVE_LST_RASTER_YEARLY, stem, (".tif", ".tiff"),
+            )
+        ):
+            continue
+        orig_y = year_lookup.get(y, y)
+        selected = (
+            ic.select("LST_mean")
+            .filter(ee.Filter.eq("year", orig_y))
+            .first()
+            .rename("LST_mean")
         )
-    ):
-        return None
-    selected = (
-        ic.select("LST_mean")
-        .filter(ee.Filter.eq("year", y))
-        .first()
-        .rename("LST_mean")
-    )
-    t = ee.batch.Export.image.toDrive(
-        image=selected.clip(ugeom),
-        description=stem,
-        folder=paths.DRIVE_LST_RASTER_YEARLY,
-        fileNamePrefix=stem,
-        scale=30,
-        region=ugeom,
-        crs="EPSG:4326",
-        maxPixels=1e13,
-    )
-    t.start()
-    return t
+        t = ee.batch.Export.image.toDrive(
+            image=selected.clip(ugeom),
+            description=stem,
+            folder=paths.DRIVE_LST_RASTER_YEARLY,
+            fileNamePrefix=stem,
+            scale=30,
+            region=ugeom,
+            crs="EPSG:4326",
+            maxPixels=1e13,
+        )
+        t.start()
+        tasks.append(t)
+    return tasks
 
 
 # ---------------------------------------------------------------------------
@@ -250,7 +272,9 @@ def start_lst_trend_raster_task(
     bypass_drive_gate: bool = False,
 ) -> ee.batch.Task | None:
     """Mann-Kendall / Sen trend from yearly asset → Drive."""
-    ic = ic or vectors.lst_yearly_collection()
+    ic = (ic or vectors.lst_yearly_collection()).filter(
+        ee.Filter.gte("year", LST_START_YEAR)
+    )
     ugeom = vectors.area_urbana_quilpue_feature().geometry()
     stem = "LST_Yearly_Trend"
     if (

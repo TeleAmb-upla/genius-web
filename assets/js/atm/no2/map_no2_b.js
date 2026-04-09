@@ -179,17 +179,34 @@ function removeAllLayers(map) {
       }
   
       // Mostrar/ocultar los selectores y leyendas según el modo
-      setCompareSingleMapMode({
-          container,
-          beforeSelector: '#before_b_no2',
-          afterSelector: '#after_b_no2',
-          beforeMap,
-          afterMap,
-          enabled: mode === 'trend',
-      });
-
-      if (window.compareInstance && window.compareInstance.slider) {
-          window.compareInstance.slider.style.display = mode === 'trend' ? 'none' : 'block';
+      if (mode === 'trend') {
+        if (window.compareInstance) {
+          window.compareInstance.remove();
+          window.compareInstance = null;
+        }
+        setCompareSingleMapMode({
+            container,
+            beforeSelector: '#before_b_no2',
+            afterSelector: '#after_b_no2',
+            beforeMap,
+            afterMap,
+            enabled: true,
+        });
+      } else {
+        setCompareSingleMapMode({
+            container,
+            beforeSelector: '#before_b_no2',
+            afterSelector: '#after_b_no2',
+            beforeMap,
+            afterMap,
+            enabled: false,
+        });
+        if (!window.compareInstance) {
+          window.compareInstance = new maplibregl.Compare(beforeMap, afterMap, '#p31', {
+            mousemove: false,
+            orientation: 'vertical'
+          });
+        }
       }
 
       if (mode === 'yearly') {
@@ -198,8 +215,10 @@ function removeAllLayers(map) {
           yearLegend.style.display = 'block';
           monthLegend.style.display = 'none';
           trendLegend.style.display = 'none';
-          beforeYearSelector.value = defaultBeforeYear;
-          afterYearSelector.value = defaultAfterYear;
+          const bSel = beforeYearSelector.querySelector('select');
+          const aSel = afterYearSelector.querySelector('select');
+          if (bSel) bSel.value = defaultBeforeYear;
+          if (aSel) aSel.value = defaultAfterYear;
           await updateMapLayerYear(beforeMap, 'vectorSourceBeforeYear', 'vectorLayerBeforeYear', defaultBeforeYear);
           await updateMapLayerYear(afterMap, 'vectorSourceAfterYear', 'vectorLayerAfterYear', defaultAfterYear);
       } else if (mode === 'monthly') {
@@ -223,55 +242,47 @@ function removeAllLayers(map) {
           yearLegend.style.display = 'none';
           monthLegend.style.display = 'none';
           trendLegend.style.display = 'block';
-  
-          // Ocultar el slider para dar la ilusión de un solo mapa
-          if (window.compareInstance && window.compareInstance.slider) {
-              window.compareInstance.slider.style.display = 'none';
-          }
-      } else if (mode === 'infraestructura') {
-          // Cargar la capa de infraestructura crítica en ambos mapas
-          try {
-              const infraLayerBefore = await loadInfCriticaMapLibre(beforeMap);
-              const infraLayerAfter = await loadInfCriticaMapLibre(afterMap);
-  
-              if (infraLayerBefore && infraLayerAfter) {
-              }
-  
-              // Mostrar/ocultar leyendas y selectores si es necesario
-              yearSelectors.style.display = 'none';
-              monthSelectors.style.display = 'none';
-              yearLegend.style.display = 'none';
-              monthLegend.style.display = 'none';
-              trendLegend.style.display = 'none';
-          } catch (error) {
-              console.error('Error al cargar la capa de infraestructura crítica:', error);
-          }
       }
   
   }
    
-     const controls = new LayersControl(setMode);
-   
-     // Esperar a que ambos mapas carguen completamente
+     async function toggleInfra(enabled) {
+    if (enabled) {
+        try {
+            await loadInfCriticaMapLibre(beforeMap);
+            await loadInfCriticaMapLibre(afterMap);
+        } catch (e) {
+            console.error('Error loading infra:', e);
+        }
+    } else {
+        [beforeMap, afterMap].forEach(m => {
+            if (m.getLayer('infra-layer')) m.removeLayer('infra-layer');
+            if (m.getSource('infraestructuraCritica')) m.removeSource('infraestructuraCritica');
+        });
+    }
+}
+
+     const controls = new LayersControl(setMode, toggleInfra);
+     controls._container.style.position = 'absolute';
+     controls._container.style.top = '10px';
+     controls._container.style.right = '10px';
+     controls._container.style.zIndex = '10';
+     container.appendChild(controls._container);
+
      let mapsLoaded = 0;
      function onMapLoaded() {
        mapsLoaded++;
        if (mapsLoaded === 2) {
-         // Ambos mapas han cargado, podemos inicializar el slider de opacidad
          createOpacitySlider();
-        const yearlyRadio = controls._container.querySelector('input[type="radio"]');
-        if (yearlyRadio) yearlyRadio.checked = true;
-        setMode('yearly');
+         setMode('yearly');
        }
      }
-   
+
      beforeMap.on('load', () => {
-       beforeMap.addControl(controls);
        onMapLoaded();
      });
    
      afterMap.on('load', () => {
-       afterMap.addControl(controls);
        onMapLoaded();
      });
    

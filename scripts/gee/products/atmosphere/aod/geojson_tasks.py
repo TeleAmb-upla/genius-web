@@ -53,6 +53,7 @@ def start_aod_m_geojson_tasks(
 def start_aod_y_geojson_tasks(
     ic: ee.ImageCollection | None = None,
     *,
+    year_numbers: list[int] | None = None,
     drive_gate: DriveExportGate | None = None,
 ) -> list[ee.batch.Task]:
     ic = ic or vectors.aod_yearmonth_collection()
@@ -66,6 +67,7 @@ def start_aod_y_geojson_tasks(
         value_property="AOD_median",
         stem_prefix="AOD_Yearly_ZonalStats",
         last_year=ly,
+        year_numbers=year_numbers,
         unidad_fc=barrios,
         nombre_prefijo="Barrios",
         drive_folder=paths.DRIVE_AOD_GEO_YEARLY_B,
@@ -79,6 +81,7 @@ def start_aod_y_geojson_tasks(
         value_property="AOD_median",
         stem_prefix="AOD_Yearly_ZonalStats",
         last_year=ly,
+        year_numbers=year_numbers,
         unidad_fc=manzanas,
         nombre_prefijo="Manzanas",
         drive_folder=paths.DRIVE_AOD_GEO_YEARLY_M,

@@ -82,7 +82,7 @@ export async function map_ndvi_stdev() {
     avSelector = createAvSelector('av-selector', categoryLayers, currentMap);
 
     // Posicionar el selector en la parte superior derecha con desplazamiento
-    positionAvSelector(avSelector, 'top-right', 200, 0); // Desplazar 20px a la derecha
+    positionAvSelector(avSelector, 'top-center');
 
     // **Ajustar el z-index del avSelector para que esté por encima del slider**
     const avSelectorContainer = document.getElementById('av-selector');

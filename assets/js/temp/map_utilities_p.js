@@ -52,7 +52,7 @@ export function createyearLegendSVG() {
             <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Temperatura Superficial</text>
 
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="5" y="40" font-size="12" font-family="Arial">LST (°C) Anual · escala visual p5-p95</text>
+            <text x="5" y="40" font-size="12" font-family="Arial">LST (°C) Anual</text>
 
             <!-- Bloques de colores -->
             ${legendItems}
@@ -114,7 +114,7 @@ export function createmonthLegendSVG() {
             <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Temperatura Superficial</text>
 
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="5" y="40" font-size="12" font-family="Arial">LST (°C) Mensual · escala visual p5-p95</text>
+            <text x="5" y="40" font-size="12" font-family="Arial">LST (°C) Mensual</text>
 
             <!-- Bloques de colores -->
             ${legendItems}

@@ -212,6 +212,11 @@ def start_ndvi_yearly_raster_tasks(
     if not years_loop:
         return tasks
 
+    all_years_raw = (
+        s2_ym.aggregate_array("year").distinct().sort().getInfo() or []
+    )
+    year_lookup: dict[int, object] = {int(y): y for y in all_years_raw}
+
     for y in years_loop:
         stem = f"NDVI_Yearly_{y}"
         if (
@@ -224,9 +229,10 @@ def start_ndvi_yearly_raster_tasks(
             )
         ):
             continue
+        orig_y = year_lookup.get(y, y)
         selected = (
             s2_ym.select("NDVI_median")
-            .filter(ee.Filter.calendarRange(y, y, "year"))
+            .filter(ee.Filter.eq("year", orig_y))
             .median()
         )
         task = ee.batch.Export.image.toDrive(
@@ -296,66 +302,80 @@ def start_ndvi_sd_raster_task(
 def start_ndvi_yearly_zonal_geojson_tasks(
     s2_ym: ee.ImageCollection | None = None,
     *,
+    year_numbers: list[int] | None = None,
     drive_gate: DriveExportGate | None = None,
 ) -> list[ee.batch.Task]:
     """
-    Estadística zonal anual (último año completo) barrios y manzanas — GeoJSON.
-    Copiar a assets/data/geojson/NDVI/NDVI_Yearly_ZonalStats_{Barrios|Manzanas}/
+    Estadística zonal anual barrios y manzanas — GeoJSON.
+    When *year_numbers* is provided, exports those years; otherwise the effective yearly year.
     """
     s2_ym = s2_ym or vectors.ndvi_yearmonth_collection()
     barrios = vectors.barrios_quilpue()
     manzanas = vectors.manzanas_quilpue()
-    last_year = ym_lib.effective_yearly_export_year(s2_ym)
 
-    img = (
-        s2_ym.select("NDVI_median")
-        .filter(ee.Filter.calendarRange(last_year, last_year, "year"))
-        .median()
-        .rename("NDVI")
+    if year_numbers:
+        years_loop = sorted(year_numbers)
+    else:
+        years_loop = [ym_lib.effective_yearly_export_year(s2_ym)]
+
+    all_years_raw = (
+        s2_ym.aggregate_array("year").distinct().sort().getInfo() or []
     )
+    year_lookup: dict[int, object] = {int(y): y for y in all_years_raw}
 
-    tasks = []
-    stem_b = f"NDVI_Yearly_ZonalStats_Barrios_{last_year}"
-    if not (
-        drive_gate
-        and drive_gate.should_skip_export(
-            paths.DRIVE_GEO_YEARLY_B,
-            stem_b,
-            (".geojson", ".json"),
+    tasks: list[ee.batch.Task] = []
+    for y in years_loop:
+        orig_y = year_lookup.get(y, y)
+        selected = s2_ym.select("NDVI_median").filter(
+            ee.Filter.eq("year", orig_y)
         )
-    ):
-        t1 = ee.batch.Export.table.toDrive(
-            collection=img.reduceRegions(collection=barrios, reducer=ee.Reducer.mean(), scale=10).map(
-                lambda f: f.set("Year", last_year)
-            ),
-            description=stem_b,
-            folder=paths.DRIVE_GEO_YEARLY_B,
-            fileNamePrefix=stem_b,
-            fileFormat="GeoJSON",
-            selectors=["NOMBRE", "POBLACION", "Year", "NDVI", ".geo"],
-        )
-        t1.start()
-        tasks.append(t1)
+        n_images = selected.size().getInfo()
+        if n_images == 0:
+            print(
+                f"  [WARN] Year {y}: 0 images with NDVI_median "
+                "— skipping yearly zonal GeoJSON"
+            )
+            continue
 
-    stem_m = f"NDVI_Yearly_ZonalStats_Manzanas_{last_year}"
-    if not (
-        drive_gate
-        and drive_gate.should_skip_export(
-            paths.DRIVE_GEO_YEARLY_M,
-            stem_m,
-            (".geojson", ".json"),
-        )
-    ):
-        t2 = ee.batch.Export.table.toDrive(
-            collection=img.reduceRegions(
-                collection=manzanas, reducer=ee.Reducer.mean(), scale=10
-            ).map(lambda f: f.set("Year", last_year)),
-            description=stem_m,
-            folder=paths.DRIVE_GEO_YEARLY_M,
-            fileNamePrefix=stem_m,
-            fileFormat="GeoJSON",
-            selectors=["MANZENT", "TOTAL_PERS", "Year", "NDVI", ".geo"],
-        )
-        t2.start()
-        tasks.append(t2)
+        img = selected.median().rename("NDVI")
+
+        stem_b = f"NDVI_Yearly_ZonalStats_Barrios_{y}"
+        if not (
+            drive_gate
+            and drive_gate.should_skip_export(
+                paths.DRIVE_GEO_YEARLY_B, stem_b, (".geojson", ".json"),
+            )
+        ):
+            t1 = ee.batch.Export.table.toDrive(
+                collection=img.reduceRegions(
+                    collection=barrios, reducer=ee.Reducer.mean(), scale=10,
+                ).map(lambda f: f.set("Year", y)),
+                description=stem_b,
+                folder=paths.DRIVE_GEO_YEARLY_B,
+                fileNamePrefix=stem_b,
+                fileFormat="GeoJSON",
+                selectors=["NOMBRE", "POBLACION", "Year", "NDVI", ".geo"],
+            )
+            t1.start()
+            tasks.append(t1)
+
+        stem_m = f"NDVI_Yearly_ZonalStats_Manzanas_{y}"
+        if not (
+            drive_gate
+            and drive_gate.should_skip_export(
+                paths.DRIVE_GEO_YEARLY_M, stem_m, (".geojson", ".json"),
+            )
+        ):
+            t2 = ee.batch.Export.table.toDrive(
+                collection=img.reduceRegions(
+                    collection=manzanas, reducer=ee.Reducer.mean(), scale=10,
+                ).map(lambda f: f.set("Year", y)),
+                description=stem_m,
+                folder=paths.DRIVE_GEO_YEARLY_M,
+                fileNamePrefix=stem_m,
+                fileFormat="GeoJSON",
+                selectors=["MANZENT", "TOTAL_PERS", "Year", "NDVI", ".geo"],
+            )
+            t2.start()
+            tasks.append(t2)
     return tasks

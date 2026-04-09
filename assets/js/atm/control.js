@@ -1,5 +1,7 @@
 export class LayersControl {
-    constructor(onModeChange) {
+    constructor(onModeChange, onInfraToggle) {
+        LayersControl._nextId = (LayersControl._nextId || 0) + 1;
+        this._controlId = `atm-layers-control-${LayersControl._nextId}`;
         this._container = document.createElement("div");
         this._container.classList.add(
             "maplibregl-ctrl",
@@ -7,86 +9,70 @@ export class LayersControl {
             "layers-control"
         );
         this._onModeChange = onModeChange;
+        this._onInfraToggle = onInfraToggle || null;
+        this._activeMode = null;
+        this._infraEnabled = false;
         this._createModeSwitchButtons();
     }
 
     _createModeSwitchButtons() {
-        // Estilo para alinear los botones a la izquierda
-        const alignLeftStyle = "text-align: left;";
+        const pillRow = document.createElement("div");
+        pillRow.className = "layers-control__pills";
 
-        // Botón de Años
-        const yearDiv = document.createElement("div");
-        yearDiv.style = alignLeftStyle;
-        const yearButton = document.createElement("input");
-        yearButton.type = "radio";
-        yearButton.name = "mode";
-        yearButton.id = "yearly";
-        yearButton.addEventListener("change", () => {
-            if (yearButton.checked) this._onModeChange('yearly');
+        const modes = [
+            { key: "yearly", label: "Anual" },
+            { key: "monthly", label: "Mensual" },
+            { key: "trend", label: "Tendencia" },
+        ];
+
+        this._pillButtons = {};
+        modes.forEach(({ key, label }) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "layers-control__pill";
+            btn.textContent = label;
+            btn.dataset.mode = key;
+            btn.addEventListener("click", () => this._selectMode(key));
+            pillRow.appendChild(btn);
+            this._pillButtons[key] = btn;
         });
 
-        const yearLabel = document.createElement("label");
-        yearLabel.htmlFor = "yearly";
-        yearLabel.textContent = "Años";
-        yearDiv.appendChild(yearButton);
-        yearDiv.appendChild(yearLabel);
+        const divider = document.createElement("hr");
+        divider.className = "layers-control__divider";
 
-        // Botón de Meses
-        const monthDiv = document.createElement("div");
-        monthDiv.style = alignLeftStyle;
-        const monthButton = document.createElement("input");
-        monthButton.type = "radio";
-        monthButton.name = "mode";
-        monthButton.id = "monthly";
-        monthButton.addEventListener("change", () => {
-            if (monthButton.checked) this._onModeChange('monthly');
+        const infraRow = document.createElement("label");
+        infraRow.className = "layers-control__toggle";
+        const infraCb = document.createElement("input");
+        infraCb.type = "checkbox";
+        infraCb.id = `${this._controlId}-infra`;
+        infraCb.addEventListener("change", () => {
+            this._infraEnabled = infraCb.checked;
+            if (this._onInfraToggle) {
+                this._onInfraToggle(this._infraEnabled);
+            }
         });
+        this._infraCheckbox = infraCb;
+        const infraLabel = document.createElement("span");
+        infraLabel.textContent = "Infraestructura";
+        infraRow.appendChild(infraCb);
+        infraRow.appendChild(infraLabel);
 
-        const monthLabel = document.createElement("label");
-        monthLabel.htmlFor = "monthly";
-        monthLabel.textContent = "Meses";
-        monthDiv.appendChild(monthButton);
-        monthDiv.appendChild(monthLabel);
+        this._container.appendChild(pillRow);
+        this._container.appendChild(divider);
+        this._container.appendChild(infraRow);
+    }
 
-        // Botón de Tendencia
-        const trendDiv = document.createElement("div");
-        trendDiv.style = alignLeftStyle;
-        const trendButton = document.createElement("input");
-        trendButton.type = "radio";
-        trendButton.name = "mode";
-        trendButton.id = "trend";
-        trendButton.addEventListener("change", () => {
-            if (trendButton.checked) this._onModeChange('trend');
+    _selectMode(key) {
+        if (this._activeMode === key) return;
+        this._activeMode = key;
+        Object.entries(this._pillButtons).forEach(([k, btn]) => {
+            btn.classList.toggle("layers-control__pill--active", k === key);
         });
+        this._onModeChange(key);
+    }
 
-        const trendLabel = document.createElement("label");
-        trendLabel.htmlFor = "trend";
-        trendLabel.textContent = "Tendencia";
-        trendDiv.appendChild(trendButton);
-        trendDiv.appendChild(trendLabel);
-
-        // Botón de Infraestructura Urbana
-        const infraDiv = document.createElement("div");
-        infraDiv.style = alignLeftStyle;
-        const infraButton = document.createElement("input");
-        infraButton.type = "radio";
-        infraButton.name = "mode";
-        infraButton.id = "infraestructura";
-        infraButton.addEventListener("change", () => {
-            if (infraButton.checked) this._onModeChange('infraestructura');
-        });
-
-        const infraLabel = document.createElement("label");
-        infraLabel.htmlFor = "infraestructura";
-        infraLabel.textContent = "Infraestructura Urbana";
-        infraDiv.appendChild(infraButton);
-        infraDiv.appendChild(infraLabel);
-
-        // Añadir todos los botones al contenedor principal
-        this._container.appendChild(yearDiv);
-        this._container.appendChild(monthDiv);
-        this._container.appendChild(trendDiv);
-        this._container.appendChild(infraDiv);
+    setMode(key) {
+        this._selectMode(key);
     }
 
     onAdd(map) {

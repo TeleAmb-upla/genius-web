@@ -6,6 +6,7 @@ import ee
 from ....config import paths
 from ....earth_engine_init import vectors
 from ....drive.drive_export_gate import DriveExportGate
+from ....lib import yearmonth as ym_lib
 
 
 def start_aod_csv_tasks(
@@ -57,7 +58,11 @@ def start_aod_csv_tasks(
         t1.start()
         tasks.append(t1)
 
-    years = ee.List(ic.aggregate_array("year")).distinct().sort()
+    max_export_year = ym_lib.last_completed_wall_clock_calendar_year()
+    years = (
+        ee.List(ic.aggregate_array("year")).distinct().sort()
+        .filter(ee.Filter.lte("item", max_export_year))
+    )
     aod_by_year = ee.ImageCollection.fromImages(
         years.map(
             lambda y: ee.Image(

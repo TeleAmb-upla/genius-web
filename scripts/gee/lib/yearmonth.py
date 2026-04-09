@@ -94,6 +94,21 @@ def list_missing_yearly(
     return [y for y in range(start_year, target + 1) if y not in existing]
 
 
+def get_collection_distinct_years(
+    ic: ee.ImageCollection,
+    *,
+    max_year: int | None = None,
+) -> list[int]:
+    """
+    All distinct ``year`` values in *ic*, sorted ascending, optionally capped at *max_year*.
+    """
+    raw = ic.aggregate_array("year").distinct().sort().getInfo() or []
+    years = sorted(int(y) for y in raw)
+    if max_year is not None:
+        years = [y for y in years if y <= max_year]
+    return years
+
+
 def get_collection_max_year(ic: ee.ImageCollection) -> int | None:
     """Max ``year`` property in a yearly ImageCollection."""
     n = ic.size().getInfo()

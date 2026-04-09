@@ -38,6 +38,25 @@
     "raster_monthly": "incremental",
     "geo_yearly_b": "incremental",
     "geo_yearly_m": "incremental",
-    "no2_raster_yearly": "incremental"
+    "no2_raster_yearly": "incremental",
+    "so2_raster_monthly": "incremental",
+    "so2_geo_trend_b": "incremental",
+    "so2_geo_trend_m": "incremental",
+    "so2_geo_yearly_b": "incremental",
+    "so2_geo_yearly_m": "incremental",
+    "lst_raster_yearly": "incremental",
+    "lst_geo_yearly_b": "incremental",
+    "lst_geo_yearly_m": "incremental",
+    "hu_csv_prc": "incremental",
+    "hu_csv_total": "incremental",
+    "aod_geo_trend_b": "incremental",
+    "aod_geo_trend_m": "incremental",
+    "aod_geo_yearly_b": "incremental",
+    "aod_geo_yearly_m": "incremental",
+    "no2_geo_yearly_b": "incremental",
+    "no2_geo_yearly_m": "incremental",
+    "aod_raster_yearly": "incremental",
+    "so2_raster_yearly": "incremental",
+    "lst_suhi_yearly": "incremental"
   }
 }

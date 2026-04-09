@@ -9,11 +9,17 @@ export function createYearSelector(id) {
 
     const selector = document.createElement('select');
     selector.id = id;
-    for (let year = 2017; year <= 2024; year++) {
+    const lastYear = new Date().getFullYear() - 1;
+    for (let year = 2017; year <= lastYear; year++) {
         const option = document.createElement('option');
         option.value = year;
         option.text = year;
         selector.appendChild(option);
+    }
+    if (/right|after/i.test(id)) {
+        selector.value = String(lastYear);
+    } else {
+        selector.value = String(Math.max(2017, lastYear - 1));
     }
     container.appendChild(selector);
 

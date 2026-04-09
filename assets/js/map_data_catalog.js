@@ -21,7 +21,9 @@ export function getProductYears(productKey) {
 export function getDefaultYearPair(productKey) {
     const years = getProductYears(productKey);
     if (!years.length) return [null, null];
-    return [String(years[0]), String(years[years.length - 1])];
+    const last = years[years.length - 1];
+    const secondToLast = years.length > 1 ? years[years.length - 2] : last;
+    return [String(secondToLast), String(last)];
 }
 
 export function getDefaultMonthPair() {

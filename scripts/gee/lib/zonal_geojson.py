@@ -72,6 +72,7 @@ def yearly_zonal_geojson_tasks_last_year(
     value_property: str,
     stem_prefix: str,
     last_year: int,
+    year_numbers: list[int] | None = None,
     unidad_fc: ee.FeatureCollection,
     nombre_prefijo: str,
     drive_folder: str,
@@ -80,32 +81,47 @@ def yearly_zonal_geojson_tasks_last_year(
     drive_gate: DriveExportGate | None = None,
 ) -> list[ee.batch.Task]:
     tasks: list[ee.batch.Task] = []
-    y = last_year
-    stem = f"{stem_prefix}_{nombre_prefijo}_{y}"
-    if drive_gate and drive_gate.should_skip_export(
-        drive_folder,
-        stem,
-        (".geojson", ".json"),
-    ):
-        return tasks
-    selected = ic.select(source_band).filter(ee.Filter.calendarRange(y, y, "year"))
-    median_img = selected.median().rename(value_property)
-    image_return = ee.Image([median_img]).clip(unidad_fc).set("year", y)
-    triplets = (
-        image_return.addBands(ee.Image(1))
-        .reduceRegions(collection=unidad_fc, reducer=ee.Reducer.mean(), scale=scale_m)
-        .map(lambda f: f.set({"imageId": image_return.id(), "Year": y}))
+    years_loop = sorted(year_numbers) if year_numbers else [last_year]
+
+    all_years_raw = (
+        ic.aggregate_array("year").distinct().sort().getInfo() or []
     )
-    t = ee.batch.Export.table.toDrive(
-        collection=triplets,
-        description=stem,
-        folder=drive_folder,
-        fileNamePrefix=stem,
-        fileFormat="GeoJSON",
-        selectors=selectores,
-    )
-    t.start()
-    tasks.append(t)
+    year_lookup: dict[int, object] = {int(y): y for y in all_years_raw}
+
+    for y in years_loop:
+        stem = f"{stem_prefix}_{nombre_prefijo}_{y}"
+        if drive_gate and drive_gate.should_skip_export(
+            drive_folder,
+            stem,
+            (".geojson", ".json"),
+        ):
+            continue
+        orig_y = year_lookup.get(y, y)
+        selected = ic.select(source_band).filter(ee.Filter.eq("year", orig_y))
+        n_images = selected.size().getInfo()
+        if n_images == 0:
+            print(
+                f"  [WARN] Year {y}: 0 images for band '{source_band}' "
+                f"— skipping GeoJSON export ({nombre_prefijo})"
+            )
+            continue
+        median_img = selected.median().rename(value_property)
+        image_return = ee.Image([median_img]).clip(unidad_fc).set("year", y)
+        triplets = (
+            image_return.addBands(ee.Image(1))
+            .reduceRegions(collection=unidad_fc, reducer=ee.Reducer.mean(), scale=scale_m)
+            .map(lambda f: f.set({"imageId": image_return.id(), "Year": y}))
+        )
+        t = ee.batch.Export.table.toDrive(
+            collection=triplets,
+            description=stem,
+            folder=drive_folder,
+            fileNamePrefix=stem,
+            fileFormat="GeoJSON",
+            selectors=selectores,
+        )
+        t.start()
+        tasks.append(t)
     return tasks
 
 

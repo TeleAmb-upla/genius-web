@@ -52,19 +52,30 @@ def enqueue_ndvi_exports(
 
     ic_for_year = vectors.ndvi_yearmonth_collection()
     last_calendar_year = ym_lib.effective_yearly_export_year(ic_for_year)
+    force_yearly_csv = bool(
+        drive_freshness and drive_freshness.yearly_csv_missing_or_stale
+    )
+    force_yearly_geo = bool(
+        drive_freshness and drive_freshness.yearly_geo_missing_or_stale
+    )
     refresh_yearly_products = (
         plan.is_full_refresh
         or (last_calendar_year in plan.years_touched)
         or (tables_run_override is True)
+        or force_yearly_csv
+        or force_yearly_geo
     )
-    force_yearly_tables = bool(
-        drive_freshness and drive_freshness.yearly_tables_missing_or_stale
-    )
-    tables_run = (
-        (plan.run or force_yearly_tables)
+    csv_run = (
+        (plan.run or force_yearly_csv)
         if tables_run_override is None
         else tables_run_override
     )
+    geo_run = (
+        (plan.run or force_yearly_geo)
+        if tables_run_override is None
+        else tables_run_override
+    )
+    tables_run = csv_run or geo_run
 
     if want("asset"):
         _add_tasks(asset, raster_tasks.start_ndvi_ym_asset_tasks())
@@ -118,118 +129,60 @@ def enqueue_ndvi_exports(
                     f"last_trend_raster_full_year ya en {lfy_tr})."
                 )
 
-            max_ym = plan.max_ym or incremental.get_collection_max_ym(ic_r)
-            climatology_target = incremental.target_ym_for_monthly_climatology(ic_r)
-            refresh_by_state = incremental.should_refresh_monthly_climatology(ic_r)
-            stale_mtime = (
-                max_ym is not None
-                and incremental.monthly_rasters_stale_vs_max_ym(max_ym)
-            )
-            stale_local_wall = ym_lib.monthly_local_rasters_stale_vs_last_completed_year(
-                paths.REPO_RASTER_NDVI_MONTHLY, "NDVI_Monthly_"
-            )
-            drive_force_monthly = (
-                drive_freshness.force_full_monthly_raster_export
-                if drive_freshness
-                else False
-            )
-            full_clim_refresh = (
-                refresh_by_state
-                or stale_mtime
-                or stale_local_wall
-                or drive_force_monthly
-                or (plan.run and plan.is_full_refresh)
-            )
-
-            if full_clim_refresh and climatology_target:
-                prev = incremental.load_last_climatology_target_ym()
-                prev_s = (
-                    f"{prev[0]}-{prev[1]:02d}" if prev else "(sin registro previo)"
-                )
-                messages.append(
-                    "[raster] Climatología mensual NDVI_Monthly_*: serie hasta "
-                    f"{climatology_target[0]}-{climatology_target[1]:02d} "
-                    f"(último reexport guardado: {prev_s}); se encolan los 12 meses "
-                    "y se omite pre-flight Drive para sustituir GeoTIFF en la carpeta."
-                )
-            elif stale_mtime and max_ym and not refresh_by_state:
-                messages.append(
-                    "[raster] Climatología mensual: también por mtime local vs colección "
-                    f"(último mes en asset ~{max_ym[0]}-{max_ym[1]:02d})."
-                )
-            if stale_local_wall and not drive_force_monthly:
-                messages.append(
-                    "[raster] Climatología mensual: mtime local más reciente anterior al "
-                    f"año civil cerrado {ym_lib.last_completed_wall_clock_calendar_year()}."
-                )
-
-            run_monthly = False
-            month_filter: frozenset[int] | None = None
-            bypass_monthly_gate = False
-            if plan.run:
-                run_monthly = True
-                if full_clim_refresh:
-                    month_filter = None
-                    bypass_monthly_gate = True
-                else:
-                    month_filter = plan.month_subset
-            elif full_clim_refresh:
-                run_monthly = True
-                month_filter = None
-                bypass_monthly_gate = True
-
+            # --- Monthly climatology: only re-export when new source data ---
+            run_monthly = plan.run or plan.is_full_refresh or force_full
             if run_monthly:
-                if bypass_monthly_gate and drive_gate:
+                full_refresh = plan.is_full_refresh or force_full
+                month_filter = None if full_refresh else plan.month_subset
+                if full_refresh and drive_gate:
                     drive_gate.clear_before_reexport(
                         paths.DRIVE_RASTER_MONTHLY,
                         stem_prefixes=("NDVI_Monthly_",),
+                        reason="refresco climatología mensual (datos nuevos en GEE)",
                     )
                 monthly_tasks = raster_tasks.start_ndvi_monthly_climatology_tasks(
                     month_numbers=month_filter,
                     drive_gate=drive_gate,
-                    bypass_drive_gate=bypass_monthly_gate,
+                    bypass_drive_gate=full_refresh,
                 )
                 _add_tasks(drive, monthly_tasks)
                 sync.add("raster_monthly")
                 ran_derivative = True
-                if (
-                    full_clim_refresh
-                    and climatology_target
-                    and monthly_tasks
-                ):
+                climatology_target = incremental.target_ym_for_monthly_climatology(ic_r)
+                if full_refresh and climatology_target and monthly_tasks:
                     incremental.save_last_climatology_target_ym(climatology_target)
-                if full_clim_refresh and monthly_tasks:
+                if full_refresh and monthly_tasks:
                     sync_full_mirror.add("raster_monthly")
             else:
                 messages.append(
-                    "Omitidos: climatología mensual (sin meses nuevos en derivados ni refresco "
-                    "por objetivo año-mes ni mtime local)."
+                    "Omitidos: climatología mensual (sin meses nuevos en fuente GEE)."
                 )
             if drive_freshness:
                 sync_full_mirror |= set(drive_freshness.sync_full_mirror_extra_keys)
 
-            yearly_needed = (
-                drive_freshness is not None
-                and drive_freshness.yearly_raster_missing_or_stale
-            )
+            # --- Yearly rasters: fill ALL missing years ---
+            missing_raster_years = list(
+                drive_freshness.missing_yearly_raster_years
+            ) if drive_freshness else []
+            yearly_needed = bool(missing_raster_years)
             if skip_yearly and not yearly_needed:
                 messages.append(
                     "Omitido: raster anual y SD (--include-yearly para encolarlos)."
                 )
             else:
-                bypass_yr = bool(
-                    drive_freshness and drive_freshness.yearly_raster_enqueue_bypass
-                )
+                year_nums = missing_raster_years or None
+                bypass_yr = bool(missing_raster_years)
                 if bypass_yr and drive_gate:
-                    drive_gate.clear_before_reexport(
-                        paths.DRIVE_RASTER_YEARLY,
-                        stem_prefixes=("NDVI_Yearly_",),
-                        stem_exclude_substrings=("Trend",),
-                    )
+                    for yr in missing_raster_years:
+                        drive_gate.clear_before_reexport(
+                            paths.DRIVE_RASTER_YEARLY,
+                            file_stems=(f"NDVI_Yearly_{yr}",),
+                            reason=f"falta año {yr} en Drive",
+                        )
                 _add_tasks(
                     drive,
                     raster_tasks.start_ndvi_yearly_raster_tasks(
-                        year_numbers=None,
+                        year_numbers=year_nums,
                         drive_gate=drive_gate,
                         bypass_drive_gate=bypass_yr,
                     ),
@@ -249,16 +202,28 @@ def enqueue_ndvi_exports(
                 sync.add("raster_sd")
                 ran_derivative = True
 
+    local_stale_drive_ok = bool(
+        drive_freshness and drive_freshness.local_tables_stale_drive_ok
+    )
+
     if want("csv"):
-        if tables_run:
+        if csv_run and local_stale_drive_ok:
+            sync.update({"csv", "csv_yearmonth"})
+            ran_derivative = True
+            messages.append(
+                "CSV: Drive ya tiene versión reciente; descargando sin re-exportar."
+            )
+        elif csv_run:
             if drive_gate:
                 drive_gate.clear_before_reexport(
                     paths.DRIVE_CSV_MONTHLY, extensions=(".csv",),
                     stem_prefixes=("NDVI_m_",),
+                    reason="re-export CSV mensual",
                 )
                 drive_gate.clear_before_reexport(
                     paths.DRIVE_CSV_YEARLY, extensions=(".csv",),
                     stem_prefixes=("NDVI_y_",),
+                    reason="re-export CSV anual",
                 )
             _add_tasks(drive, csv_tasks.start_ndvi_m_csv_tasks(drive_gate=drive_gate))
             _add_tasks(drive, csv_tasks.start_ndvi_ym_csv_tasks(drive_gate=drive_gate))
@@ -268,44 +233,61 @@ def enqueue_ndvi_exports(
                 plan.is_full_refresh
                 or plan.years_touched
                 or (tables_run_override is True)
+                or force_yearly_csv
             ):
                 _add_tasks(drive, csv_tasks.start_ndvi_y_csv_tasks(drive_gate=drive_gate))
             else:
                 messages.append("Omitido: CSV anual (sin años nuevos en el delta).")
         else:
-            messages.append("Omitidos: CSV — ver mensaje incremental.")
+            messages.append("Omitidos: CSV — sin datos nuevos ni CSV inválidos.")
 
     if want("geojson"):
-        geo_yearly_needed = bool(
-            drive_freshness
-            and (
-                drive_freshness.yearly_raster_missing_or_stale
-                or drive_freshness.yearly_tables_missing_or_stale
-            )
-        )
-        if (not skip_yearly or geo_yearly_needed) and tables_run and refresh_yearly_products:
+        missing_geo_years = list(
+            drive_freshness.missing_yearly_geo_years
+        ) if drive_freshness else []
+        geo_yearly_needed = bool(missing_geo_years)
+
+        if (not skip_yearly or geo_yearly_needed) and geo_run and refresh_yearly_products:
+            if missing_geo_years and drive_gate:
+                for yr in missing_geo_years:
+                    drive_gate.clear_before_reexport(
+                        paths.DRIVE_GEO_YEARLY_B,
+                        extensions=(".geojson", ".json"),
+                        file_stems=(f"NDVI_Yearly_ZonalStats_Barrios_{yr}",),
+                        reason=f"GeoJSON anual Barrios {yr} inválido/faltante — re-export",
+                    )
+                    drive_gate.clear_before_reexport(
+                        paths.DRIVE_GEO_YEARLY_M,
+                        extensions=(".geojson", ".json"),
+                        file_stems=(f"NDVI_Yearly_ZonalStats_Manzanas_{yr}",),
+                        reason=f"GeoJSON anual Manzanas {yr} inválido/faltante — re-export",
+                    )
             _add_tasks(
                 drive,
-                raster_tasks.start_ndvi_yearly_zonal_geojson_tasks(drive_gate=drive_gate),
+                raster_tasks.start_ndvi_yearly_zonal_geojson_tasks(
+                    year_numbers=missing_geo_years or None,
+                    drive_gate=drive_gate,
+                ),
             )
             _add_tasks(
                 drive,
-                geojson_tasks.start_ndvi_y_geojson_tasks(drive_gate=drive_gate),
+                geojson_tasks.start_ndvi_y_geojson_tasks(
+                    year_numbers=missing_geo_years or None,
+                    drive_gate=drive_gate,
+                ),
             )
             sync.update({"geo_yearly_b", "geo_yearly_m"})
             ran_derivative = True
-        elif (not skip_yearly or geo_yearly_needed) and tables_run:
-            messages.append(
-                "Omitidos: GeoJSON anuales zonales (sin actualización para el año "
-                f"calendario {last_calendar_year})."
-            )
         elif skip_yearly and not geo_yearly_needed:
             messages.append(
                 "Omitidos: GeoJSON anuales (zonal último año y NDVI_y_geojson; "
                 "--include-yearly para encolarlos)."
             )
+        elif not geo_run:
+            messages.append("Omitidos: GeoJSON anuales — sin datos faltantes/inválidos.")
 
-        if tables_run:
+        run_monthly_geo = plan.run or plan.is_full_refresh or force_full
+        if run_monthly_geo:
             month_filter = None if plan.is_full_refresh else plan.month_subset
             months_to_refresh = (
                 range(1, 13)
@@ -320,6 +302,7 @@ def enqueue_ndvi_exports(
                         f"NDVI_Monthly_ZonalStats_Barrios_{m:02d}"
                         for m in months_to_refresh
                     ),
+                    reason="re-export GeoJSON mensual",
                 )
                 drive_gate.clear_before_reexport(
                     paths.DRIVE_GEO_MONTHLY_M,
@@ -328,6 +311,7 @@ def enqueue_ndvi_exports(
                         f"NDVI_Monthly_ZonalStats_Manzanas_{m:02d}"
                         for m in months_to_refresh
                     ),
+                    reason="re-export GeoJSON mensual",
                 )
             _add_tasks(
                 drive,
@@ -340,31 +324,44 @@ def enqueue_ndvi_exports(
                 drive,
                 geojson_tasks.start_ndvi_sd_av_geojson_task(drive_gate=drive_gate),
             )
-            if drive_gate:
-                drive_gate.clear_before_reexport(
-                    paths.DRIVE_GEO_TREND_B, extensions=(".geojson", ".json"),
-                    stem_prefixes=("Trend_NDVI_ZonalStats_Barrios",),
-                )
-                drive_gate.clear_before_reexport(
-                    paths.DRIVE_GEO_TREND_M, extensions=(".geojson", ".json"),
-                    stem_prefixes=("Trend_NDVI_ZonalStats_Manzanas",),
-                )
-            _add_tasks(
-                drive,
-                geojson_tasks.start_ndvi_t_geojson_tasks(drive_gate=drive_gate),
-            )
             sync.update(
                 {
                     "geo_monthly_b",
                     "geo_monthly_m",
                     "geo_sd_av",
-                    "geo_trend_b",
-                    "geo_trend_m",
                 }
             )
             ran_derivative = True
+        elif geo_run:
+            messages.append(
+                "Omitidos: GeoJSON mensuales (sin meses nuevos; solo anuales pendientes)."
+            )
         else:
             messages.append("Omitidos: resto de GeoJSON — ver mensaje incremental.")
+
+        need_trend_geo = plan.run or plan.is_full_refresh or force_full
+        if need_trend_geo:
+            if drive_gate:
+                drive_gate.clear_before_reexport(
+                    paths.DRIVE_GEO_TREND_B, extensions=(".geojson", ".json"),
+                    stem_prefixes=("Trend_NDVI_ZonalStats_Barrios",),
+                    reason="re-export GeoJSON tendencia",
+                )
+                drive_gate.clear_before_reexport(
+                    paths.DRIVE_GEO_TREND_M, extensions=(".geojson", ".json"),
+                    stem_prefixes=("Trend_NDVI_ZonalStats_Manzanas",),
+                    reason="re-export GeoJSON tendencia",
+                )
+            _add_tasks(
+                drive,
+                geojson_tasks.start_ndvi_t_geojson_tasks(drive_gate=drive_gate),
+            )
+            sync.update({"geo_trend_b", "geo_trend_m"})
+            ran_derivative = True
+        else:
+            messages.append(
+                "Omitidos: GeoJSON tendencia — sin datos nuevos en fuente GEE."
+            )
 
     state_saved = False
     state_path_msg = ""

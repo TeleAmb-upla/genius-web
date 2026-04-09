@@ -221,6 +221,12 @@ def start_yearly_raster_tasks(
         years_loop = [ym_lib.effective_yearly_export_year(ic)]
     else:
         years_loop = sorted(year_numbers)
+
+    all_years_raw = (
+        ic.aggregate_array("year").distinct().sort().getInfo() or []
+    )
+    year_lookup: dict[int, object] = {int(y): y for y in all_years_raw}
+
     for y in years_loop:
         stem = f"{spec.key.upper()}_Yearly_{y}"
         if (
@@ -231,9 +237,10 @@ def start_yearly_raster_tasks(
             )
         ):
             continue
+        orig_y = year_lookup.get(y, y)
         raw = (
             ic.select(spec.asset_median_band)
-            .filter(ee.Filter.eq("year", y))
+            .filter(ee.Filter.eq("year", orig_y))
             .median()
         )
         out = _to_export_band(raw, spec)
@@ -277,7 +284,7 @@ def start_trend_raster_task(
         y = ee.Number(y)
         raw = (
             ic.select(spec.asset_median_band)
-            .filter(ee.Filter.calendarRange(y, y, "year"))
+            .filter(ee.Filter.eq("year", y))
             .median()
         )
         exp = _to_export_band(raw, spec)
@@ -347,7 +354,11 @@ def start_csv_tasks(
         t1.start()
         tasks.append(t1)
 
-    years = ee.List(ic.aggregate_array("year")).distinct().sort()
+    max_export_year = ym_lib.last_completed_wall_clock_calendar_year()
+    years = (
+        ee.List(ic.aggregate_array("year")).distinct().sort()
+        .filter(ee.Filter.lte("item", max_export_year))
+    )
     by_year = ee.ImageCollection.fromImages(
         years.map(
             lambda y: _to_export_band(
@@ -425,6 +436,7 @@ def start_y_geojson_tasks(
     spec: PollutantSpec,
     ic: ee.ImageCollection | None = None,
     *,
+    year_numbers: list[int] | None = None,
     drive_gate: DriveExportGate | None = None,
 ) -> list[ee.batch.Task]:
     ic = ic or ee.ImageCollection(spec.asset_ym)
@@ -439,6 +451,7 @@ def start_y_geojson_tasks(
         value_property=spec.export_band_name,
         stem_prefix=stem,
         last_year=ly,
+        year_numbers=year_numbers,
         unidad_fc=barrios,
         nombre_prefijo="Barrios",
         drive_folder=spec.drive_geo_y_b,
@@ -452,6 +465,7 @@ def start_y_geojson_tasks(
         value_property=spec.export_band_name,
         stem_prefix=stem,
         last_year=ly,
+        year_numbers=year_numbers,
         unidad_fc=manzanas,
         nombre_prefijo="Manzanas",
         drive_folder=spec.drive_geo_y_m,
@@ -479,7 +493,7 @@ def start_t_geojson_tasks(
         y = ee.Number(y)
         raw = (
             ic.select(spec.asset_median_band)
-            .filter(ee.Filter.calendarRange(y, y, "year"))
+            .filter(ee.Filter.eq("year", y))
             .median()
         )
         exp = _to_export_band(raw, spec)

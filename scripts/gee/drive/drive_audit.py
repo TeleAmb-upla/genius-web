@@ -1,24 +1,32 @@
 """
-Auditoría de frescura en Google Drive (modifiedTime) antes de encolar exportaciones EE.
+Auditoría de frescura en Google Drive antes de encolar exportaciones EE.
 
-Reglas (alineadas al plan pipeline vs Drive/GEE):
-- **Mensual**: reexportar si no hay archivos en la carpeta o el ``modifiedTime`` más reciente
-  entre los GeoTIFF del prefijo tiene año calendario **menor** que el último año civil cerrado UTC.
-- **Anual**: el stem ``{prefix}{year}.tif`` para ``year`` = **último año civil cerrado por reloj**
-  UTC (``last_completed_wall_clock_calendar_year``). La existencia en Drive se comprueba para
-  ese año. El bypass del pre-flight y el espejo completo anual solo aplican si el asset año-mes
-  ya cubre ese año completo (``assets_cover_target_year``).
+Reglas:
+- **Mensual**: solo para espejo local (Drive → repo). No se usa para disparar re-exports GEE.
+- **Anual**: se buscan TODAS las brechas anuales (no solo el último año) comparando los
+  años disponibles en el asset GEE (hasta ``target_yearly_year``) vs los archivos en Drive.
+- **CSV**: se valida el contenido local (años presentes, datos no vacíos / NaN).
 """
 from __future__ import annotations
 
+import csv
 import datetime
+import io
+import json
+import math
+import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from ..config import paths
 from . import download_drive_to_repo
 from ..lib import yearmonth as ym_lib
 
+
+# ---------------------------------------------------------------------------
+# Utilidades de parseo
+# ---------------------------------------------------------------------------
 
 def parse_drive_modified_time(iso: str | None) -> datetime.datetime | None:
     if not iso or not isinstance(iso, str):
@@ -39,7 +47,7 @@ def newest_modified_time_for_prefix(
     name_prefix: str,
     extensions: tuple[str, ...],
 ) -> datetime.datetime | None:
-    """Mayor ``modifiedTime`` entre archivos cuyo nombre empieza por ``name_prefix`` (case-sensitive)."""
+    """Mayor ``modifiedTime`` entre archivos cuyo nombre empieza por *name_prefix*."""
     exts = _norm_exts(extensions)
     best: datetime.datetime | None = None
     plen = len(name_prefix)
@@ -76,9 +84,7 @@ def monthly_stale_from_drive_mtime(
     monthly_name_prefix: str,
     extensions: tuple[str, ...],
 ) -> bool:
-    """
-    True = conviene reexportar toda la climatología mensual (omitir pre-flight Drive).
-    """
+    """True when the monthly Drive folder looks stale (for mirror/sync decisions only)."""
     last_cy = ym_lib.last_completed_wall_clock_calendar_year()
     newest = newest_modified_time_for_prefix(files, monthly_name_prefix, extensions)
     if newest is None:
@@ -86,23 +92,286 @@ def monthly_stale_from_drive_mtime(
     return newest.year < last_cy
 
 
+# ---------------------------------------------------------------------------
+# Yearly gap detection
+# ---------------------------------------------------------------------------
+
+def _find_missing_yearly_files(
+    files: list[dict],
+    stem_prefix: str,
+    extensions: tuple[str, ...],
+    expected_years: list[int],
+) -> list[int]:
+    """Return years from *expected_years* that lack a matching file on Drive."""
+    exts = _norm_exts(extensions)
+    prefix_low = stem_prefix.lower()
+    existing: set[int] = set()
+    for f in files:
+        name = (f.get("name") or "").lower()
+        for ext in exts:
+            if name.startswith(prefix_low) and name.endswith(ext):
+                mid = name[len(prefix_low):-len(ext)]
+                if mid.isdigit() and len(mid) == 4:
+                    existing.add(int(mid))
+    return sorted(y for y in expected_years if y not in existing)
+
+
+def _find_missing_yearly_geo(
+    files_b: list[dict],
+    files_m: list[dict],
+    stem_prefix_b: str,
+    stem_prefix_m: str,
+    extensions: tuple[str, ...],
+    expected_years: list[int],
+) -> list[int]:
+    """Years missing in Barrios OR Manzanas GeoJSON folders."""
+    miss_b = set(_find_missing_yearly_files(files_b, stem_prefix_b, extensions, expected_years))
+    miss_m = set(_find_missing_yearly_files(files_m, stem_prefix_m, extensions, expected_years))
+    return sorted(miss_b | miss_m)
+
+
+# ---------------------------------------------------------------------------
+# CSV content validation
+# ---------------------------------------------------------------------------
+
+_LOCAL_YEARLY_CSV_TARGETS: dict[str, list[tuple[Path, str, list[str]]]] = {
+    # (csv_path, year_column, value_columns_to_check)
+    "ndvi": [
+        (paths.REPO_CSV / "NDVI_y_urban.csv", "Year", ["NDVI"]),
+    ],
+    "aod": [
+        (paths.REPO_RASTER_AOD_YEARLY / "AOD_y_region.csv", "Year", ["AOD_median"]),
+    ],
+    "no2": [
+        (paths.REPO_RASTER_NO2_YEARLY / "NO2_y_region.csv", "Year", ["NO2_median"]),
+    ],
+    "so2": [
+        (paths.REPO_RASTER_SO2_YEARLY / "SO2_y_region.csv", "Year", ["SO2"]),
+    ],
+    "lst": [
+        (paths.REPO_RASTER_LST_YEARLY / "LST_y_urban.csv", "Year", ["LST_mean"]),
+    ],
+}
+
+
+def _is_value_empty_or_nan(val: str) -> bool:
+    """True if the string represents a missing / empty / NaN value."""
+    v = val.strip()
+    if not v:
+        return True
+    try:
+        return math.isnan(float(v))
+    except (ValueError, OverflowError):
+        return False
+
+
+def _validate_local_csv(
+    csv_path: Path,
+    expected_years: list[int],
+    year_column: str = "Year",
+    value_columns: list[str] | None = None,
+) -> tuple[bool, str, int]:
+    """
+    Returns ``(is_valid, reason, n_missing_years)``.
+
+    Checks:
+    1. File exists and is non-empty.
+    2. All *expected_years* have at least one row.
+    3. The *value_columns* for those rows are not empty / NaN.
+    """
+    if not csv_path.is_file():
+        return False, f"archivo no existe: {csv_path.name}", len(expected_years)
+    text = csv_path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text:
+        return False, f"archivo vacío: {csv_path.name}", len(expected_years)
+
+    try:
+        reader = csv.DictReader(io.StringIO(text))
+        fieldnames = reader.fieldnames or []
+    except Exception as exc:
+        return False, f"error leyendo CSV: {exc}", len(expected_years)
+
+    if year_column not in fieldnames:
+        return False, f"columna '{year_column}' no encontrada en {csv_path.name}", len(expected_years)
+
+    check_cols = value_columns or [c for c in fieldnames if c != year_column]
+    years_found_valid: set[int] = set()
+
+    for row in reader:
+        raw_year = (row.get(year_column) or "").strip()
+        if not raw_year:
+            continue
+        try:
+            yr = int(float(raw_year))
+        except (ValueError, OverflowError):
+            continue
+        if yr not in expected_years:
+            continue
+        has_value = False
+        for col in check_cols:
+            cell = row.get(col, "")
+            if not _is_value_empty_or_nan(cell):
+                has_value = True
+                break
+        if has_value:
+            years_found_valid.add(yr)
+
+    missing = sorted(set(expected_years) - years_found_valid)
+    if missing:
+        sample = ", ".join(str(y) for y in missing[:5])
+        tail = f" (y {len(missing) - 5} más)" if len(missing) > 5 else ""
+        return False, f"años sin datos válidos en {csv_path.name}: {sample}{tail}", len(missing)
+    return True, "OK", 0
+
+
+def _validate_all_local_csvs(
+    product: str,
+    expected_years: list[int],
+) -> tuple[bool, list[str], bool]:
+    """Validate all local yearly CSVs for *product*.
+
+    Returns ``(all_valid, reasons, completely_invalid)``.
+
+    *completely_invalid* is ``True`` when **every** (or nearly every)
+    expected year has null / empty values — this signals that the GEE
+    export itself produced bad data and a Drive re-download alone will
+    not help; a fresh GEE re-export is needed.
+    """
+    specs = _LOCAL_YEARLY_CSV_TARGETS.get(product, [])
+    if not specs:
+        return True, [], False
+    all_ok = True
+    completely_invalid = False
+    reasons: list[str] = []
+    for csv_path, year_col, val_cols in specs:
+        ok, reason, n_missing = _validate_local_csv(
+            csv_path, expected_years, year_col, val_cols
+        )
+        if not ok:
+            all_ok = False
+            reasons.append(reason)
+            if expected_years and n_missing >= len(expected_years) * 0.8:
+                completely_invalid = True
+    return all_ok, reasons, completely_invalid
+
+
+# ---------------------------------------------------------------------------
+# GeoJSON content validation
+# ---------------------------------------------------------------------------
+
+_LOCAL_YEARLY_GEO_TARGETS: dict[str, dict[str, tuple[Path, str, str]]] = {
+    # zone -> (directory, filename_prefix, value_property)
+    "ndvi": {
+        "barrios":  (paths.REPO_GEOJSON_NDVI_YEARLY_B, "NDVI_Yearly_ZonalStats_Barrios_", "NDVI"),
+        "manzanas": (paths.REPO_GEOJSON_NDVI_YEARLY_M, "NDVI_Yearly_ZonalStats_Manzanas_", "NDVI"),
+    },
+    "aod": {
+        "barrios":  (paths.REPO_GEOJSON_AOD_YEARLY_B, "AOD_Yearly_ZonalStats_Barrios_", "AOD_median"),
+        "manzanas": (paths.REPO_GEOJSON_AOD_YEARLY_M, "AOD_Yearly_ZonalStats_Manzanas_", "AOD_median"),
+    },
+    "no2": {
+        "barrios":  (paths.REPO_GEOJSON_NO2_YEARLY_B, "NO2_Yearly_ZonalStats_Barrios_", "NO2_median"),
+        "manzanas": (paths.REPO_GEOJSON_NO2_YEARLY_M, "NO2_Yearly_ZonalStats_Manzanas_", "NO2_median"),
+    },
+    "so2": {
+        "barrios":  (paths.REPO_GEOJSON_SO2_YEARLY_B, "SO2_Yearly_ZonalStats_Barrios_", "SO2"),
+        "manzanas": (paths.REPO_GEOJSON_SO2_YEARLY_M, "SO2_Yearly_ZonalStats_Manzanas_", "SO2"),
+    },
+    "lst": {
+        "barrios":  (paths.REPO_GEOJSON_LST_YEARLY_B, "LST_Yearly_ZonalStats_Barrios_", "LST_mean"),
+        "manzanas": (paths.REPO_GEOJSON_LST_YEARLY_M, "LST_Yearly_ZonalStats_Manzanas_", "LST_mean"),
+    },
+}
+
+
+def _validate_local_geojson(
+    geojson_path: Path,
+    value_property: str,
+) -> tuple[bool, str]:
+    """
+    Returns ``(is_valid, reason)``.
+
+    A GeoJSON is invalid when it exists but every feature has a null / None
+    value in *value_property* (i.e. the export ran but produced no real data).
+    """
+    if not geojson_path.is_file():
+        return False, f"archivo no existe: {geojson_path.name}"
+    try:
+        text = geojson_path.read_text(encoding="utf-8", errors="replace")
+        data = json.loads(text)
+    except Exception as exc:
+        return False, f"error leyendo GeoJSON: {exc}"
+
+    features = data.get("features") or []
+    if not features:
+        return False, f"sin features: {geojson_path.name}"
+
+    for feat in features:
+        props = feat.get("properties") or {}
+        val = props.get(value_property)
+        if val is not None:
+            try:
+                if not math.isnan(float(val)):
+                    return True, "OK"
+            except (ValueError, TypeError):
+                return True, "OK"
+
+    return False, (
+        f"todos los valores de '{value_property}' son null en {geojson_path.name}"
+    )
+
+
+def _validate_local_geojsons_for_years(
+    product: str,
+    expected_years: list[int],
+) -> list[int]:
+    """
+    Return years whose local yearly GeoJSON files are missing or have
+    all-null values in the expected property column.
+    """
+    specs = _LOCAL_YEARLY_GEO_TARGETS.get(product, {})
+    if not specs:
+        return []
+    invalid_years: set[int] = set()
+    for year in expected_years:
+        for _zone, (directory, prefix, value_prop) in specs.items():
+            fname = f"{prefix}{year}.geojson"
+            fpath = directory / fname
+            ok, _reason = _validate_local_geojson(fpath, value_prop)
+            if not ok:
+                invalid_years.add(year)
+                break
+    return sorted(invalid_years)
+
+
+# ---------------------------------------------------------------------------
+# DriveFreshnessHints
+# ---------------------------------------------------------------------------
+
 @dataclass(frozen=True)
 class DriveFreshnessHints:
-    """Decisiones de pre-flight coherentes con auditoría Drive + espejo local."""
+    """Decisiones de pre-flight coherentes con auditoría Drive + GEE asset."""
 
     force_full_monthly_raster_export: bool = False
-    # Falta en Drive el anual para target_yearly_year (año civil cerrado reloj).
     yearly_raster_missing_or_stale: bool = False
-    # Falta en Drive (o aparenta estar desactualizado) al menos una salida anual tabular.
-    # Incluye CSV anual y GeoJSON anual zonal para ``target_yearly_year``.
     yearly_tables_missing_or_stale: bool = False
-    # Falta ese raster y el asset ya cubre ese año: omitir pre-flight para reexport.
+    yearly_csv_missing_or_stale: bool = False
+    yearly_geo_missing_or_stale: bool = False
     yearly_raster_enqueue_bypass: bool = False
     mirror_full_monthly_local: bool = False
     target_yearly_year: int | None = None
+    local_tables_stale_drive_ok: bool = False
+
+    missing_yearly_raster_years: tuple[int, ...] = ()
+    missing_yearly_geo_years: tuple[int, ...] = ()
+
     sync_full_mirror_extra_keys: frozenset[str] = field(default_factory=frozenset)
     audit_messages: tuple[str, ...] = ()
 
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _list_folder_files(service: Any, folder_display_name: str) -> list[dict]:
     try:
@@ -118,14 +387,18 @@ def _yearly_csv_missing_or_stale(
     target_year: int,
 ) -> bool:
     """
-    Para CSV anuales con nombre estable (sin año en filename), usamos modifiedTime.
-    True si no hay CSV o si el modifiedTime más reciente es anterior al año objetivo.
+    True if no CSV exists on Drive or the newest CSV ``modifiedTime`` is from
+    *target_year* or earlier (it could not contain that full year's data).
     """
     newest = newest_modified_time_for_prefix(files, "", (".csv",))
     if newest is None:
         return True
-    return newest.year < target_year
+    return newest.year <= target_year
 
+
+# ---------------------------------------------------------------------------
+# Main computation
+# ---------------------------------------------------------------------------
 
 def compute_drive_freshness_hints(
     product: str,
@@ -133,28 +406,29 @@ def compute_drive_freshness_hints(
     *,
     target_yearly_year: int,
     assets_cover_target_year: bool = True,
+    available_years: list[int] | None = None,
 ) -> DriveFreshnessHints:
     """
-    ``target_yearly_year``: último año civil cerrado **por reloj** UTC (comprobación en Drive).
+    Compute freshness hints by comparing GEE asset years vs Drive contents.
 
-    ``assets_cover_target_year``: el asset año-mes ya incluye diciembre de ese año (o posterior);
-    si es falso, no se fuerza bypass ni espejo anual aunque falte el archivo en Drive.
+    *available_years*: distinct years in the GEE asset collection, capped at
+    ``target_yearly_year``.  Used for full yearly-gap detection.  When ``None``
+    the audit falls back to checking only *target_yearly_year*.
     """
     msgs: list[str] = []
+
+    # --- Product-specific config ---
     monthly_folder: str
     monthly_prefix: str
     yearly_folder: str
     yearly_stem_prefix: str
     mirror_key: str
-    yearly_mirror_key: str
     yearly_csv_folder: str
     yearly_geo_folder_b: str
     yearly_geo_folder_m: str
-    yearly_geo_stem_b: str
-    yearly_geo_stem_m: str
+    yearly_geo_stem_prefix_b: str
+    yearly_geo_stem_prefix_m: str
     yearly_csv_mirror_key: str
-    yearly_geo_mirror_key_b: str
-    yearly_geo_mirror_key_m: str
 
     if product == "ndvi":
         monthly_folder = paths.DRIVE_RASTER_MONTHLY
@@ -162,158 +436,190 @@ def compute_drive_freshness_hints(
         yearly_folder = paths.DRIVE_RASTER_YEARLY
         yearly_stem_prefix = "NDVI_Yearly_"
         mirror_key = "raster_monthly"
-        yearly_mirror_key = "raster_yearly"
         yearly_csv_folder = paths.DRIVE_CSV_YEARLY
         yearly_geo_folder_b = paths.DRIVE_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_GEO_YEARLY_M
-        yearly_geo_stem_b = f"NDVI_Yearly_ZonalStats_Barrios_{target_yearly_year}"
-        yearly_geo_stem_m = f"NDVI_Yearly_ZonalStats_Manzanas_{target_yearly_year}"
+        yearly_geo_stem_prefix_b = "NDVI_Yearly_ZonalStats_Barrios_"
+        yearly_geo_stem_prefix_m = "NDVI_Yearly_ZonalStats_Manzanas_"
         yearly_csv_mirror_key = "csv"
-        yearly_geo_mirror_key_b = "geo_yearly_b"
-        yearly_geo_mirror_key_m = "geo_yearly_m"
     elif product == "aod":
         monthly_folder = paths.DRIVE_AOD_RASTER_MONTHLY
         monthly_prefix = "AOD_Monthly_"
         yearly_folder = paths.DRIVE_AOD_RASTER_YEARLY
         yearly_stem_prefix = "AOD_Yearly_"
         mirror_key = "aod_raster_monthly"
-        yearly_mirror_key = "aod_raster_yearly"
         yearly_csv_folder = paths.DRIVE_AOD_CSV_YEARLY
         yearly_geo_folder_b = paths.DRIVE_AOD_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_AOD_GEO_YEARLY_M
-        yearly_geo_stem_b = f"AOD_Yearly_ZonalStats_Barrios_{target_yearly_year}"
-        yearly_geo_stem_m = f"AOD_Yearly_ZonalStats_Manzanas_{target_yearly_year}"
+        yearly_geo_stem_prefix_b = "AOD_Yearly_ZonalStats_Barrios_"
+        yearly_geo_stem_prefix_m = "AOD_Yearly_ZonalStats_Manzanas_"
         yearly_csv_mirror_key = "aod_csv_yearly"
-        yearly_geo_mirror_key_b = "aod_geo_yearly_b"
-        yearly_geo_mirror_key_m = "aod_geo_yearly_m"
     elif product == "no2":
         monthly_folder = paths.DRIVE_NO2_RASTER_MONTHLY
         monthly_prefix = "NO2_Monthly_"
         yearly_folder = paths.DRIVE_NO2_RASTER_YEARLY
         yearly_stem_prefix = "NO2_Yearly_"
         mirror_key = "no2_raster_monthly"
-        yearly_mirror_key = "no2_raster_yearly"
         yearly_csv_folder = paths.DRIVE_NO2_CSV_YEARLY
         yearly_geo_folder_b = paths.DRIVE_NO2_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_NO2_GEO_YEARLY_M
-        yearly_geo_stem_b = f"NO2_Yearly_ZonalStats_Barrios_{target_yearly_year}"
-        yearly_geo_stem_m = f"NO2_Yearly_ZonalStats_Manzanas_{target_yearly_year}"
+        yearly_geo_stem_prefix_b = "NO2_Yearly_ZonalStats_Barrios_"
+        yearly_geo_stem_prefix_m = "NO2_Yearly_ZonalStats_Manzanas_"
         yearly_csv_mirror_key = "no2_csv_yearly"
-        yearly_geo_mirror_key_b = "no2_geo_yearly_b"
-        yearly_geo_mirror_key_m = "no2_geo_yearly_m"
     elif product == "so2":
         monthly_folder = paths.DRIVE_SO2_RASTER_MONTHLY
         monthly_prefix = "SO2_Monthly_"
         yearly_folder = paths.DRIVE_SO2_RASTER_YEARLY
         yearly_stem_prefix = "SO2_Yearly_"
         mirror_key = "so2_raster_monthly"
-        yearly_mirror_key = "so2_raster_yearly"
         yearly_csv_folder = paths.DRIVE_SO2_CSV_YEARLY
         yearly_geo_folder_b = paths.DRIVE_SO2_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_SO2_GEO_YEARLY_M
-        yearly_geo_stem_b = f"SO2_Yearly_ZonalStats_Barrios_{target_yearly_year}"
-        yearly_geo_stem_m = f"SO2_Yearly_ZonalStats_Manzanas_{target_yearly_year}"
+        yearly_geo_stem_prefix_b = "SO2_Yearly_ZonalStats_Barrios_"
+        yearly_geo_stem_prefix_m = "SO2_Yearly_ZonalStats_Manzanas_"
         yearly_csv_mirror_key = "so2_csv_yearly"
-        yearly_geo_mirror_key_b = "so2_geo_yearly_b"
-        yearly_geo_mirror_key_m = "so2_geo_yearly_m"
     elif product == "lst":
         monthly_folder = paths.DRIVE_LST_RASTER_MONTHLY
         monthly_prefix = "LST_Monthly_"
         yearly_folder = paths.DRIVE_LST_RASTER_YEARLY
         yearly_stem_prefix = "LST_Yearly_"
         mirror_key = "lst_raster_monthly"
-        yearly_mirror_key = "lst_raster_yearly"
         yearly_csv_folder = paths.DRIVE_LST_CSV_YEARLY
         yearly_geo_folder_b = paths.DRIVE_LST_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_LST_GEO_YEARLY_M
-        yearly_geo_stem_b = f"LST_Yearly_ZonalStats_Barrios_{target_yearly_year}"
-        yearly_geo_stem_m = f"LST_Yearly_ZonalStats_Manzanas_{target_yearly_year}"
+        yearly_geo_stem_prefix_b = "LST_Yearly_ZonalStats_Barrios_"
+        yearly_geo_stem_prefix_m = "LST_Yearly_ZonalStats_Manzanas_"
         yearly_csv_mirror_key = "lst_csv_yearly"
-        yearly_geo_mirror_key_b = "lst_geo_yearly_b"
-        yearly_geo_mirror_key_m = "lst_geo_yearly_m"
     else:
         return DriveFreshnessHints(target_yearly_year=target_yearly_year)
 
+    expected_years = available_years or [target_yearly_year]
+
+    # --- Monthly: mtime check (for mirror sync only, NOT for GEE re-export) ---
     m_files = _list_folder_files(service, monthly_folder)
     force_monthly = monthly_stale_from_drive_mtime(
         m_files, monthly_prefix, (".tif", ".tiff")
     )
     if force_monthly:
         msgs.append(
-            f"[Drive audit] Mensual «{monthly_folder}»: refresco completo "
-            f"(sin archivos o mtime más reciente anterior al año civil cerrado "
-            f"{ym_lib.last_completed_wall_clock_calendar_year()})."
+            f"[Drive audit] Mensual «{monthly_folder}»: archivos locales desactualizados — "
+            f"se hará espejo completo desde Drive."
         )
 
+    # --- Yearly rasters: full gap detection ---
     y_files = _list_folder_files(service, yearly_folder)
-    y_stem = f"{yearly_stem_prefix}{target_yearly_year}"
-    yearly_ok = yearly_raster_present_in_drive(y_files, y_stem, (".tif", ".tiff"))
-    yearly_missing = not yearly_ok
+    missing_raster_years = _find_missing_yearly_files(
+        y_files, yearly_stem_prefix, (".tif", ".tiff"), expected_years,
+    )
+    yearly_missing = bool(missing_raster_years)
     yearly_bypass = yearly_missing and assets_cover_target_year
-    if yearly_missing:
+    if missing_raster_years:
+        yrs_str = ", ".join(str(y) for y in missing_raster_years)
         msgs.append(
-            f"[Drive audit] Anual «{yearly_folder}»: falta {y_stem}.tif "
-            f"(objetivo año civil cerrado reloj: {target_yearly_year})."
+            f"[Drive audit] Raster anual «{yearly_folder}»: faltan años [{yrs_str}]."
         )
     if yearly_missing and not assets_cover_target_year:
         msgs.append(
-            f"[Drive audit] Anual: el asset año-mes aún no cubre dic. {target_yearly_year}; "
-            "no se fuerza reexport anual hasta completar ese año en GEE."
+            f"[Drive audit] El asset aún no cubre dic. {target_yearly_year}; "
+            "no se fuerza reexport hasta completar ese año en GEE."
         )
 
+    # --- Yearly CSV: modifiedTime check ---
     csv_y_files = _list_folder_files(service, yearly_csv_folder)
     yearly_csv_missing = _yearly_csv_missing_or_stale(
-        csv_y_files,
-        target_year=target_yearly_year,
+        csv_y_files, target_year=target_yearly_year,
     )
     if yearly_csv_missing:
         msgs.append(
             f"[Drive audit] CSV anual «{yearly_csv_folder}»: faltante o desactualizado "
-            f"para {target_yearly_year} (modifiedTime/auditoría de contenido)."
+            f"para {target_yearly_year}."
         )
 
+    # --- Yearly GeoJSON: full gap detection ---
     geo_y_files_b = _list_folder_files(service, yearly_geo_folder_b)
     geo_y_files_m = _list_folder_files(service, yearly_geo_folder_m)
-    geo_y_ok_b = yearly_raster_present_in_drive(
-        geo_y_files_b,
-        yearly_geo_stem_b,
+    missing_geo_years = _find_missing_yearly_geo(
+        geo_y_files_b, geo_y_files_m,
+        yearly_geo_stem_prefix_b, yearly_geo_stem_prefix_m,
         (".geojson", ".json"),
+        expected_years,
     )
-    geo_y_ok_m = yearly_raster_present_in_drive(
-        geo_y_files_m,
-        yearly_geo_stem_m,
-        (".geojson", ".json"),
-    )
-    yearly_geo_missing = not (geo_y_ok_b and geo_y_ok_m)
-    if yearly_geo_missing:
+    yearly_geo_missing = bool(missing_geo_years)
+    if missing_geo_years:
+        yrs_str = ", ".join(str(y) for y in missing_geo_years)
         msgs.append(
-            "[Drive audit] GeoJSON anual: faltan salidas zonales para "
-            f"{target_yearly_year} en Barrios/Manzanas."
+            f"[Drive audit] GeoJSON anual: faltan años [{yrs_str}] en Barrios/Manzanas."
         )
+
+    # --- Local GeoJSON content validation (null-value detection) ---
+    local_geo_invalid_years = _validate_local_geojsons_for_years(product, expected_years)
+    if local_geo_invalid_years:
+        yrs_str = ", ".join(str(y) for y in local_geo_invalid_years)
+        msgs.append(
+            f"[Drive audit] GeoJSON local con valores nulos: años [{yrs_str}] — "
+            f"se marcará para re-export."
+        )
+        missing_geo_years = sorted(set(missing_geo_years) | set(local_geo_invalid_years))
+        yearly_geo_missing = True
+        # Delete invalid local files so incremental download will replace them
+        specs = _LOCAL_YEARLY_GEO_TARGETS.get(product, {})
+        for year in local_geo_invalid_years:
+            for _zone, (directory, prefix, _vprop) in specs.items():
+                fpath = directory / f"{prefix}{year}.geojson"
+                if fpath.is_file():
+                    fpath.unlink()
+                    msgs.append(
+                        f"[Drive audit] Eliminado local inválido: {fpath.name}"
+                    )
 
     yearly_tables_missing = yearly_csv_missing or yearly_geo_missing
 
+    # --- Local CSV content validation ---
+    local_csv_ok, csv_reasons, csv_completely_invalid = _validate_all_local_csvs(
+        product, expected_years
+    )
+    local_csv_stale = not local_csv_ok
+
+    if csv_completely_invalid:
+        msgs.append(
+            "[Drive audit] CSV local completamente inválido (todos los valores vacíos) — "
+            "se forzará re-export desde GEE (no solo descarga de Drive)."
+        )
+        yearly_csv_missing = True
+        local_stale_drive_ok = False
+    else:
+        local_stale_drive_ok = local_csv_stale and not yearly_csv_missing
+
+    if local_csv_stale:
+        for reason in csv_reasons:
+            msgs.append(f"[Drive audit] CSV local inválido: {reason}")
+        if local_stale_drive_ok:
+            msgs.append(
+                "[Drive audit] Drive parece tener CSV reciente — "
+                "se descargará sin re-exportar."
+            )
+
+    yearly_tables_missing = yearly_tables_missing or local_csv_stale
+
+    # --- Sync mirror keys ---
     extra: set[str] = set()
     if force_monthly:
         extra.add(mirror_key)
-    if yearly_bypass:
-        extra.add(yearly_mirror_key)
-    if yearly_tables_missing and assets_cover_target_year:
-        extra.update(
-            {
-                yearly_csv_mirror_key,
-                yearly_geo_mirror_key_b,
-                yearly_geo_mirror_key_m,
-            }
-        )
+    if (yearly_csv_missing and assets_cover_target_year) or local_csv_stale:
+        extra.add(yearly_csv_mirror_key)
 
     return DriveFreshnessHints(
         force_full_monthly_raster_export=force_monthly,
         yearly_raster_missing_or_stale=yearly_missing,
         yearly_tables_missing_or_stale=yearly_tables_missing,
+        yearly_csv_missing_or_stale=(yearly_csv_missing or local_csv_stale),
+        yearly_geo_missing_or_stale=yearly_geo_missing,
         yearly_raster_enqueue_bypass=yearly_bypass,
         mirror_full_monthly_local=force_monthly,
         target_yearly_year=target_yearly_year,
+        local_tables_stale_drive_ok=local_stale_drive_ok,
+        missing_yearly_raster_years=tuple(missing_raster_years),
+        missing_yearly_geo_years=tuple(missing_geo_years),
         sync_full_mirror_extra_keys=frozenset(extra),
         audit_messages=tuple(msgs),
     )

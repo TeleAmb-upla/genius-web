@@ -57,7 +57,7 @@ export async function map_hu() {
     const settledLayers = await Promise.allSettled(
         yearlyLayers.map(async ([name, loader]) => [name, await loader(currentMap)])
     );
-    const baseLayers = {};
+    const overlayLayers = {};
     settledLayers.forEach((result) => {
         if (result.status !== 'fulfilled') {
             console.warn('Huella urbana:', result.reason);
@@ -66,17 +66,16 @@ export async function map_hu() {
         const [name, layer] = result.value;
         if (!layer) return;
         currentLayers[name] = layer;
-        baseLayers[name] = layer;
+        overlayLayers[name] = layer;
     });
 
     const infCriticaData = await loadinf_critica(currentMap);
-    const overlayOnly = {};
     if (infCriticaData && typeof infCriticaData === 'object') {
         const layersArray = Object.values(infCriticaData);
-        overlayOnly["Infraestructura crítica (vectores)"] = L.layerGroup(layersArray);
+        overlayLayers["Infraestructura crítica (vectores)"] = L.layerGroup(layersArray);
     }
 
-    const layerControl = L.control.layers(baseLayers, overlayOnly).addTo(currentMap);
+    const layerControl = L.control.layers(null, overlayLayers).addTo(currentMap);
     const layersList = layerControl.getContainer().querySelector('.leaflet-control-layers-list');
     const title = document.createElement('h4');
     title.innerHTML = 'Huella — año';
@@ -86,7 +85,7 @@ export async function map_hu() {
     layersList.prepend(separator);
     layersList.prepend(title);
 
-    const defaultLayer = Object.keys(baseLayers)[0];
+    const defaultLayer = Object.keys(overlayLayers)[0];
     if (defaultLayer && currentLayers[defaultLayer]) {
         currentMap.addLayer(currentLayers[defaultLayer]);
     }

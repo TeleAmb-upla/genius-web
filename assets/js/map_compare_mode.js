@@ -40,7 +40,10 @@ export function setCompareSingleMapMode({
 
     const beforePane = container.querySelector(beforeSelector);
     const afterPane = container.querySelector(afterSelector);
-    if (beforePane) beforePane.classList.toggle('map-compare-single__pane', enabled);
+    if (beforePane) {
+        beforePane.classList.toggle('map-compare-single__pane', enabled);
+        beforePane.style.clip = enabled ? 'unset' : '';
+    }
     if (afterPane) afterPane.classList.toggle('map-compare-hidden', enabled);
 
     if (beforeMap && typeof beforeMap.resize === 'function') {

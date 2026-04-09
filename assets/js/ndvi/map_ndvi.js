@@ -6,6 +6,8 @@ import { createyearLegendSVG, createmonthLegendSVG, addCenteredTitle } from './m
 import { map_trend, createSTLegendSVG } from './ndvi_trend_dev/trend.js';
 import { createOpacitySlider } from '../slider_opacity.js';
 import { loadinf_critica } from '../inf_critica_leaflet.js';
+import { LayersControl } from '../control.js';
+import { getDefaultYearPair } from '../map_data_catalog.js';
 
 // Variables globales para almacenar el estado del mapa y las capas
 let currentMap = null;
@@ -23,8 +25,9 @@ let trendGeoraster = null; // Nuevo: georaster para la capa de tendencia
 // Variables para almacenar los años/meses actuales
 let currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
 
-let currentLeftYear = "2017";
-let currentRightYear = "2025";
+const [_defaultLeft, _defaultRight] = getDefaultYearPair('ndvi');
+let currentLeftYear = _defaultLeft || "2024";
+let currentRightYear = _defaultRight || "2025";
 
 let currentLeftMonth = "01";
 let currentRightMonth = "12";
@@ -137,21 +140,8 @@ export async function map_ndvi() {
     monthLeftSelector.style.display = 'none';
     monthRightSelector.style.display = 'none';
 
-    const YearLayer = L.layerGroup();
-    const MonthLayer = L.layerGroup();
     const trendLayerData = await map_trend(currentMap);
     const trendLayer = trendLayerData ? trendLayerData.layer : null;
-    const TrendSlot = L.layerGroup();
-
-    const baseLayers = { "Año": YearLayer, "Mes": MonthLayer };
-    if (trendLayer) {
-        baseLayers["Tendencia"] = TrendSlot;
-    }
-
-    const overlayOnly = {};
-    if (infCriticaLayer) {
-        overlayOnly["Infraestructura crítica (vectores)"] = infCriticaLayer;
-    }
 
     function countNdviRasterSlots(layersObj) {
         return Object.values(layersObj).filter(Boolean).length;
@@ -340,18 +330,23 @@ export async function map_ndvi() {
 
     syncNdviRasterNotice();
 
-    if (Object.keys(baseLayers).length > 0) {
-        const layerControl = L.control.layers(baseLayers, overlayOnly).addTo(currentMap);
-        const layerControlDiv = layerControl.getContainer();
-        const layersList = layerControlDiv.querySelector('.leaflet-control-layers-list');
-        const title = document.createElement('h4');
-        title.innerHTML = 'NDVI — unidad de tiempo';
-        title.classList.add('leaflet-control-title');
-        const separator = document.createElement('div');
-        separator.classList.add('leaflet-control-layers-separator');
-        layersList.prepend(separator);
-        layersList.prepend(title);
-    }
+    const controls = new LayersControl(
+        (mode) => {
+            if (mode === 'yearly') activateAnualMode();
+            else if (mode === 'monthly') activateMensualMode();
+            else if (mode === 'trend') activateTendenciaMode();
+        },
+        (enabled) => {
+            if (!infCriticaLayer) return;
+            if (enabled) infCriticaLayer.addTo(currentMap);
+            else currentMap.removeLayer(infCriticaLayer);
+        }
+    );
+    controls._container.style.position = 'absolute';
+    controls._container.style.top = '10px';
+    controls._container.style.right = '10px';
+    controls._container.style.zIndex = '1000';
+    currentMap.getContainer().appendChild(controls._container);
 
     layers.leftLayer = leftLayer;
     layers.rightLayer = rightLayer;
@@ -360,15 +355,7 @@ export async function map_ndvi() {
     await createOpacitySlider(currentMap, layers, currentLayerTypeRef);
 
     currentLayerType = null;
-
-    currentMap.on('baselayerchange', function (e) {
-        if (e.layer === YearLayer) activateAnualMode();
-        else if (e.layer === MonthLayer) activateMensualMode();
-        else if (e.layer === TrendSlot) activateTendenciaMode();
-    });
-
-    currentMap.addLayer(YearLayer);
-    activateAnualMode();
+    controls.setMode('yearly');
 
     document.getElementById('yearLeft').addEventListener('change', function () {
         if (currentLayerType !== 'Anual') return;
