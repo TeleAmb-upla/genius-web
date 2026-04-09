@@ -7,7 +7,7 @@ const endYear = 2024;
 const aodMonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0'); // Genera '01', '02', ..., '12'
     return { 
-        url: `/assets/data/raster/AOD/AOD_Monthly/AOD_Monthly_${month}.tif`,
+        url: resolveAssetUrl(`assets/data/raster/AOD/AOD_Monthly/AOD_Monthly_${month}.tif`),
         name: `AOD_Monthly_${month}.tif`
     };
 });
@@ -16,16 +16,16 @@ const aodMonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
 const aodYearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: `/assets/data/raster/AOD/AOD_Yearly/AOD_Yearly_${year}.tif`,
+        url: resolveAssetUrl(`assets/data/raster/AOD/AOD_Yearly/AOD_Yearly_${year}.tif`),
         name: `AOD_Yearly_${year}.tif`
     };
 });
  
 
 const aodTrendFiles_tif = [
-    { url: '/assets/data/raster/AOD/AOD_Trend/AOD_Yearly_Trend.tif', name: 'AOD_Trend.tif' },
-    { url: '/assets/data/csv/AOD_Yearly_Urbano.csv', name: 'AOD_Anual.csv' },
-    { url: '/assets/data/csv/AOD_Mensual_Urbano.csv', name: 'AOD_Monthly.csv' }
+    { url: resolveAssetUrl('assets/data/raster/AOD/AOD_Trend/AOD_Yearly_Trend.tif'), name: 'AOD_Trend.tif' },
+    { url: resolveAssetUrl('assets/data/csv/AOD_Yearly_Urbano.csv'), name: 'AOD_Anual.csv' },
+    { url: resolveAssetUrl('assets/data/csv/AOD_Mensual_Urbano.csv'), name: 'AOD_Monthly.csv' }
  ];
 
 
@@ -33,7 +33,7 @@ const aodTrendFiles_tif = [
 const aodMonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
     return {
-        url: `/assets/data/geojson/AOD/AOD_Monthly_ZonalStats/AOD_Monthly_ZonalStats_Barrios/AOD_Monthly_ZonalStats_Barrios_${month}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/AOD/AOD_Monthly_ZonalStats/AOD_Monthly_ZonalStats_Barrios/AOD_Monthly_ZonalStats_Barrios_${month}.geojson`),
         name: `AOD_Monthly_${month}.geojson`
     };
 });
@@ -41,23 +41,23 @@ const aodMonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
 const aodYearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: `/assets/data/geojson/AOD/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Barrios/AOD_Yearly_ZonalStats_Barrios_${year}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/AOD/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Barrios/AOD_Yearly_ZonalStats_Barrios_${year}.geojson`),
         name: `AOD_Yearly_${year}.geojson`
     };
 });
 
 
 const aodTrendFiles_json_Barrio = [
-    { url: '/assets/data/geojson/AOD/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Barrios/Trend_AOD_ZonalStats_Barrios.geojson', name: 'AOD_Trend.geojson' },
-    { url: '/assets/data/csv/AOD_Yearly_Urbano.csv', name: 'AOD_Anual.csv' },
-    { url: '/assets/data/csv/AOD_Mensual_Urbano.csv', name: 'AOD_Monthly.csv' }
+    { url: resolveAssetUrl('assets/data/geojson/AOD/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Barrios/Trend_AOD_ZonalStats_Barrios.geojson'), name: 'AOD_Trend.geojson' },
+    { url: resolveAssetUrl('assets/data/csv/AOD_Yearly_Urbano.csv'), name: 'AOD_Anual.csv' },
+    { url: resolveAssetUrl('assets/data/csv/AOD_Mensual_Urbano.csv'), name: 'AOD_Monthly.csv' }
 ];
 
 
 const aodMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
     return {
-        url: `/assets/data/geojson/AOD/AOD_Monthly_ZonalStats/AOD_Monthly_ZonalStats_Manzanas/AOD_Monthly_ZonalStats_Manzanas_${month}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/AOD/AOD_Monthly_ZonalStats/AOD_Monthly_ZonalStats_Manzanas/AOD_Monthly_ZonalStats_Manzanas_${month}.geojson`),
         name: `AOD_Monthly_${month}.geojson`
     };
 });
@@ -65,19 +65,19 @@ const aodMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
 const aodYearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: `/assets/data/geojson/AOD/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Manzanas/AOD_Yearly_ZonalStats_Manzanas_${year}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/AOD/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Manzanas/AOD_Yearly_ZonalStats_Manzanas_${year}.geojson`),
         name: `AOD_Yearly_${year}.geojson`
     };
 });
 
 const aodTrendFiles_json_Manzanas = [
-    { url: '/assets/data/geojson/AOD/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Manzanas/Trend_AOD_ZonalStats_Manzanas.geojson', name: 'AOD_Trend.geojson' },
-    { url: '/assets/data/csv/AOD_Yearly_Urbano.csv', name: 'AOD_Anual.csv' },
-    { url: '/assets/data/csv/AOD_Mensual_Urbano.csv', name: 'AOD_Monthly.csv' }
+    { url: resolveAssetUrl('assets/data/geojson/AOD/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Manzanas/Trend_AOD_ZonalStats_Manzanas.geojson'), name: 'AOD_Trend.geojson' },
+    { url: resolveAssetUrl('assets/data/csv/AOD_Yearly_Urbano.csv'), name: 'AOD_Anual.csv' },
+    { url: resolveAssetUrl('assets/data/csv/AOD_Mensual_Urbano.csv'), name: 'AOD_Monthly.csv' }
 ];
 
 const textFiles = [
-    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+    { url: resolveAssetUrl('assets/js/indicaciones.txt'), name: 'indicaciones.txt' },
 ];
 
 

@@ -46,7 +46,7 @@ export async function g_m_hu() {
         .attr("x", -innerHeight / 2)
         .style("font-family", "Arial")
         .style("font-size", "12px")
-        .text("Huella Urbana");
+        .text("Huella Urbana (ha)");
 
     // Definir un patrón SVG para el rayado diagonal
     svg.append("defs")
@@ -73,6 +73,9 @@ export async function g_m_hu() {
 
     // Definir colores por año para Area_DentroPRC
     const colorPorAno = {
+        2026: '#999999',
+        2025: '#f781bf',
+        2024: '#a65628',
         2023: '#e41a1c',
         2022: '#377eb8',
         2021: '#4daf4a',
@@ -98,7 +101,7 @@ export async function g_m_hu() {
 
     // Add Y axis
     var y = d3.scaleLinear()
-        .domain([0, d3.max(data, d => +d.Area_DentroPRC + +d.Area_FueraPRC) * 1.1])  // Consideramos solo las áreas para el eje Y
+        .domain([800, d3.max(data, d => +d.Area_DentroPRC + +d.Area_FueraPRC) * 1.1])
         .range([innerHeight, 0]);
     svg.append("g")
         .call(d3.axisLeft(y));
@@ -132,8 +135,8 @@ export async function g_m_hu() {
     var mousemove = function(event, d) {
         // Asegurarse de que se está accediendo correctamente a los datos del círculo
         tooltip
-            .html("Año: " + d.Year + "<br>Área Dentro PRC: " + d.Area_DentroPRC
-                + "<br>Área Fuera PRC: " + d.Area_FueraPRC + "<br>Precision Kappa: " + d.Precision_Kappa)
+            .html("Año: " + d.Year + "<br>Área Dentro PRC: " + d.Area_DentroPRC + " ha"
+                + "<br>Área Fuera PRC: " + d.Area_FueraPRC + " ha<br>Precisión Kappa: " + d.Precision_Kappa)
             .style("left", (event.pageX + 10) + "px")  // Ajusta la posición del tooltip
             .style("top", (event.pageY - 28) + "px");
     }
@@ -170,8 +173,8 @@ export async function g_m_hu() {
         .on("mousemove", function(event, d) {
             // Tooltip para las barras (rectángulos)
             tooltip
-                .html("Año: " + d.data.Year + "<br>Area DentroPRC: " + d.data.Area_DentroPRC
-                    + "<br>Area FueraPRC: " + d.data.Area_FueraPRC + "<br>Precision Kappa: " + d.data.Precision_Kappa)
+                .html("Año: " + d.data.Year + "<br>Área Dentro PRC: " + d.data.Area_DentroPRC + " ha"
+                    + "<br>Área Fuera PRC: " + d.data.Area_FueraPRC + " ha<br>Precisión Kappa: " + d.data.Precision_Kappa)
                 .style("left", (event.pageX + 10) + "px")  // Ajusta la posición del tooltip
                 .style("top", (event.pageY - 28) + "px");
         })

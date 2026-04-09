@@ -1,4 +1,4 @@
-﻿
+
 import { ToColorMonth } from '../palette_month.js'; // Ajusta la ruta según sea necesario
 
 export async function map_st_03(map) {
@@ -20,7 +20,7 @@ export async function map_st_03(map) {
             // De lo contrario, utiliza la función ndviToColor
             return ToColorMonth(LST_median);
         },
-        resolution: 1080
+        resolution: 384
     });
 
     // No agregar la capa al mapa aquí, solo retornarla

@@ -1,4 +1,4 @@
-﻿import { ndviToColor } from '../ndvi_palette.js';
+import { ndviToColor } from '../ndvi_palette.js';
 import { fetchGeoTiffTryPaths } from '../../../raster_fetch.js';
 import { candidatePathsNdviYearly } from '../../ndvi_raster_paths.js';
 
@@ -24,7 +24,7 @@ export async function map_ndvi_2022(map) {
             // De lo contrario, utiliza la función ndviToColor
             return ndviToColor(ndviValue);
         },
-        resolution: 1080
+        resolution: 384
     });
     // No agregar la capa al mapa aquí, solo retornarla
     return { layer: ndviLayer, georaster: georaster };

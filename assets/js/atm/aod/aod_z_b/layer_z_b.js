@@ -36,7 +36,7 @@ function removeSource(map, sourceId) {
 }
 
 export async function updateMapLayerYear(map, sourceId, layerId, year) {
-    const url = `/assets/data/geojson/AOD/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Barrios/AOD_Yearly_ZonalStats_Barrios_${year}.geojson`;
+    const url = resolveAssetUrl(`assets/data/geojson/AOD/AOD_Yearly_ZonalStats/AOD_Yearly_ZonalStats_Barrios/AOD_Yearly_ZonalStats_Barrios_${year}.geojson`);
     const data = await preprocessGeoJSON(url, 'yearly');
     if (!data) return;
 
@@ -79,7 +79,7 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 }
 
 export async function updateMapLayerMonth(map, sourceId, layerId, month) {
-    const url = `/assets/data/geojson/AOD/AOD_Monthly_ZonalStats/AOD_Monthly_ZonalStats_Barrios/AOD_Monthly_ZonalStats_Barrios_${month}.geojson`;
+    const url = resolveAssetUrl(`assets/data/geojson/AOD/AOD_Monthly_ZonalStats/AOD_Monthly_ZonalStats_Barrios/AOD_Monthly_ZonalStats_Barrios_${month}.geojson`);
     const data = await preprocessGeoJSON(url, 'monthly');
     if (!data) return;
 

@@ -10,9 +10,9 @@ import datetime
 import ee
 
 from . import mk_sen_trend
-from ... import paths
-from ... import vectors
-from ...drive_export_gate import DriveExportGate
+from ...config import paths
+from ...earth_engine_init import vectors
+from ...drive.drive_export_gate import DriveExportGate
 from ...lib import yearmonth as ym_lib
 from . import incremental
 

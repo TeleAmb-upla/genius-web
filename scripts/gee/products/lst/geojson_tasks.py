@@ -1,23 +1,44 @@
-"""GeoJSON LST (scripts/LST_geojson.txt)."""
+"""
+GeoJSON LST.
+
+- Mensual: climatología on-the-fly desde Landsat (necesita propiedad ``month``).
+- Anual y trend: desde asset LST_Yearly.
+"""
 from __future__ import annotations
 
 import ee
 
-from ... import paths
-from ... import vectors
-from ...drive_export_gate import DriveExportGate
+from ...config import paths
+from ...earth_engine_init import vectors
+from ...drive.drive_export_gate import DriveExportGate
 from ...lib import mk_sen as mk_sen_lib
 from ...lib import yearmonth as ym_lib
 from ...lib import zonal_geojson
+from .raster_tasks import _build_lst_landsat_collection
+
+
+def _build_monthly_composite_ic() -> ee.ImageCollection:
+    """12 monthly median images from Landsat with ``month`` property (for zonal lib)."""
+    region_fc = vectors.lst_landsat_region_fc()
+    landsat = _build_lst_landsat_collection(region_fc).select("LST_mean")
+    months = ee.List.sequence(1, 12)
+    return ee.ImageCollection.fromImages(
+        months.map(
+            lambda m: ee.Image(
+                landsat.filter(ee.Filter.calendarRange(m, m, "month"))
+                .median()
+                .rename("LST_mean")
+            ).set("month", m)
+        )
+    )
 
 
 def start_lst_m_geojson_tasks(
-    ic: ee.ImageCollection | None = None,
     *,
     month_numbers: frozenset[int] | None = None,
     drive_gate: DriveExportGate | None = None,
 ) -> list[ee.batch.Task]:
-    ic = ic or vectors.lst_yearmonth_collection()
+    ic = _build_monthly_composite_ic()
     barrios = vectors.barrios_quilpue()
     manzanas = vectors.manzanas_quilpue()
     tasks: list[ee.batch.Task] = []
@@ -55,10 +76,15 @@ def start_lst_y_geojson_tasks(
     *,
     drive_gate: DriveExportGate | None = None,
 ) -> list[ee.batch.Task]:
-    ic = ic or vectors.lst_yearmonth_collection()
+    """Yearly zonal from asset LST_Yearly."""
+    ic = ic or vectors.lst_yearly_collection()
     barrios = vectors.barrios_quilpue()
     manzanas = vectors.manzanas_quilpue()
-    ly = ym_lib.effective_yearly_export_year(ic)
+    max_y = ym_lib.get_collection_max_year(ic)
+    if max_y is None:
+        return []
+    wall = ym_lib.last_completed_wall_clock_calendar_year()
+    ly = min(max_y, wall)
     tasks: list[ee.batch.Task] = []
     tasks += zonal_geojson.yearly_zonal_geojson_tasks_last_year(
         ic,
@@ -94,10 +120,13 @@ def start_lst_t_geojson_tasks(
     *,
     drive_gate: DriveExportGate | None = None,
 ) -> list[ee.batch.Task]:
-    ic = ic or vectors.lst_yearmonth_collection()
+    """Trend zonal from asset LST_Yearly."""
+    ic = ic or vectors.lst_yearly_collection()
     barrios = vectors.barrios_quilpue()
     manzanas = vectors.manzanas_quilpue()
-    sens, pval = mk_sen_lib.mk_sen_slope_and_p_value(ic, band_name="LST_mean")
+    sens, pval = mk_sen_lib.mk_sen_slope_and_p_value_annual(
+        ic, "LST_mean"
+    )
     return zonal_geojson.trend_zonal_geojson_tasks(
         sens,
         pval,

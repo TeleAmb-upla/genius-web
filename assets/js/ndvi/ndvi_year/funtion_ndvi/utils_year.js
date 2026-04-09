@@ -1,3 +1,5 @@
+import { getProductYears } from '../../../map_data_catalog.js';
+
 export function createYearSelector(id) {
     const container = document.createElement('div');
     container.className = 'map-ui-temporal-panel';
@@ -9,7 +11,7 @@ export function createYearSelector(id) {
 
     const selector = document.createElement('select');
     selector.id = id;
-    for (let year = 2017; year <= 2024; year++) {
+    for (const year of getProductYears('ndvi')) {
         const option = document.createElement('option');
         option.value = year;
         option.text = year;

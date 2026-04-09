@@ -1,0 +1,7 @@
+# Earth Engine OAuth (never commit)
+secrets/earthengine_credentials.json
+secrets/*.json
+!secrets/README.md
+
+# Ignore local large raster artifact
+assets/data/raster/Iluminacion/M3T_RGB_QUI_2024_07.tif

@@ -5,6 +5,8 @@ import { map_2021 } from './js_anual/year_2021.js';
 import { map_2022 } from './js_anual/year_2022.js';
 import { map_2023 } from './js_anual/year_2023.js';
 import { map_2024 } from './js_anual/year_2024.js';
+import { map_2025 } from './js_anual/year_2025.js';
+import { getProductYears } from '../../../map_data_catalog.js';
 
 const Loaders = [
     map_2019,
@@ -12,26 +14,27 @@ const Loaders = [
     map_2021,
     map_2022,
     map_2023,
-    map_2024
+    map_2024,
+    map_2025
 ];
 
 
 export async function loadLayersyear(map) {
-    const years = [
-        2019, 2020, 2021, 2022, 2023, 2024
-    ];
+    const years = getProductYears('no2');
   
     const Layers = {};
     const georasters = {};
-    try {
-        const layersData = await Promise.all(Loaders.map(loader => loader(map)));
-        layersData.forEach((data, index) => {
-            const year = years[index];
-            Layers[`NO² ${year}`] = data.layer;
-            georasters[`NO² ${year}`] = data.georaster;
-        });
-    } catch (error) {
-        console.error("Error loading layers:", error);
-    }
+    const settled = await Promise.allSettled(Loaders.map((loader) => loader(map)));
+    settled.forEach((result, index) => {
+        const year = years[index];
+        if (result.status !== 'fulfilled') {
+            console.warn(`NO2 ${year}:`, result.reason);
+            return;
+        }
+        const data = result.value;
+        if (!data || !data.layer) return;
+        Layers[`NO² ${year}`] = data.layer;
+        georasters[`NO² ${year}`] = data.georaster;
+    });
     return { layers: Layers, georasters: georasters };
 }

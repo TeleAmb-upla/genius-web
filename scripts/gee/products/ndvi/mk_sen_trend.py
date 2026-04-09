@@ -26,10 +26,11 @@ def mk_sen_raster_trend_image(
     area_urbana: ee.Feature,
 ) -> ee.Image:
     last_y = ym_lib.effective_yearly_export_year(s2_ym)
-    return mk_sen_lib.mk_sen_raster_trend_image(
+    return mk_sen_lib.mk_sen_raster_trend_masked_p(
         s2_ym,
-        gran_valparaiso,
-        area_urbana,
+        area_urbana.geometry(),
         band_name="NDVI_median",
         last_calendar_year=last_y,
+        first_year_offset=1,
+        p_max=0.025,
     )

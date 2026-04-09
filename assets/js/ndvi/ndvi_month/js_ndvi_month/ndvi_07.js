@@ -1,4 +1,4 @@
-﻿import { ndviToColorMonth } from '../ndvi_palette_month.js'; // Ajusta la ruta según sea necesario
+import { ndviToColorMonth } from '../ndvi_palette_month.js'; // Ajusta la ruta según sea necesario
 import { fetchGeoTiffTryPaths } from '../../../raster_fetch.js';
 import { candidatePathsNdviMonthly } from '../../ndvi_raster_paths.js';
 
@@ -23,7 +23,7 @@ export async function map_ndvi_07(map) {
             // De lo contrario, utiliza la función ndviToColor
             return ndviToColorMonth(ndviValue);
         },
-        resolution: 1080
+        resolution: 384
     });
 
     // No agregar la capa al mapa aquí, solo retornarla

@@ -38,7 +38,8 @@ if __name__ == "__main__" and not __package__:
         sys.path.insert(0, _repo_str)
     __package__ = "scripts.gee"
 
-from .ee_init import initialize_ee
+from .audit_terminal import format_enqueue_message, print_audit_block
+from .earth_engine_init.ee_init import initialize_ee
 from .pipeline import _enqueue_for_product, _parse_products, _plan_for_product
 
 
@@ -122,7 +123,7 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     for product in products:
-        print(f"\n[export_all] Producto: {product.upper()}\n")
+        print_audit_block(f"export_all · {product.upper()} · solo encolado (sin espera ni Drive)")
         _, plan = _plan_for_product(product, args.force_full)
         print(f"[incremental {product}] {plan.reason}")
         if plan.max_ym:
@@ -132,7 +133,9 @@ def main(argv: list[str] | None = None) -> None:
             )
 
         if use_phased:
-            print("\n[export_all] Fase 1: asset + rasters\n")
+            print_audit_block(
+                f"export_all · {product.upper()} · Fase 1: asset + rasters"
+            )
             r1 = _enqueue_for_product(
                 product,
                 only=phase1_only,
@@ -143,10 +146,12 @@ def main(argv: list[str] | None = None) -> None:
                 tables_run_override=None,
             )
             for line in r1.messages:
-                print(line)
+                print(format_enqueue_message(product, line))
             phase1_work = bool(r1.asset_tasks or r1.drive_tasks)
             tables_override = plan.run or phase1_work
-            print("\n[export_all] Fase 2: CSV + GeoJSON\n")
+            print_audit_block(
+                f"export_all · {product.upper()} · Fase 2: CSV + GeoJSON"
+            )
             result = _enqueue_for_product(
                 product,
                 only=phase2_only,
@@ -157,6 +162,9 @@ def main(argv: list[str] | None = None) -> None:
                 tables_run_override=tables_override,
             )
         else:
+            print_audit_block(
+                f"export_all · {product.upper()} · encolado (una sola pasada)"
+            )
             result = _enqueue_for_product(
                 product,
                 only=only,
@@ -168,7 +176,7 @@ def main(argv: list[str] | None = None) -> None:
             )
 
         for line in result.messages:
-            print(line)
+            print(format_enqueue_message(product, line))
 
         rp = result.plan
         if result.state_saved and result.state_path_msg and rp.max_ym:
@@ -177,7 +185,10 @@ def main(argv: list[str] | None = None) -> None:
                 f"{rp.max_ym[0]}-{rp.max_ym[1]:02d} ({result.state_path_msg})."
             )
 
-        print("Listo: revisa las tareas en https://code.earthengine.google.com/tasks")
+        print(
+            f"[{product.upper()}] Listo: revisa las tareas en "
+            "https://code.earthengine.google.com/tasks"
+        )
 
 
 if __name__ == "__main__":

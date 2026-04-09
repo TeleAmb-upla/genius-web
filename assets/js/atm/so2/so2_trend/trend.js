@@ -61,7 +61,7 @@ export async function map_trend(map) {
                 }
                 return valueToSTColor(Value);
             },
-            resolution: 1080
+            resolution: 384
         });
 
         // Retornar un objeto con la capa y el georaster

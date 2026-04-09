@@ -1,4 +1,4 @@
-﻿export async function map_2023(map) {
+export async function map_2023(map) {
   // Leer el archivo  
   const response = await fetch(resolveAssetUrl('assets/data/raster/Huella_Urbana/Huella_Urbana_Yearly_2023.tif'));
   const arrayBuffer = await response.arrayBuffer();
@@ -15,7 +15,7 @@
           if (Value ==  2 ) return null; // Transparente si no hay datos
           return '#e41a1c'; // Cian fijo para 2023
       },
-      resolution: 1080
+      resolution: 384
   });
 
   // No agregar la capa al mapa aquí, solo retornarla

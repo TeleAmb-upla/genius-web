@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ... import paths
+from ...config import paths
 
 
 @dataclass(frozen=True)
@@ -72,7 +72,7 @@ def so2_spec() -> PollutantSpec:
         sensor_band="SO2_column_number_density",
         asset_median_band="SO2_median",
         ym_prefix="SO2_YearMonth",
-        filter_start="2018-01-01",
+        filter_start="2019-01-01",
         drive_monthly=paths.DRIVE_SO2_RASTER_MONTHLY,
         drive_yearly=paths.DRIVE_SO2_RASTER_YEARLY,
         drive_trend=paths.DRIVE_SO2_RASTER_TREND,

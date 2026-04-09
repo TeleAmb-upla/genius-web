@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import ee
 
-from ..drive_export_gate import DriveExportGate
+from ..drive.drive_export_gate import DriveExportGate
 
 
 def months_zonal_geojson_tasks(
@@ -123,8 +123,10 @@ def trend_zonal_geojson_tasks(
     selectors_m: list,
     scale_m: float,
     drive_gate: DriveExportGate | None = None,
+    p_max: float = 0.025,
 ) -> list[ee.batch.Task]:
-    image_to_reduce = sens_slope.addBands(p_value)
+    masked_slope = sens_slope.updateMask(p_value.lte(p_max))
+    image_to_reduce = masked_slope.addBands(p_value)
     tasks: list[ee.batch.Task] = []
 
     fc_b = image_to_reduce.reduceRegions(

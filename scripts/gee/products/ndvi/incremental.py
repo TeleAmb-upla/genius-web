@@ -19,19 +19,26 @@ from pathlib import Path
 
 import ee
 
-from ... import paths
-from ... import vectors
+from ...config import paths
+from ...earth_engine_init import vectors
+from ...lib import incremental_base as inc_base
 from ...lib import incremental_plan as incplan
 from ...lib import state as state_lib
 from ...lib import yearmonth as ym_lib
 
 DerivativePlan = incplan.DerivativePlan
 
-STATE_FILENAME = "ndvi_export_state.json"
+# Instancia de manager (usa base class para funciones comunes)
+_manager = inc_base.IncrementalStateManager(
+    state_filename="ndvi_export_state.json",
+    root_asset_path=paths.ASSET_NDVI_YEARMONTH,
+    start_year=2016,
+)
 
 
 def state_path() -> Path:
-    return Path(__file__).resolve().parents[2] / STATE_FILENAME
+    """Path al archivo de estado JSON."""
+    return _manager.state_path()
 
 
 def _read_state() -> dict:
@@ -42,12 +49,21 @@ def _write_state(updates: dict) -> None:
     state_lib.merge_state(state_path(), updates)
 
 
+# Redirigir a manager para funciones comunes
 def load_last_processed_ym() -> tuple[int, int] | None:
-    return incplan.load_last_processed_ym(state_path())
+    return _manager.load_last_processed_ym()
 
 
 def save_last_processed_ym(ym: tuple[int, int]) -> None:
-    incplan.save_last_processed_ym(state_path(), ym)
+    _manager.save_last_processed_ym(ym)
+
+
+def load_last_trend_raster_full_year() -> int | None:
+    return _manager.load_last_trend_raster_full_year()
+
+
+def save_last_trend_raster_full_year(year: int) -> None:
+    _manager.save_last_trend_raster_full_year(year)
 
 
 def load_last_climatology_target_ym() -> tuple[int, int] | None:

@@ -21,7 +21,7 @@ let trendGeoraster = null;
 let currentLayerType = null;
 
 let currentLeftYear = "2021";
-let currentRightYear = "2024";
+let currentRightYear = "2025";
 
 let currentLeftMonth = "01";
 let currentRightMonth = "12";
@@ -226,7 +226,7 @@ export async function map_aod_p() {
         layers.leftLayer = null;
         layers.rightLayer = null;
         const additionalContent = `
-                <p>El análisis de los datos revela tendencias aparentes; sin embargo no se observan significancias estadísticas (p-value 0.05).</p>
+                <p>La tendencia raster se muestra solo donde el resultado supera la máscara estadística usada en el backend (p-value <= 0.025).</p>
             `;
         trendAdditionalTextDiv = createTrendAdditionalText(additionalContent);
         currentMap.getContainer().appendChild(trendAdditionalTextDiv);

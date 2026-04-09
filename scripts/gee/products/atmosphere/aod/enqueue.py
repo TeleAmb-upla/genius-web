@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from ....drive_audit import DriveFreshnessHints
-from ....enqueue_types import EnqueueResult
-from ....drive_export_gate import DriveExportGate
-from .... import paths
+from ....drive.drive_audit import DriveFreshnessHints
+from ....config.enqueue_types import EnqueueResult
+from ....drive.drive_export_gate import DriveExportGate
+from ....config import paths
 from ....lib import yearmonth as ym_lib
 from . import csv_tasks
 from . import geojson_tasks
@@ -58,29 +58,45 @@ def enqueue_aod_exports(
                 "[raster AOD] Asset AOD_YearMonth incompleto: omitidos derivados raster."
             )
         else:
-            from .... import vectors
+            from ....earth_engine_init import vectors
 
             ic = vectors.aod_yearmonth_collection()
-            if skip_yearly:
+            if aod_inc.should_refresh_trend_raster(ic):
+                if drive_gate:
+                    drive_gate.clear_before_reexport(
+                        paths.DRIVE_AOD_RASTER_YEARLY,
+                        stem_prefixes=("AOD_Yearly_Trend",),
+                    )
+                tr = raster_tasks.start_aod_trend_raster_task(
+                    drive_gate=drive_gate,
+                    bypass_drive_gate=True,
+                )
+                _add_tasks(drive, tr)
+                if tr:
+                    sync.add("aod_raster_trend")
+                    ran_derivative = True
+                    aod_inc.save_last_trend_raster_full_year(
+                        ym_lib.effective_yearly_export_year(ic)
+                    )
+
+            yearly_needed = (
+                drive_freshness is not None
+                and drive_freshness.yearly_raster_missing_or_stale
+            )
+            if skip_yearly and not yearly_needed:
                 messages.append(
-                    "AOD: omitidos tendencia y anual raster (--include-yearly para encolarlos)."
+                    "AOD: omitidos anuales (--include-yearly para encolarlos)."
                 )
             else:
-                if aod_inc.should_refresh_trend_raster(ic):
-                    tr = raster_tasks.start_aod_trend_raster_task(
-                        drive_gate=drive_gate,
-                        bypass_drive_gate=True,
-                    )
-                    _add_tasks(drive, tr)
-                    if tr:
-                        sync.add("aod_raster_trend")
-                        ran_derivative = True
-                        aod_inc.save_last_trend_raster_full_year(
-                            ym_lib.effective_yearly_export_year(ic)
-                        )
                 bypass_yearly = bool(
                     drive_freshness and drive_freshness.yearly_raster_enqueue_bypass
                 )
+                if bypass_yearly and drive_gate:
+                    drive_gate.clear_before_reexport(
+                        paths.DRIVE_AOD_RASTER_YEARLY,
+                        stem_prefixes=("AOD_Yearly_",),
+                        stem_exclude_substrings=("Trend",),
+                    )
                 _add_tasks(
                     drive,
                     raster_tasks.start_aod_yearly_raster_last_year_task(
@@ -118,6 +134,11 @@ def enqueue_aod_exports(
                         "[raster AOD] Climatología mensual: mtime local vs año civil cerrado "
                         f"{ym_lib.last_completed_wall_clock_calendar_year()}."
                     )
+                if full_refresh and drive_gate:
+                    drive_gate.clear_before_reexport(
+                        paths.DRIVE_AOD_RASTER_MONTHLY,
+                        stem_prefixes=("AOD_Monthly_",),
+                    )
                 _add_tasks(
                     drive,
                     raster_tasks.start_aod_monthly_raster_tasks(
@@ -135,13 +156,25 @@ def enqueue_aod_exports(
             if drive_freshness:
                 sync_full_mirror |= set(drive_freshness.sync_full_mirror_extra_keys)
 
+    force_yearly_tables = bool(
+        drive_freshness and drive_freshness.yearly_tables_missing_or_stale
+    )
     tables_run = (
-        plan.run or plan.is_full_refresh or force_full
+        plan.run or plan.is_full_refresh or force_full or force_yearly_tables
         if tables_run_override is None
         else tables_run_override
     )
 
     if want("csv") and tables_run:
+        if drive_gate:
+            drive_gate.clear_before_reexport(
+                paths.DRIVE_AOD_RASTER_MONTHLY, extensions=(".csv",),
+                stem_prefixes=("AOD_m_",),
+            )
+            drive_gate.clear_before_reexport(
+                paths.DRIVE_AOD_RASTER_YEARLY, extensions=(".csv",),
+                stem_prefixes=("AOD_y_",),
+            )
         _add_tasks(drive, csv_tasks.start_aod_csv_tasks(drive_gate=drive_gate))
         sync.update({"aod_csv_monthly", "aod_csv_yearly"})
         ran_derivative = True
@@ -149,31 +182,64 @@ def enqueue_aod_exports(
         messages.append("Omitidos CSV AOD (sin delta).")
 
     if want("geojson") and tables_run:
+        month_filter = None if plan.is_full_refresh else plan.month_subset
+        months_to_refresh = (
+            range(1, 13)
+            if month_filter is None
+            else sorted(x for x in month_filter if 1 <= x <= 12)
+        )
+        if drive_gate:
+            drive_gate.clear_before_reexport(
+                paths.DRIVE_AOD_GEO_MONTHLY_B,
+                extensions=(".geojson", ".json"),
+                file_stems=tuple(
+                    f"AOD_Monthly_ZonalStats_Barrios_{m:02d}"
+                    for m in months_to_refresh
+                ),
+            )
+            drive_gate.clear_before_reexport(
+                paths.DRIVE_AOD_GEO_MONTHLY_M,
+                extensions=(".geojson", ".json"),
+                file_stems=tuple(
+                    f"AOD_Monthly_ZonalStats_Manzanas_{m:02d}"
+                    for m in months_to_refresh
+                ),
+            )
         _add_tasks(
             drive,
             geojson_tasks.start_aod_m_geojson_tasks(
-                month_numbers=None if plan.is_full_refresh else plan.month_subset,
+                month_numbers=month_filter,
                 drive_gate=drive_gate,
             ),
         )
         sync.update({"aod_geo_monthly_b", "aod_geo_monthly_m"})
-        if not skip_yearly:
+        if drive_gate:
+            drive_gate.clear_before_reexport(
+                paths.DRIVE_AOD_GEO_TREND_B, extensions=(".geojson", ".json"),
+                stem_prefixes=("Trend_AOD_ZonalStats_Barrios",),
+            )
+            drive_gate.clear_before_reexport(
+                paths.DRIVE_AOD_GEO_TREND_M, extensions=(".geojson", ".json"),
+                stem_prefixes=("Trend_AOD_ZonalStats_Manzanas",),
+            )
+        _add_tasks(
+            drive,
+            geojson_tasks.start_aod_t_geojson_tasks(drive_gate=drive_gate),
+        )
+        sync.update({"aod_geo_trend_b", "aod_geo_trend_m"})
+        geo_yearly_needed = bool(
+            drive_freshness
+            and (
+                drive_freshness.yearly_raster_missing_or_stale
+                or drive_freshness.yearly_tables_missing_or_stale
+            )
+        )
+        if not skip_yearly or geo_yearly_needed:
             _add_tasks(
                 drive,
                 geojson_tasks.start_aod_y_geojson_tasks(drive_gate=drive_gate),
             )
-            _add_tasks(
-                drive,
-                geojson_tasks.start_aod_t_geojson_tasks(drive_gate=drive_gate),
-            )
-            sync.update(
-                {
-                    "aod_geo_yearly_b",
-                    "aod_geo_yearly_m",
-                    "aod_geo_trend_b",
-                    "aod_geo_trend_m",
-                }
-            )
+            sync.update({"aod_geo_yearly_b", "aod_geo_yearly_m"})
         ran_derivative = True
     elif want("geojson"):
         messages.append("Omitidos GeoJSON AOD (sin delta).")

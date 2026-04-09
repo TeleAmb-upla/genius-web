@@ -78,6 +78,49 @@ def list_missing_yearmonth_months(
     return missing
 
 
+def list_missing_yearly(
+    asset_path: str,
+    *,
+    start_year: int,
+) -> list[int]:
+    """
+    Years from ``start_year`` through ``last_completed_wall_clock_calendar_year()``
+    that do not exist in the yearly asset collection at ``asset_path``.
+    """
+    saved = ee.ImageCollection(asset_path)
+    existing_raw = saved.aggregate_array("year").getInfo() or []
+    existing = {int(y) for y in existing_raw}
+    target = last_completed_wall_clock_calendar_year()
+    return [y for y in range(start_year, target + 1) if y not in existing]
+
+
+def get_collection_max_year(ic: ee.ImageCollection) -> int | None:
+    """Max ``year`` property in a yearly ImageCollection."""
+    n = ic.size().getInfo()
+    if n == 0:
+        return None
+    return int(ee.Number(ic.aggregate_max("year")).getInfo())
+
+
+def audit_asset_yearly_vs_wall_clock_messages(
+    ic: ee.ImageCollection, *, product: str
+) -> tuple[str, ...]:
+    """Audits a yearly asset collection against the last completed calendar year."""
+    target = last_completed_wall_clock_calendar_year()
+    max_y = get_collection_max_year(ic)
+    tag = product.upper()
+    if max_y is None:
+        return (
+            f"[GEE audit {tag}] Colección anual vacía; encolar assets hasta {target}.",
+        )
+    if max_y < target:
+        return (
+            f"[GEE audit {tag}] Asset anual rezagado: máximo {max_y} < objetivo {target}. "
+            "Completar assets anuales.",
+        )
+    return (f"[GEE audit {tag}] Asset anual máximo {max_y}; objetivo {target} (OK).",)
+
+
 def get_collection_max_ym(ic: ee.ImageCollection) -> tuple[int, int] | None:
     """Mayor (año, mes) presente en la colección (propiedades year/month)."""
     n = ic.size().getInfo()

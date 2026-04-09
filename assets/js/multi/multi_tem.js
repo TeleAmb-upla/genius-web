@@ -26,20 +26,33 @@ import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
     return colorScale(value);
 }
 export async function m_tem(map) {
-    // Leer el archivo GeoTIFF
-    const response = await fetch(resolveAssetUrl('assets/data/raster/Multicapa/PlazaVieja_Dia_Termico.tif'));
-    const arrayBuffer = await response.arrayBuffer();
+    try {
+        const boundsResp = await fetch(resolveAssetUrl('assets/data/raster/Multicapa/PlazaVieja_Dia_Termico_bounds.json'));
+        const imageResp = await fetch(resolveAssetUrl('assets/data/raster/Multicapa/PlazaVieja_Dia_Termico.webp'), { method: 'HEAD' });
+        if (boundsResp.ok && imageResp.ok) {
+            const boundsData = await boundsResp.json();
+            return L.imageOverlay(
+                resolveAssetUrl('assets/data/raster/Multicapa/PlazaVieja_Dia_Termico.webp'),
+                boundsData.bounds,
+                { opacity: 1 }
+            );
+        }
+    } catch (error) {
+        console.warn('No se pudo cargar el térmico optimizado:', error);
+    }
 
-    // Parsear el GeoRaster
+    const response = await fetch(resolveAssetUrl('assets/data/raster/Multicapa/PlazaVieja_Dia_Termico.tif'));
+    if (!response.ok) return null;
+    const arrayBuffer = await response.arrayBuffer();
     const georaster = await parseGeoraster(arrayBuffer);
 
     // Crear la capa GeoRaster con la función de colores ajustada
     const layer = new GeoRasterLayer({
         georaster: georaster,
         resolution: 256, // Ajusta según sea necesario
-        pixelValuesToColorFn: function (value) {
-            // Asegurarte de no procesar valores nulos o no válidos
-            if (value === null || isNaN(value)) return 'transparent';
+        pixelValuesToColorFn: function (values) {
+            const value = values[0];
+            if (value === undefined || value === null || isNaN(value)) return null;
             return ToColor(value);
         }
     });

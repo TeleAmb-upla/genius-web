@@ -1,4 +1,4 @@
-﻿import { ToColorYear } from '../palette_year.js';
+import { ToColorYear } from '../palette_year.js';
 
 export async function map_2017(map) {
     // Leer el archivo NDVI 2017
@@ -21,7 +21,7 @@ export async function map_2017(map) {
             // De lo contrario, utiliza la función ndviToColor
             return ToColorYear(Value);
         },
-        resolution: 1080
+        resolution: 384
     
     });
 

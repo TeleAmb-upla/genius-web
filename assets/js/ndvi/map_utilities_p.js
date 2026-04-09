@@ -37,7 +37,7 @@ export function createyearLegendSVG(isMobile = false) {
     return `
         <svg class="map-legend-svg" width="${width}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
             <text x="0" y="${fontSizeTitle + 2}" font-size="${fontSizeTitle}" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
-            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Anual</text>
+            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Anual · escala visual p5-p95</text>
             ${legendItems}
         </svg>
     `;
@@ -77,36 +77,22 @@ export function createmonthLegendSVG(isMobile = false) {
     return `
         <svg class="map-legend-svg" width="${width}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
             <text x="0" y="${fontSizeTitle + 2}" font-size="${fontSizeTitle}" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
-            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Mensual</text>
+            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Mensual · escala visual p5-p95</text>
             ${legendItems}
         </svg>
     `;
 }
-let mapTitleDiv = null;
 
 // Función para añadir o actualizar el título centrado del mapa
 export function addCenteredTitle(map, titleText) {
     let mapTitleDiv = document.getElementById('map-title');
-
     if (!mapTitleDiv) {
-        // Crear el elemento del título si no existe
         mapTitleDiv = document.createElement('div');
         mapTitleDiv.id = 'map-title';
-        mapTitleDiv.style.position = 'absolute';
-        mapTitleDiv.style.top = '10px';
-        mapTitleDiv.style.left = '50%';
-        mapTitleDiv.style.transform = 'translate(-50%, 0)';
-        mapTitleDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-        mapTitleDiv.style.padding = '10px';
-        mapTitleDiv.style.borderRadius = '8px';
-        mapTitleDiv.style.zIndex = '1000';
-        mapTitleDiv.style.pointerEvents = 'none';
-        mapTitleDiv.style.fontFamily = 'Arial';
-        mapTitleDiv.style.fontSize = '14px';
-        mapTitleDiv.style.fontWeight = 'bold';
+        mapTitleDiv.className = 'map-title';
         map.getContainer().appendChild(mapTitleDiv);
     }
-
-    // Actualiza el contenido del título
-    mapTitleDiv.innerHTML = titleText;
+    if (titleText !== undefined) {
+        mapTitleDiv.innerHTML = `<strong>${titleText}</strong>`;
+    }
 }

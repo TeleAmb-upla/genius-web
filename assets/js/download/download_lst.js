@@ -8,7 +8,7 @@ const endYear = 2024;
 const lstMonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0'); // Genera '01', '02', ..., '12'
     return { 
-        url: `/assets/data/raster/LST/LST_Monthly/LST_Monthly_${month}.tif`,
+        url: resolveAssetUrl(`assets/data/raster/LST/LST_Monthly/LST_Monthly_${month}.tif`),
         name: `LST_Monthly_${month}.tif`
     };
 });
@@ -16,15 +16,15 @@ const lstMonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
 const lstYearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: `/assets/data/raster/LST/LST_Yearly/LST_Yearly_${year}.tif`,
+        url: resolveAssetUrl(`assets/data/raster/LST/LST_Yearly/LST_Yearly_${year}.tif`),
         name: `LST_Yearly_${year}.tif`
     };
 });
 
 const lstTrendFiles_tif = [
-    { url: '/assets/data/raster/LST/LST_Trend/LST_Yearly_Trend.tif', name: 'LST_Trend.tif' },
-    { url: '/assets/data/csv/LST_m_urban.csv', name: 'LST_Monthly.csv' },
-    { url: '/assets/data/csv/LST_y_urban.csv', name: 'LST_Anual.csv' }
+    { url: resolveAssetUrl('assets/data/raster/LST/LST_Trend/LST_Yearly_Trend.tif'), name: 'LST_Trend.tif' },
+    { url: resolveAssetUrl('assets/data/csv/LST_m_urban.csv'), name: 'LST_Monthly.csv' },
+    { url: resolveAssetUrl('assets/data/csv/LST_y_urban.csv'), name: 'LST_Anual.csv' }
  ];
 
 
@@ -33,7 +33,7 @@ const lstTrendFiles_tif = [
 const lstMonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
     return {
-        url: `/assets/data/geojson/LST/LST_Monthly_ZonalStats_Barrios/LST_Monthly_ZonalStats_Barrios_${month}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Monthly_ZonalStats_Barrios/LST_Monthly_ZonalStats_Barrios_${month}.geojson`),
         name: `LST_Monthly_${month}.geojson`
     };
 });
@@ -41,22 +41,22 @@ const lstMonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
 const lstYearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: `/assets/data/geojson/LST/LST_Yearly_ZonalStats_Barrios/LST_Yearly_ZonalStats_Barrios_${year}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Yearly_ZonalStats_Barrios/LST_Yearly_ZonalStats_Barrios_${year}.geojson`),
         name: `LST_Yearly_${year}.geojson`
     };
 });
 
 const lstTrendFiles_json_Barrio = [
-    { url: '/assets/data/geojson/LST/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson', name: 'LST_Trend.geojson' },
-    { url: '/assets/data/csv/LST_m_urban.csv', name: 'LST_Monthly.csv' },
-    { url: '/assets/data/csv/LST_y_urban.csv', name: 'LST_Anual.csv' }
+    { url: resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson'), name: 'LST_Trend.geojson' },
+    { url: resolveAssetUrl('assets/data/csv/LST_m_urban.csv'), name: 'LST_Monthly.csv' },
+    { url: resolveAssetUrl('assets/data/csv/LST_y_urban.csv'), name: 'LST_Anual.csv' }
 ];
 
 
 const lstMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
     return {
-        url: `/assets/data/geojson/LST/LST_Monthly_ZonalStats_Manzanas/LST_Monthly_ZonalStats_Manzanas_${month}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Monthly_ZonalStats_Manzanas/LST_Monthly_ZonalStats_Manzanas_${month}.geojson`),
         name: `LST_Monthly_${month}.geojson`
     };
 });
@@ -64,18 +64,18 @@ const lstMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
 const lstYearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: `/assets/data/geojson/LST/LST_Yearly_ZonalStats_Manzanas/LST_Yearly_ZonalStats_Manzanas_${year}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Yearly_ZonalStats_Manzanas/LST_Yearly_ZonalStats_Manzanas_${year}.geojson`),
         name: `LST_Yearly_${year}.geojson`
     };
 });
 const lstTrendFiles_json_Manzanas = [
-    { url: '/assets/data/geojson/LST/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson', name: 'LST_Trend.geojson' },
-    { url: '/assets/data/csv/LST_m_urban.csv', name: 'LST_Monthly.csv' },
-    { url: '/assets/data/csv/LST_y_urban.csv', name: 'LST_Anual.csv' }
+    { url: resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson'), name: 'LST_Trend.geojson' },
+    { url: resolveAssetUrl('assets/data/csv/LST_m_urban.csv'), name: 'LST_Monthly.csv' },
+    { url: resolveAssetUrl('assets/data/csv/LST_y_urban.csv'), name: 'LST_Anual.csv' }
 ];
 
 const textFiles = [
-    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+    { url: resolveAssetUrl('assets/js/indicaciones.txt'), name: 'indicaciones.txt' },
 ];
 
 

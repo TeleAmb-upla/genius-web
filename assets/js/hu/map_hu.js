@@ -4,6 +4,9 @@ import { map_2020 } from './funtion/year_2020.js';
 import { map_2021 } from './funtion/year_2021.js';
 import { map_2022 } from './funtion/year_2022.js';
 import { map_2023 } from './funtion/year_2023.js';
+import { map_2024 } from './funtion/year_2024.js';
+import { map_2025 } from './funtion/year_2025.js';
+import { map_2026 } from './funtion/year_2026.js';
 import { addCenteredTitle, createLegendSVG } from './funtion/map_utilities_p.js';
 import { loadinf_critica } from '../inf_critica_leaflet.js';
 import { attachMapOpacityPanel } from '../slider_opacity.js';
@@ -40,21 +43,31 @@ export async function map_hu() {
 
     L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
 
-    currentLayers["Huella Urbana 2023"] = await map_2023(currentMap);
-    currentLayers["Huella Urbana 2022"] = await map_2022(currentMap);
-    currentLayers["Huella Urbana 2021"] = await map_2021(currentMap);
-    currentLayers["Huella Urbana 2020"] = await map_2020(currentMap);
-    currentLayers["Huella Urbana 2019"] = await map_2019(currentMap);
-    currentLayers["Huella Urbana 2018"] = await map_2018(currentMap);
-
-    const baseLayers = {
-        "Huella Urbana 2023": currentLayers["Huella Urbana 2023"],
-        "Huella Urbana 2022": currentLayers["Huella Urbana 2022"],
-        "Huella Urbana 2021": currentLayers["Huella Urbana 2021"],
-        "Huella Urbana 2020": currentLayers["Huella Urbana 2020"],
-        "Huella Urbana 2019": currentLayers["Huella Urbana 2019"],
-        "Huella Urbana 2018": currentLayers["Huella Urbana 2018"]
-    };
+    const yearlyLayers = [
+        ["Huella Urbana 2026", map_2026],
+        ["Huella Urbana 2025", map_2025],
+        ["Huella Urbana 2024", map_2024],
+        ["Huella Urbana 2023", map_2023],
+        ["Huella Urbana 2022", map_2022],
+        ["Huella Urbana 2021", map_2021],
+        ["Huella Urbana 2020", map_2020],
+        ["Huella Urbana 2019", map_2019],
+        ["Huella Urbana 2018", map_2018],
+    ];
+    const settledLayers = await Promise.allSettled(
+        yearlyLayers.map(async ([name, loader]) => [name, await loader(currentMap)])
+    );
+    const baseLayers = {};
+    settledLayers.forEach((result) => {
+        if (result.status !== 'fulfilled') {
+            console.warn('Huella urbana:', result.reason);
+            return;
+        }
+        const [name, layer] = result.value;
+        if (!layer) return;
+        currentLayers[name] = layer;
+        baseLayers[name] = layer;
+    });
 
     const infCriticaData = await loadinf_critica(currentMap);
     const overlayOnly = {};
@@ -62,23 +75,6 @@ export async function map_hu() {
         const layersArray = Object.values(infCriticaData);
         overlayOnly["Infraestructura crítica (vectores)"] = L.layerGroup(layersArray);
     }
-
-    fetch(resolveAssetUrl('assets/data/vectores/PRC_Quilpue.geojson'))
-        .then(response => response.json())
-        .then(geojsonData => {
-            const geojsonLayer = L.geoJSON(geojsonData, {
-                style: {
-                    color: "black",
-                    weight: 1,
-                    fillOpacity: 0
-                },
-                pointToLayer: function () {
-                    return null;
-                }
-            }).addTo(currentMap);
-            currentLayers["GeoJSON Layer"] = geojsonLayer;
-        })
-        .catch(error => console.error('Error cargando el GeoJSON:', error));
 
     const layerControl = L.control.layers(baseLayers, overlayOnly).addTo(currentMap);
     const layersList = layerControl.getContainer().querySelector('.leaflet-control-layers-list');
@@ -90,7 +86,10 @@ export async function map_hu() {
     layersList.prepend(separator);
     layersList.prepend(title);
 
-    currentMap.addLayer(currentLayers["Huella Urbana 2023"]);
+    const defaultLayer = Object.keys(baseLayers)[0];
+    if (defaultLayer && currentLayers[defaultLayer]) {
+        currentMap.addLayer(currentLayers[defaultLayer]);
+    }
 
     addCenteredTitle(currentMap);
 

@@ -1,13 +1,13 @@
 ﻿// Definir las rutas de archivos TIF específicos de NDVI
 const json = [
-    { url: '/assets/data/raster/Multicapa/PlazaVieja_Dia_RGB.tif', name: 'PlazaVieja_Dia_RGB.tif' },
-    { url: '/assets/data/raster/Multicapa/PlazaVieja_Dia_Termico.tif', name: 'PlazaVieja_Dia_Termico.tif' },
-    { url: '/assets/data/raster/Multicapa/PlazaVieja_Noche_Class.geojson', name: 'PlazaVieja_Noche_Class.geojson' },
+    { url: resolveAssetUrl('assets/data/raster/Multicapa/PlazaVieja_Dia_RGB.tif'), name: 'PlazaVieja_Dia_RGB.tif' },
+    { url: resolveAssetUrl('assets/data/raster/Multicapa/PlazaVieja_Dia_Termico.tif'), name: 'PlazaVieja_Dia_Termico.tif' },
+    { url: resolveAssetUrl('assets/data/raster/Multicapa/PlazaVieja_Noche_Class.geojson'), name: 'PlazaVieja_Noche_Class.geojson' },
 
 ];
 
 const textFiles = [
-    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+    { url: resolveAssetUrl('assets/js/indicaciones.txt'), name: 'indicaciones.txt' },
 ];
 
 

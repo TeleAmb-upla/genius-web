@@ -2,6 +2,7 @@
     try {
         // Leer el archivo GeoJSON
         const response = await fetch(resolveAssetUrl('assets/data/raster/Multicapa/PlazaVieja_Noche_Class.geojson'));
+        if (!response.ok) return null;
         const data = await response.json();
 
         // Mapeo de gridcode a etiquetas descriptivas

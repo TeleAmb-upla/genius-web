@@ -2973,22 +2973,35 @@ button {
   z-index: 3; /* Ajusta el valor según sea necesario */
 }
 
+.map-compare-single .map-compare-hidden {
+  display: none !important;
+}
+
+.map-compare-single .map-compare-single__pane {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  clip-path: none !important;
+}
 
 /* TITUOLO MAPA */
 .map-title {
   position: absolute;
-  top: 10px;
+  top: -42px;
   left: 50%;
   transform: translate(-50%, 0);
-  background-color: rgba(255, 255, 255, 0.7);
-  padding: 10px;
-  border-radius: 8px;
-  z-index: 1000;
+  background-color: rgba(255, 255, 255, 0.94);
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  z-index: 900;
   pointer-events: none;
-  font-family: Arial, sans-serif;
-  font-size: 14px;
-  font-weight: bold;
-  color: black;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #18212f;
+  white-space: nowrap;
 }
 
 /* Mapa: misma altura visual que la suma de los dos gráficos a la derecha */
@@ -2999,7 +3012,7 @@ button {
   min-height: var(--viz-map-height);
   max-height: none;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
   border-radius: 10px;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -3023,7 +3036,7 @@ button {
   min-height: var(--viz-map-height);
   max-height: none;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
   border-radius: 10px;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -3033,7 +3046,7 @@ button {
 /* Paneles de año/mes sobre Leaflet */
 .map-ui-temporal-panel {
   position: absolute;
-  z-index: 1000;
+  z-index: 900;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -3075,7 +3088,7 @@ button {
 /* Opacidad: barra horizontal centrada abajo (no tapa controles esquina derecha) */
 .map-ui-opacity-panel {
   position: absolute;
-  z-index: 1000;
+  z-index: 900;
   left: 50%;
   right: auto;
   bottom: 12px;
@@ -3094,6 +3107,97 @@ button {
   user-select: none;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   backdrop-filter: blur(6px);
+}
+
+.layers-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  min-width: 170px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.10);
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(10px);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.layers-control__pills {
+  display: flex;
+  gap: 2px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.layers-control__pill {
+  flex: 1;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.layers-control__pill:hover {
+  color: #334155;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.layers-control__pill--active {
+  background: #fff;
+  color: #2a7d4a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10);
+}
+
+.layers-control__divider {
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  margin: 2px 0;
+}
+
+.layers-control__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.layers-control__toggle:hover {
+  background: #f8fafc;
+}
+
+.layers-control__toggle input[type="checkbox"] {
+  margin: 0;
+  accent-color: #2a7d4a;
+  width: 14px;
+  height: 14px;
+}
+
+.layers-control__toggle span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.map-legend-panel {
+  z-index: 900;
+}
+
+.header,
+.header.sticked,
+.navbar,
+.navbar ul {
+  z-index: 9998 !important;
 }
 
 .map-ui-opacity-panel__label {
@@ -3418,6 +3522,7 @@ button {
 
 /* Botón base: sin borde visible por defecto */
 .button-green-border,
+.button-green-areas,
 .button-orange-border,
 .button-air-quality,
 .sub-button-aod,
@@ -3438,6 +3543,19 @@ button {
 .button-green-border.selected,
 .button-green-border:hover {
   border-color: #3cb371 !important;
+}
+
+.button-green-areas {
+  border-radius: 14px !important;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%) !important;
+  box-shadow: 0 2px 8px rgba(56, 142, 60, 0.15);
+  transition: all 0.2s ease;
+}
+
+.button-green-areas.selected,
+.button-green-areas:hover {
+  border-color: #2e7d32 !important;
+  box-shadow: 0 3px 12px rgba(56, 142, 60, 0.3);
 }
 
 .button-orange-border.selected,

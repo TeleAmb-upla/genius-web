@@ -60,8 +60,6 @@
   <!-- Template Main CSS File -->
   <link href="assets/css/main.css" rel="stylesheet">
 
-  <script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@1.0.2/dist/georaster-layer-for-leaflet.min.js"></script>
   <!-- <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script> -->
   <!-- MapLibre -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@2.1.6/dist/maplibre-gl.css" />
@@ -289,7 +287,7 @@
     <span class="ndvi-text" style="display: none;">Píxel</span>
   </div>
   <div class="button-col">
-    <button id="ndviButtonstdev" onclick="toggleTable('ndviTablestdev', 'ndvi_stdev');" class="button-green-border"></button>
+    <button id="ndviButtonstdev" onclick="toggleTable('ndviTablestdev', 'ndvi_stdev');" class="button-green-areas"></button>
     <span class="ndvi-text" style="display: none;">Áreas Verdes</span>
   </div>
 </div>
@@ -1098,6 +1096,9 @@ function toggleAireButton() {
 }
 
 function toggleSubAireButtons(containerId) {
+    destroyActiveMap();
+    hideAllTables();
+
     var containers = ['AODSubButtons', 'NO2SubButtons', 'SO2SubButtons'];
     containers.forEach(function(id) {
         var container = document.getElementById(id);
@@ -1106,6 +1107,10 @@ function toggleSubAireButtons(containerId) {
             container.classList.remove('active');
         }
     });
+
+    resetButtonStates('.sub-button-aod');
+    resetButtonStates('.sub-button-no2');
+    resetButtonStates('.sub-button-so2');
 
     setTimeout(() => {
         var container = document.getElementById(containerId);
@@ -1121,16 +1126,21 @@ function toggleSubAireButtons(containerId) {
                 texts[j].style.display = 'block';
             }
         }
-    }, 50);
 
-    // Resetear estados de sub-botones según el contenedor seleccionado
-    if (containerId === 'AODSubButtons') {
-        resetButtonStates('.sub-button-aod');
-    } else if (containerId === 'NO2SubButtons') {
-        resetButtonStates('.sub-button-no2');
-    } else if (containerId === 'SO2SubButtons') {
-        resetButtonStates('.sub-button-so2');
-    }
+        if (containerId === 'AODSubButtons') {
+            var first = document.getElementById('AODButton_B');
+            if (first) first.classList.add('selected');
+            toggleTable('AODTable_B', 'AOD_B');
+        } else if (containerId === 'NO2SubButtons') {
+            var first = document.getElementById('NO2Button_B');
+            if (first) first.classList.add('selected');
+            toggleTable('NO2Table_B', 'NO2_B');
+        } else if (containerId === 'SO2SubButtons') {
+            var first = document.getElementById('SO2Button_B');
+            if (first) first.classList.add('selected');
+            toggleTable('SO2Table_B', 'SO2_B');
+        }
+    }, 80);
 }
 
 function resetButtonStates(buttonSelector) {
@@ -1149,9 +1159,10 @@ document.querySelectorAll('.button-air-quality').forEach(button => {
 });
 
 // Añadir evento click para los botones NDVI
-document.querySelectorAll('.button-green-border').forEach(button => {
+document.querySelectorAll('.button-green-border, .button-green-areas').forEach(button => {
     button.addEventListener('click', function() {
         resetButtonStates('.button-green-border');
+        resetButtonStates('.button-green-areas');
         button.classList.add('selected');
     });
 });

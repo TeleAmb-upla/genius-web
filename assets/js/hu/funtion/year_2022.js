@@ -1,4 +1,4 @@
-﻿export async function map_2022(map) {
+export async function map_2022(map) {
   // Leer el archivo  
   const response = await fetch(resolveAssetUrl('assets/data/raster/Huella_Urbana/Huella_Urbana_Yearly_2022.tif'));
   const arrayBuffer = await response.arrayBuffer();
@@ -15,7 +15,7 @@
           if (Value ==  2 ) return null; // Transparente si no hay datos
           return '#377eb8'; // Magenta fijo para 2022
       },
-      resolution: 1080
+      resolution: 384
   });
 
   // No agregar la capa al mapa aquí, solo retornarla

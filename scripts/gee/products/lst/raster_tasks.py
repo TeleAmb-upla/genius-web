@@ -1,15 +1,24 @@
-"""Rasters LST (scripts/LST_raster.txt)."""
+"""
+Rasters LST desde Landsat L8+L9.
+
+- Asset anual (LST_Yearly): un compuesto por año → export toAsset.
+- Climatología mensual: directo desde Landsat → export toDrive (sin asset intermedio).
+- Trend raster: desde asset LST_Yearly → toDrive.
+"""
 from __future__ import annotations
 
 import ee
 
-from ... import paths
-from ... import vectors
-from ...drive_export_gate import DriveExportGate
+from ...config import paths
+from ...earth_engine_init import vectors
+from ...drive.drive_export_gate import DriveExportGate
 from ...lib import mk_sen as mk_sen_lib
 from ...lib import yearmonth as ym_lib
-from . import incremental as lst_inc
 
+
+# ---------------------------------------------------------------------------
+# Landsat helpers (cloud mask, thermal conversion)
+# ---------------------------------------------------------------------------
 
 def _cloud_mask(image: ee.Image) -> ee.Image:
     cirrus = 1 << 2
@@ -24,8 +33,8 @@ def _cloud_mask(image: ee.Image) -> ee.Image:
     return image.updateMask(mask)
 
 
-def _cloud_filter(image: ee.Image, gran: ee.FeatureCollection) -> ee.Image:
-    quilpue_area = gran.geometry().area()
+def _cloud_filter(image: ee.Image, geom: ee.Geometry) -> ee.Image:
+    total_area = geom.area()
     qa = image.select("QA_PIXEL")
     land_mask = (
         qa.bitwiseAnd(1 << 3).eq(0)
@@ -35,75 +44,96 @@ def _cloud_filter(image: ee.Image, gran: ee.FeatureCollection) -> ee.Image:
     area_land = land_mask.multiply(ee.Image.pixelArea())
     land_pixels = area_land.reduceRegion(
         reducer=ee.Reducer.sum(),
-        geometry=gran.geometry(),
+        geometry=geom,
         scale=30,
         maxPixels=1e9,
     )
     land_count = ee.Number(land_pixels.get("QA_PIXEL"))
-    cloud_pct = land_count.divide(quilpue_area).multiply(-100).add(100)
+    cloud_pct = land_count.divide(total_area).multiply(-100).add(100)
     return image.set("cloud_percentage", cloud_pct)
 
 
 def _thermal_celsius(image: ee.Image) -> ee.Image:
     thermal = (
-        image.select("ST_B10").multiply(0.00341802).add(149.0).subtract(273.15).rename("ST_B101")
+        image.select("ST_B10")
+        .multiply(0.00341802)
+        .add(149.0)
+        .subtract(273.15)
+        .rename("LST_mean")
     )
     return image.addBands(thermal)
 
 
-def start_lst_ym_asset_tasks() -> list[ee.batch.Task]:
-    gran = vectors.gran_valparaiso()
-    region = gran.geometry()
-    missing = lst_inc.list_missing_lst_yearmonth_months()
-    tasks: list[ee.batch.Task] = []
-    if not missing:
-        print("LST_YearMonth: sin huecos; no se encolan tareas.")
-        return tasks
-    print(f"LST_YearMonth: {len(missing)} meses a generar (solo asset).")
-
+def _build_lst_landsat_collection(
+    region: ee.FeatureCollection,
+) -> ee.ImageCollection:
+    """Merged Landsat 8+9, cloud-filtered, with band ``LST_mean`` in Celsius."""
+    geom = region.geometry()
     l8 = (
         ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
         .select("ST_B10", "QA_PIXEL")
-        .filterBounds(gran)
-        .map(lambda im: _cloud_filter(ee.Image(im), gran))
+        .filterBounds(region)
+        .map(lambda im: _cloud_filter(ee.Image(im), geom))
         .map(_cloud_mask)
     )
     l9 = (
         ee.ImageCollection("LANDSAT/LC09/C02/T1_L2")
         .select("ST_B10", "QA_PIXEL")
-        .filterBounds(gran)
-        .map(lambda im: _cloud_filter(ee.Image(im), gran))
+        .filterBounds(region)
+        .map(lambda im: _cloud_filter(ee.Image(im), geom))
         .map(_cloud_mask)
     )
-    landsat = l8.merge(l9).filter(ee.Filter.lte("cloud_percentage", 30)).map(_thermal_celsius)
+    return (
+        l8.merge(l9)
+        .filter(ee.Filter.lte("cloud_percentage", 30))
+        .map(_thermal_celsius)
+    )
 
-    for y, m in missing:
-        m_start = ee.Date.fromYMD(y, m, 1)
-        m_end = m_start.advance(1, "month")
-        filtered = landsat.select("ST_B101").filterDate(m_start, m_end)
+
+# ---------------------------------------------------------------------------
+# Yearly assets (LST_Yearly)
+# ---------------------------------------------------------------------------
+
+def start_lst_yearly_asset_tasks(
+    missing_years: list[int] | None = None,
+) -> list[ee.batch.Task]:
+    """Export annual medians to the ``LST_Yearly`` asset collection."""
+    region_fc = vectors.lst_landsat_region_fc()
+    region = region_fc.geometry()
+
+    if missing_years is None:
+        missing_years = ym_lib.list_missing_yearly(
+            paths.ASSET_LST_YEARLY, start_year=2013
+        )
+
+    tasks: list[ee.batch.Task] = []
+    if not missing_years:
+        print("LST_Yearly: sin años faltantes; no se encolan tareas de asset.")
+        return tasks
+    print(f"LST_Yearly: {len(missing_years)} año(s) a generar como asset.")
+
+    landsat = _build_lst_landsat_collection(region_fc)
+
+    for y in missing_years:
+        y_start = ee.Date.fromYMD(y, 1, 1)
+        y_end = ee.Date.fromYMD(y + 1, 1, 1)
+        filtered = landsat.select("LST_mean").filterDate(y_start, y_end)
         n = filtered.size().getInfo()
         if n == 0:
-            print(f"  Aviso: sin Landsat LST para {y}-{m:02d}")
+            print(f"  Aviso: sin Landsat LST para {y}")
             continue
-        lst_median = filtered.median().rename("LST_median")
-        perc = filtered.reduce(
-            ee.Reducer.percentile([0, 25, 75, 100], ["p0", "p25", "p75", "p100"])
-        )
-        lst_mean = filtered.mean().rename("LST_mean")
-        lst_sd = filtered.reduce(ee.Reducer.stdDev()).rename("LST_SD")
-        lst_count = filtered.count().rename("LST_count")
-        image_return = (
-            ee.Image([lst_median, perc, lst_mean, lst_count, lst_sd])
-            .clip(gran)
+        annual_median = (
+            filtered.median()
+            .rename("LST_mean")
+            .clip(region)
             .set("year", y)
-            .set("month", m)
-            .set("system:time_start", ee.Date.fromYMD(y, m, 1).millis())
+            .set("system:time_start", y_start.millis())
         )
-        desc = f"LST_YearMonth_{y}_{m:02d}"
+        desc = f"LST_Yearly_{y}"
         t = ee.batch.Export.image.toAsset(
-            image=image_return,
+            image=annual_median,
             description=desc,
-            assetId=f"{paths.ASSET_LST_YEARMONTH}/{desc}",
+            assetId=f"{paths.ASSET_LST_YEARLY}/{desc}",
             scale=30,
             region=region,
             crs="EPSG:4326",
@@ -114,19 +144,25 @@ def start_lst_ym_asset_tasks() -> list[ee.batch.Task]:
     return tasks
 
 
+# ---------------------------------------------------------------------------
+# Monthly climatology rasters (direct Landsat → Drive, no asset)
+# ---------------------------------------------------------------------------
+
 def start_lst_monthly_raster_tasks(
-    ic: ee.ImageCollection | None = None,
     *,
     month_numbers: frozenset[int] | None = None,
     drive_gate: DriveExportGate | None = None,
     bypass_drive_gate: bool = False,
 ) -> list[ee.batch.Task]:
-    ic = ic or vectors.lst_yearmonth_collection()
-    urban = vectors.area_urbana_feature()
-    ugeom = urban.geometry()
+    """12 monthly climatology medians computed on-the-fly from Landsat → Drive."""
+    region_fc = vectors.lst_landsat_region_fc()
+    ugeom = vectors.area_urbana_quilpue_feature().geometry()
+    landsat = _build_lst_landsat_collection(region_fc).select("LST_mean")
     tasks: list[ee.batch.Task] = []
     months_loop = (
-        range(1, 13) if month_numbers is None else sorted(x for x in month_numbers if 1 <= x <= 12)
+        range(1, 13)
+        if month_numbers is None
+        else sorted(x for x in month_numbers if 1 <= x <= 12)
     )
     for m in months_loop:
         ms = f"{m:02d}"
@@ -135,18 +171,12 @@ def start_lst_monthly_raster_tasks(
             drive_gate
             and not bypass_drive_gate
             and drive_gate.should_skip_export(
-                paths.DRIVE_LST_RASTER_MONTHLY,
-                stem,
-                (".tif", ".tiff"),
+                paths.DRIVE_LST_RASTER_MONTHLY, stem, (".tif", ".tiff")
             )
         ):
             continue
-        selected = (
-            ic.select("LST_mean")
-            .filter(ee.Filter.eq("month", m))
-            .median()
-            .rename("LST_mean")
-        )
+        m_filter = ee.Filter.calendarRange(m, m, "month")
+        selected = landsat.filter(m_filter).median().rename("LST_mean")
         t = ee.batch.Export.image.toDrive(
             image=selected.clip(ugeom),
             description=stem,
@@ -162,29 +192,38 @@ def start_lst_monthly_raster_tasks(
     return tasks
 
 
+# ---------------------------------------------------------------------------
+# Yearly raster to Drive (from asset LST_Yearly)
+# ---------------------------------------------------------------------------
+
 def start_lst_yearly_raster_last_year_task(
     ic: ee.ImageCollection | None = None,
     *,
     drive_gate: DriveExportGate | None = None,
     bypass_drive_gate: bool = False,
 ) -> ee.batch.Task | None:
-    ic = ic or vectors.lst_yearmonth_collection()
-    urban = vectors.area_urbana_feature()
-    ugeom = urban.geometry()
-    y = ym_lib.effective_yearly_export_year(ic)
+    """Export last complete year from the yearly asset to Drive."""
+    ic = ic or vectors.lst_yearly_collection()
+    ugeom = vectors.area_urbana_quilpue_feature().geometry()
+    max_y = ym_lib.get_collection_max_year(ic)
+    if max_y is None:
+        return None
+    wall = ym_lib.last_completed_wall_clock_calendar_year()
+    y = min(max_y, wall)
     stem = f"LST_Yearly_{y}"
     if (
         drive_gate
         and not bypass_drive_gate
         and drive_gate.should_skip_export(
-            paths.DRIVE_LST_RASTER_YEARLY,
-            stem,
-            (".tif", ".tiff"),
+            paths.DRIVE_LST_RASTER_YEARLY, stem, (".tif", ".tiff")
         )
     ):
         return None
     selected = (
-        ic.select("LST_mean").filter(ee.Filter.eq("year", y)).median().rename("LST_mean")
+        ic.select("LST_mean")
+        .filter(ee.Filter.eq("year", y))
+        .first()
+        .rename("LST_mean")
     )
     t = ee.batch.Export.image.toDrive(
         image=selected.clip(ugeom),
@@ -200,31 +239,32 @@ def start_lst_yearly_raster_last_year_task(
     return t
 
 
+# ---------------------------------------------------------------------------
+# Trend raster (from asset LST_Yearly → Drive)
+# ---------------------------------------------------------------------------
+
 def start_lst_trend_raster_task(
     ic: ee.ImageCollection | None = None,
     *,
     drive_gate: DriveExportGate | None = None,
     bypass_drive_gate: bool = False,
 ) -> ee.batch.Task | None:
-    ic = ic or vectors.lst_yearmonth_collection()
-    urban = vectors.area_urbana_feature()
-    ugeom = urban.geometry()
+    """Mann-Kendall / Sen trend from yearly asset → Drive."""
+    ic = ic or vectors.lst_yearly_collection()
+    ugeom = vectors.area_urbana_quilpue_feature().geometry()
     stem = "LST_Yearly_Trend"
     if (
         drive_gate
         and not bypass_drive_gate
         and drive_gate.should_skip_export(
-            paths.DRIVE_LST_RASTER_YEARLY,
-            stem,
-            (".tif", ".tiff"),
+            paths.DRIVE_LST_RASTER_YEARLY, stem, (".tif", ".tiff")
         )
     ):
         return None
-    trend = mk_sen_lib.mk_sen_raster_trend_masked_p(
+    trend = mk_sen_lib.mk_sen_raster_trend_masked_p_annual(
         ic,
         ugeom,
-        band_name="LST_mean",
-        first_year_offset=1,
+        "LST_mean",
         p_max=0.025,
     )
     t = ee.batch.Export.image.toDrive(

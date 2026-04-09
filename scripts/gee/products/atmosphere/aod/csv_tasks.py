@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import ee
 
-from .... import paths
-from .... import vectors
-from ....drive_export_gate import DriveExportGate
+from ....config import paths
+from ....earth_engine_init import vectors
+from ....drive.drive_export_gate import DriveExportGate
 
 
 def start_aod_csv_tasks(

@@ -1,0 +1,231 @@
+//==============================================================================================================================
+// SISTEMA AUTOMATIZADO DE CLASIFICACIÓN URBANA Y ANÁLISIS ESPACIAL (2019 - 2026)
+//==============================================================================================================================
+
+//------------------------------------------------------------------------------------------------------------------------------
+// 0. INPUTS Y VARIABLES GLOBALES
+//------------------------------------------------------------------------------------------------------------------------------
+
+var AOI_UPLA       = ee.FeatureCollection('users/plataformagenius/Vectores/Division_Administrativa/Comuna_Quilpue2017');
+var urbanos        = ee.FeatureCollection('users/plataformagenius/Vectores/Division_Administrativa/Distritos_Urbanos');
+var prc            = ee.FeatureCollection('users/plataformagenius/Vectores/Division_Administrativa/PRC_Quilpue');
+var table          = ee.FeatureCollection('users/plataformagenius/Vectores/Division_Administrativa/Comuna_Quilpue2017');
+
+var trainingPoints = ee.FeatureCollection('projects/ee-franciscagutierrez-cmm/assets/training-sample-3857float');
+var validationSample = ee.FeatureCollection('projects/ee-franciscagutierrez-cmm/assets/validacion_30_quilpue');
+
+//------------------------------------------------------------------------------------------------------------------------------
+// 1. FUNCIONES MODULARES PRINCIPALES
+//------------------------------------------------------------------------------------------------------------------------------
+
+function crearStackRadar(startDate, endDate, orbitPass, suffix) {
+  var s1 = ee.ImageCollection('COPERNICUS/S1_GRD')
+    .filterBounds(AOI_UPLA)
+    .filterDate(startDate, endDate)
+    .filter(ee.Filter.eq('instrumentMode', 'IW'))
+    .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))
+    .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH'))
+    .filter(ee.Filter.eq('orbitProperties_pass', orbitPass));
+  
+  var s1_median = s1.median().clip(AOI_UPLA);
+  var vv = s1_median.select('VV').rename('VV_' + suffix);
+  var vh = s1_median.select('VH').rename('VH_' + suffix);
+  var ratio = vv.subtract(vh).rename('Ratio_' + suffix);
+  
+  return vv.addBands(vh).addBands(ratio);
+}
+
+function clasificarAnio(startDate, endDate, cloudThresh, stackD, stackA, modelo) {
+  var col = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+    .filterDate(startDate, endDate)
+    .filterBounds(AOI_UPLA)
+    .filterMetadata('CLOUDY_PIXEL_PERCENTAGE', 'Less_Than', cloudThresh);
+
+  var sentinelAOI = ee.Image(col.median()).clip(AOI_UPLA);
+  var bandasOpticas = sentinelAOI.select(['B1', 'B2','B3', 'B4', 'B5', 'B6', 'B7','B8','B8A','B11','B12']);
+
+  return bandasOpticas.addBands(stackD).addBands(stackA).classify(modelo);
+}
+
+function exportarRaster(imagenClasificada, label) {
+  Export.image.toDrive({
+    image: imagenClasificada, description: 'classifiedImage_' + label + '_Q1',
+    scale: 10, region: AOI_UPLA, maxPixels: 1e13
+  });
+}
+
+function exportarShapefileUrbano(imagenClasificada, label) {
+  var vectorized = imagenClasificada.reduceToVectors({
+    geometry: AOI_UPLA, scale: 10, geometryType: 'polygon',  
+    eightConnected: false, labelProperty: 'classification', maxPixels: 1e8        
+  });
+  Export.table.toDrive({
+    collection: vectorized.filter(ee.Filter.eq('classification', 1)),
+    description: 'classifiedImage_' + label + '_Q1_vectorized', fileFormat: 'SHP'
+  });
+}
+
+//------------------------------------------------------------------------------------------------------------------------------
+// 2. ENTRENAMIENTO DEL MODELO BASE (2018)
+//------------------------------------------------------------------------------------------------------------------------------
+
+var Stack_S1_D_2018 = crearStackRadar('2018-11-01', '2018-12-31', 'DESCENDING', 'D');
+var Stack_S1_A_2018 = crearStackRadar('2018-11-01', '2018-12-31', 'ASCENDING', 'A');
+
+var ColSentinel_2018 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') 
+  .filterDate('2018-11-01', '2018-12-31') 
+  .filterBounds(AOI_UPLA)  
+  .filterMetadata('CLOUDY_PIXEL_PERCENTAGE', 'Less_Than', 30); 
+
+var SentinelAOI_2018 = ee.Image(ColSentinel_2018.median()).clip(AOI_UPLA); 
+var bandasOpticas_2018 = SentinelAOI_2018.select(['B1', 'B2','B3', 'B4', 'B5', 'B6', 'B7','B8','B8A','B11','B12']);
+var stackedImage_2018 = bandasOpticas_2018.addBands(Stack_S1_D_2018).addBands(Stack_S1_A_2018);
+
+var classProperty = 'CID';
+var trainingData = stackedImage_2018.sampleRegions({
+  collection: trainingPoints, properties: [classProperty], scale: 10 
+});
+
+var classifierRF = ee.Classifier.smileRandomForest({
+  numberOfTrees: 40, variablesPerSplit: 6
+}).train({
+  features: trainingData, classProperty: classProperty, inputProperties: stackedImage_2018.bandNames()
+});
+
+//------------------------------------------------------------------------------------------------------------------------------
+// 3. PIPELINE UNIFICADO: CLASIFICACIÓN, VALIDACIÓN, COLECCIÓN Y EXPORTACIÓN (2019 - 2026)
+//------------------------------------------------------------------------------------------------------------------------------
+
+var añosAClasificar = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+var listaImagenesFinales = []; 
+
+añosAClasificar.forEach(function(year) {
+  var startDate = year + '-01-01';
+  var endDateOptico = year + '-03-31';
+  var endDateRadar = (year === 2022) ? year + '-06-30' : year + '-03-31'; // Operador ternario para la excepción 2022
+  
+  var stackD = crearStackRadar(startDate, endDateRadar, 'DESCENDING', 'D');
+  var stackA = crearStackRadar(startDate, endDateRadar, 'ASCENDING', 'A');
+  var clasificacion = clasificarAnio(startDate, endDateOptico, 30, stackD, stackA, classifierRF);
+  
+  // -- VALIDACIÓN Y EXTRACCIÓN DE KAPPA (Una sola vez por año) --
+  var validationClassified = validationSample.map(function(feature) {
+    var classifiedValue = clasificacion.reduceRegion({
+      reducer: ee.Reducer.first(), geometry: feature.geometry(), scale: 10
+    }); 
+    return feature.set({ 'predictedClass': classifiedValue.get('classification') });
+  });
+
+  var matrizConfusion = validationClassified.errorMatrix('CID', 'predictedClass');
+  var kappaValue = matrizConfusion.kappa();
+  
+  print('--- Resultados ' + year + ' ---');
+  print('Matriz de Confusión:', matrizConfusion);
+  print('Precisión Global:', matrizConfusion.accuracy());
+  print('Kappa:', kappaValue);
+
+  // -- ASIGNACIÓN DE PROPIEDADES A LA IMAGEN --
+  clasificacion = clasificacion.set({
+    'year': year,
+    'kappa': kappaValue,
+    'system:index': year.toString()
+  });
+  
+  listaImagenesFinales.push(clasificacion);
+
+  // -- EXPORTACIONES Y VISUALIZACIÓN --
+  exportarRaster(clasificacion, year.toString());
+  exportarShapefileUrbano(clasificacion, year.toString());
+  Map.addLayer(clasificacion, {min: 0, max: 2, palette: ['white', 'red', 'green']}, 'Clasificación ' + year, false);
+});
+
+// Crear la colección final
+var Huella_Urbana_Yearly = ee.ImageCollection.fromImages(listaImagenesFinales);
+
+//------------------------------------------------------------------------------------------------------------------------------
+// 4. CÁLCULO DE ÁREA DE HUELLA URBANA (HECTÁREAS)
+//------------------------------------------------------------------------------------------------------------------------------
+
+Map.addLayer(urbanos, {}, 'Barrios Quilpue', false);
+Map.addLayer(prc, {}, 'PRC Quilpue', false);
+Map.addLayer(table, {}, 'Quilpue', false);
+Map.centerObject(urbanos, 12);
+
+// Extraer clase urbana y calcular área
+var colHU = Huella_Urbana_Yearly.map(function(image) {
+  var masked = image.updateMask(image.eq(1)); // Solo clase 1 (Urbano)
+  var pixelArea = ee.Image.pixelArea().divide(10000); // Hectáreas
+  return image.addBands(pixelArea.updateMask(masked).rename('pixel_area'));
+});
+
+var paletas = ['red', 'green', 'brown', 'blue', 'black', 'orange', 'purple', 'cyan'];
+añosAClasificar.forEach(function(año, index) {
+  var layerAnual = colHU.filter(ee.Filter.eq('year', año)).select('pixel_area');
+  Map.addLayer(layerAnual, {palette: paletas[index]}, 'Huella Area ' + año, false);
+});
+
+//------------------------------------------------------------------------------------------------------------------------------
+// 5. ANÁLISIS DENTRO Y FUERA DEL PRC (OPTIMIZADO)
+//------------------------------------------------------------------------------------------------------------------------------
+
+var maskPRC_dentro = ee.Image.constant(1).clip(prc).mask();
+var maskPRC_fuera = maskPRC_dentro.not();
+
+var HU_PRC = colHU.map(function(image) {
+  var area_dentro = image.select('pixel_area').updateMask(maskPRC_dentro).rename('area_dentroPRC');
+  var area_fuera = image.select('pixel_area').updateMask(maskPRC_fuera).rename('area_fueraPRC');
+  return image.addBands([area_dentro, area_fuera]); 
+});
+
+var AREAS_PRC = HU_PRC.map(function(image) {
+  var stats = image.select(['area_dentroPRC', 'area_fueraPRC']).reduceRegions({
+    collection: table, reducer: ee.Reducer.sum(), scale: 10
+  });
+  
+  return stats.map(function(f) {
+    return f.set({
+      'Year': image.get('year'),
+      'Precision_Kappa': image.get('kappa'),
+      'Area_DentroPRC': ee.Number(f.get('area_dentroPRC')).format('%.2f'),
+      'Area_FueraPRC': ee.Number(f.get('area_fueraPRC')).format('%.2f')
+    });
+  });
+}).flatten();
+
+Export.table.toDrive({
+  collection: AREAS_PRC,
+  selectors: ['Year', 'Area_DentroPRC', 'Area_FueraPRC', 'Precision_Kappa'],
+  description: 'Areas_Huella_Urbana_Yearly_PRC', folder: 'Huella_Urbana_Yearly', fileFormat: 'CSV'
+});
+
+//------------------------------------------------------------------------------------------------------------------------------
+// 6. EXPORTACIÓN TOTAL DE HECTÁREAS Y GRÁFICO 
+//------------------------------------------------------------------------------------------------------------------------------
+
+var triplets = colHU.map(function(image) {
+  var stats = image.select('pixel_area').reduceRegion({
+    reducer: ee.Reducer.sum(), geometry: urbanos.geometry(), scale: 10, maxPixels: 1e10
+  });
+  return ee.Feature(null, {
+    'Year': image.get('year'),
+    'Hectareas': ee.Number(stats.get('pixel_area')).format('%.2f')
+  });
+});
+
+Export.table.toDrive({
+  collection: triplets, selectors: ['Year','Hectareas'],
+  description: 'Huella_Urbana_Anual_Total', folder: 'Huella_Urbana_Yearly', fileFormat: 'CSV'
+});
+
+var chart = ui.Chart.image.series({
+  imageCollection: HU_PRC.select('area_fueraPRC'),
+  region: urbanos, reducer: ee.Reducer.sum(), scale: 10, xProperty: 'year'
+})
+.setSeriesNames(['Hectáreas fuera del PRC'])
+.setOptions({
+  title: 'Crecimiento Urbano fuera del PRC por año (2019 - 2026)',
+  hAxis: {title: 'Año', titleTextStyle: {italic: false, bold: true}},
+  vAxis: {title: 'Área (ha)', titleTextStyle: {italic: false, bold: true}},
+  lineWidth: 5, colors: ['e37d05'], curveType: 'function'
+});
+print(chart);

@@ -51,7 +51,7 @@ export async function map_trend(map) {
             }
             return valueToSTColor(Value); // Aplicar la función de colores según el valor
         },
-        resolution: 1080 // Resolución de la capa
+        resolution: 384 // Resolución de la capa
 
     });
 

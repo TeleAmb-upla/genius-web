@@ -54,7 +54,7 @@ function removeSource(map, sourceId) {
 /// Función para actualizar la capa del mapa con datos anuales
 export async function updateMapLayerYear_isla(map, sourceId, layerId, year) {
     try {
-        const url = `/assets/data/geojson/LST/LST_SUHI_Yearly/LST_SUHI_Yearly_${year}.geojson`;
+        const url = resolveAssetUrl(`assets/data/geojson/LST/LST_SUHI_Yearly/LST_SUHI_Yearly_${year}.geojson`);
         const data = await preprocessGeoJSON(url, 'yearly');
         if (!data) return;
 

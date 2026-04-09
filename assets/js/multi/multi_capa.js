@@ -43,11 +43,13 @@ export async function multi_capa() {
     currentLayers["Plaza Vieja Dia Termico"] = await m_tem(currentMap);
     currentLayers["Plaza Vieja Noche"] = await m_noche(currentMap);
 
-    const baseLayers = {
-        "Plaza Vieja día (RGB)": currentLayers["Plaza Vieja Dia RGB"],
-        "Plaza Vieja día (térmico)": currentLayers["Plaza Vieja Dia Termico"],
-        "Plaza Vieja noche": currentLayers["Plaza Vieja Noche"]
-    };
+    const baseLayers = Object.fromEntries(
+        Object.entries({
+            "Plaza Vieja día (RGB)": currentLayers["Plaza Vieja Dia RGB"],
+            "Plaza Vieja día (térmico)": currentLayers["Plaza Vieja Dia Termico"],
+            "Plaza Vieja noche": currentLayers["Plaza Vieja Noche"]
+        }).filter(([, layer]) => Boolean(layer))
+    );
 
     const infCriticaData = await loadinf_critica(currentMap);
     const overlayOnly = {};
@@ -76,7 +78,10 @@ export async function multi_capa() {
         currentMap.setView([-33.04752000, -71.44249000], 12.6);
     }
 
-    currentMap.addLayer(currentLayers["Plaza Vieja Dia RGB"]);
+    const defaultLayerName = Object.keys(baseLayers)[0];
+    if (defaultLayerName) {
+        currentMap.addLayer(baseLayers[defaultLayerName]);
+    }
     addCenteredTitle_rgb(currentMap);
 
     const layerControl = L.control.layers(baseLayers, overlayOnly).addTo(currentMap);

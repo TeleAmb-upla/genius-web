@@ -6,8 +6,8 @@ from pathlib import Path
 
 import ee
 
-from ... import vectors
-from ...drive_export_gate import DriveExportGate
+from ...earth_engine_init import vectors
+from ...drive.drive_export_gate import DriveExportGate
 from ...lib import incremental_plan as incplan
 from ...lib import mk_sen as mk_sen_lib
 from ...lib import state as state_lib
@@ -122,19 +122,19 @@ def start_ym_asset_tasks(spec: PollutantSpec) -> list[ee.batch.Task]:
         if n == 0:
             print(f"  Aviso: sin imágenes S5P {spec.key.upper()} para {y}-{m:02d}")
             continue
-        med = selected.select(spec.sensor_band).median().rename(spec.asset_median_band)
-        perc = selected.reduce(
+        # Una sola banda química: la colección L3 también trae cloud_fraction; si no se
+        # selecciona, mean/sd/count devuelven 2 bandas y .rename("…_mean") falla en GEE.
+        sel = selected.select(spec.sensor_band)
+        med = sel.median().rename(spec.asset_median_band)
+        perc = sel.reduce(
             ee.Reducer.percentile([0, 25, 75, 100], ["p0", "p25", "p75", "p100"])
         )
         pfx = spec.asset_median_band.replace("_median", "")
-        mean = selected.mean().rename(f"{pfx}_mean")
-        sd = selected.reduce(ee.Reducer.stdDev()).rename(f"{pfx}_SD")
-        cnt = selected.count().rename(f"{pfx}_count")
+        mean = sel.mean().rename(f"{pfx}_mean")
+        sd = sel.reduce(ee.Reducer.stdDev()).rename(f"{pfx}_SD")
+        cnt = sel.count().rename(f"{pfx}_count")
         if spec.key == "no2":
-            un = cnt.unmask(0).rename("NO2_nodata")
-            join_c = ee.Image.cat([cnt, un]).reduce(ee.Reducer.max()).rename(
-                "NO2_Count_Join"
-            )
+            join_c = cnt.unmask(0).rename("NO2_Count_Join")
         else:
             join_c = cnt.unmask(0).rename("SO2_Count_Join")
         img_return = ee.Image.cat([med, perc, mean, sd, join_c])

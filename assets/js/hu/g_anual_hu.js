@@ -38,7 +38,7 @@ export async function g_a_hu() {
         .attr("y", innerHeight + 35)
         .style("font-family", "Arial")
         .style("font-size", "12px")
-        .text("Hectáreas");
+        .text("Hectáreas (ha)");
 
     svg.append("text")
         .attr("text-anchor", "end")
@@ -60,6 +60,9 @@ export async function g_a_hu() {
 
     // Define color mapping for each year
     const colorMapping = {
+        2026: '#999999',
+        2025: '#f781bf',
+        2024: '#a65628',
         2023: '#e41a1c', 
         2022: '#377eb8',
         2021: '#4daf4a',
@@ -69,7 +72,7 @@ export async function g_a_hu() {
 
     // Add X axis
     var x = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d.Hectareas)])
+        .domain([800, d3.max(data, d => d.Hectareas) * 1.02])
         .range([0, innerWidth]);
 
     // Add Y axis
@@ -103,7 +106,7 @@ d3.select(this)
 
 var mousemove = function (event, d) {
 tooltip
-    .html("ha: " + d.Hectareas.toFixed(0) + "<br>Año: " + d.Year)
+    .html("Superficie: " + d.Hectareas.toFixed(0) + " ha<br>Año: " + d.Year)
     .style("left", (event.pageX + 15) + "px")
     .style("top", (event.pageY - 15) + "px");
 }

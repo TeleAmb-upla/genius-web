@@ -21,6 +21,18 @@ def images_by_year_median(
     first_year = ee.Number(ic.sort("year").first().get("year")).add(first_year_offset)
     last_year = ee.Number(last_calendar_year)
     years = ee.List.sequence(first_year, last_year)
+    available_years = (
+        ee.List(ic.aggregate_array("year"))
+        .map(lambda y: ee.Number(y).toInt())
+        .distinct()
+        .sort()
+    )
+    target_years = available_years.filter(
+        ee.Filter.And(
+            ee.Filter.gte("item", first_year),
+            ee.Filter.lte("item", last_year),
+        )
+    )
 
     def one_year(y):
         y = ee.Number(y)
@@ -33,7 +45,7 @@ def images_by_year_median(
             .set("system:time_start", millis)
         )
 
-    return ee.ImageCollection.fromImages(years.map(one_year))
+    return ee.ImageCollection.fromImages(target_years.map(one_year))
 
 
 def _group_size_func(array: ee.Image) -> ee.Image:
@@ -129,7 +141,10 @@ def mk_sen_slope_and_p_value_annual(
     band_name: str,
 ) -> tuple[ee.Image, ee.Image]:
     """Misma lógica zonal que ``mk_sen_slope_and_p_value`` pero entrada ya anual."""
-    return _mk_sen_slope_p_from_band_only(annual_ic.select(band_name))
+    band_only = annual_ic.filter(
+        ee.Filter.listContains("system:band_names", band_name)
+    ).select(band_name)
+    return _mk_sen_slope_p_from_band_only(band_only)
 
 
 def mk_sen_slope_and_p_value(
@@ -310,7 +325,9 @@ def mk_sen_raster_trend_masked_p_annual(
     p_max: float = 0.025,
 ) -> ee.Image:
     """Igual que ``mk_sen_raster_trend_masked_p`` pero la colección ya es anual."""
-    band_only = annual_ic.select(band_name).map(lambda img: ee.Image(img).clip(region_geom))
+    band_only = annual_ic.filter(
+        ee.Filter.listContains("system:band_names", band_name)
+    ).select(band_name).map(lambda img: ee.Image(img).clip(region_geom))
     sens, pval = _mk_sen_slope_p_from_band_only(band_only)
     return (
         sens.updateMask(pval.lte(p_max))

@@ -2,116 +2,104 @@
 import { loadinf_critica } from '../inf_critica_leaflet.js';
 import { attachMapOpacityPanel } from '../slider_opacity.js';
 
-
-
-// Variables globales para almacenar el estado del mapa, las capas y el título
-// Variables globales para almacenar el estado del mapa, las capas y el título
 let currentMap = null;
-let currentLayer = null;
-let mapTitleDiv = null;
-let geojsonLayer = null; // Mover la declaración de geojsonLayer al ámbito global
-let rasterLayer = null;  // Variable para la capa raster si existe
-let infCriticaLayer = null; // Variable para la capa de infraestructura crítica
+let luminosityOverlay = null;
+let droneOverlay = null;
+let compareControl = null;
 
-let currentLayers = {}; // Objeto para almacenar las capas cargadas
+async function loadWebpOverlay(imagePath, boundsPath) {
+    try {
+        const boundsResp = await fetch(resolveAssetUrl(boundsPath));
+        if (!boundsResp.ok) return null;
+        const imageResp = await fetch(resolveAssetUrl(imagePath), { method: 'HEAD' });
+        if (!imageResp.ok) return null;
+        const boundsData = await boundsResp.json();
+        return L.imageOverlay(resolveAssetUrl(imagePath), boundsData.bounds, { opacity: 1 });
+    } catch (error) {
+        console.warn(`No se pudo cargar ${imagePath}:`, error);
+        return null;
+    }
+}
+
+async function loadTifOverlay(tifPath, colorFn) {
+    try {
+        const resp = await fetch(resolveAssetUrl(tifPath), { method: 'HEAD' });
+        if (!resp.ok) return null;
+        const tifResp = await fetch(resolveAssetUrl(tifPath));
+        const arrayBuffer = await tifResp.arrayBuffer();
+        const georaster = await parseGeoraster(arrayBuffer);
+        return new GeoRasterLayer({
+            georaster,
+            opacity: 1,
+            pixelValuesToColorFn: colorFn || function (values) {
+                if (!values || values[0] === undefined || values[0] === null) return null;
+                const r = values[0], g = values[1] || 0, b = values[2] || 0;
+                return `rgb(${r},${g},${b})`;
+            },
+            resolution: 256,
+        });
+    } catch (error) {
+        console.warn(`No se pudo cargar TIF ${tifPath}:`, error);
+        return null;
+    }
+}
+
+const CLASS_COLOR_FN = function (values) {
+    const v = values[0];
+    if (v === undefined || v === null || isNaN(v)) return null;
+    if (v === 3) return 'yellow';
+    if (v === 2) return 'red';
+    if (v === 1) return '#000080';
+    return null;
+};
 
 export async function map_lum() {
-    // Elimina el mapa si ya está inicializado
     if (currentMap) {
         currentMap.remove();
         currentMap = null;
-        currentLayers = {};  // Restablecer las capas cargadas
     }
 
-    // Crear el mapa
     currentMap = L.map("p46").setView([-33.04752000, -71.44249000], 12.6);
 
-    // Agregar el fondo del mapa
-    const CartoDB_Positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
         minZoom: 0,
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
     }).addTo(currentMap);
 
-    // Agregar la escala
     L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
-
-    // Llamar a la función para agregar el título centrado
     addCenteredTitle(currentMap);
 
-    // Cargar la capa GeoJSON de Luminosidad (siempre visible; infraestructura es overlay opcional)
-    try {
-        const response = await fetch(resolveAssetUrl('assets/data/vectores/Quilpue_Class_Smoothed.geojson'));
-        const data = await response.json();
+    luminosityOverlay =
+        await loadWebpOverlay(
+            'assets/data/vectores/Quilpue_Class_Smoothed.webp',
+            'assets/data/vectores/illumination_class_bounds.json'
+        ) ||
+        await loadTifOverlay(
+            'assets/data/raster/Iluminacion/ILU_CLASS_RESAMPLE_1m.tif',
+            CLASS_COLOR_FN
+        );
 
-        const luminosidadLabels = {
-            1: 'Transparente',
-            2: 'Baja',
-            3: 'Media',
-            4: 'Alta'
-        };
+    droneOverlay =
+        await loadWebpOverlay(
+            'assets/data/raster/Iluminacion/M3T_RGB_QUI_2024_07.webp',
+            'assets/data/raster/Iluminacion/illumination_bounds.json'
+        ) ||
+        await loadTifOverlay('assets/data/raster/Iluminacion/M3T_RGB_QUI_2024_07.tif');
 
-        geojsonLayer = L.geoJSON(data, {
-            style: function (feature) {
-                let gridcode = feature.properties.gridcode;
-                let fillColor;
-                let fillOpacity = 1;
-
-                switch (gridcode) {
-                    case 1:
-                        fillColor = 'transparent';
-                        fillOpacity = 0;
-                        break;
-                    case 2:
-                        fillColor = '#000080';
-                        break;
-                    case 3:
-                        fillColor = 'red';
-                        break;
-                    case 4:
-                        fillColor = 'yellow';
-                        break;
-                    default:
-                        fillColor = 'gray';
-                }
-
-                return {
-                    color: 'transparent',
-                    weight: 0,
-                    fillColor: fillColor,
-                    fillOpacity: fillOpacity
-                };
-            },
-            onEachFeature: function (feature, layer) {
-                if (feature.properties.gridcode !== 1) {
-                    layer.on('click', function (e) {
-                        const gridcode = feature.properties.gridcode;
-                        const luminosidad = luminosidadLabels[gridcode] || 'Desconocida';
-
-                        L.popup()
-                            .setLatLng(e.latlng)
-                            .setContent(`<strong>Luminosidad:</strong> ${luminosidad}`)
-                            .openOn(currentMap);
-                    });
-
-                    layer.on('mouseover', function (e) {
-                        e.target.setStyle({
-                            weight: 2,
-                            color: '#666',
-                            fillOpacity: e.target.options.fillOpacity
-                        });
-                        currentMap.getContainer().style.cursor = 'pointer';
-                    });
-
-                    layer.on('mouseout', function (e) {
-                        geojsonLayer.resetStyle(e.target);
-                        currentMap.getContainer().style.cursor = '';
-                    });
-                }
-            }
-        }).addTo(currentMap);
-    } catch (error) {
-        console.error('Error al cargar el archivo GeoJSON:', error);
+    if (luminosityOverlay && droneOverlay) {
+        luminosityOverlay.addTo(currentMap);
+        droneOverlay.addTo(currentMap);
+        compareControl = L.control.sideBySide(luminosityOverlay, droneOverlay).addTo(currentMap);
+        if (luminosityOverlay.getBounds) currentMap.fitBounds(luminosityOverlay.getBounds());
+    } else if (luminosityOverlay) {
+        luminosityOverlay.addTo(currentMap);
+        if (luminosityOverlay.getBounds) currentMap.fitBounds(luminosityOverlay.getBounds());
+    } else if (droneOverlay) {
+        droneOverlay.addTo(currentMap);
+        if (droneOverlay.getBounds) currentMap.fitBounds(droneOverlay.getBounds());
+    } else {
+        console.error('No se encontraron overlays de iluminación listos para el visor.');
     }
 
     const infCriticaData = await loadinf_critica(currentMap);
@@ -126,55 +114,44 @@ export async function map_lum() {
     attachMapOpacityPanel(
         currentMap.getContainer(),
         (opacity) => {
-            if (geojsonLayer) {
-                geojsonLayer.setStyle({ fillOpacity: opacity });
-            }
+            if (luminosityOverlay) luminosityOverlay.setOpacity(opacity);
+            if (droneOverlay) droneOverlay.setOpacity(opacity);
         },
         { leafletMap: currentMap },
     );
 
-    // Agregar la leyenda al mapa
-    function addLegend() {
-        // Obtener el contenedor del mapa
-        const mapContainer = currentMap.getContainer();
+    const mapContainer = currentMap.getContainer();
+    const legendContainer = document.createElement('div');
+    legendContainer.className = 'map-legend-panel info legend';
 
-        // Crear el contenedor de la leyenda
-        const legendContainer = document.createElement('div');
-        legendContainer.className = 'map-legend-panel info legend';
+    const legendTitle = document.createElement('div');
+    legendTitle.className = 'map-legend-panel__title';
+    legendTitle.innerText = droneOverlay && luminosityOverlay ? 'Clasificación y dron' : 'Luminosidad';
+    legendContainer.appendChild(legendTitle);
 
-        const legendTitle = document.createElement('div');
-        legendTitle.className = 'map-legend-panel__title';
-        legendTitle.innerText = 'Luminosidad';
-        legendContainer.appendChild(legendTitle);
+    const categories = [
+        { label: 'Alta', color: 'yellow' },
+        { label: 'Media', color: 'red' },
+        { label: 'Baja', color: '#000080' }
+    ];
 
-        const categories = [
-            { label: 'Alta', color: 'yellow' },
-            { label: 'Media', color: 'red' },
-            { label: 'Baja', color: '#000080' }
-        ];
+    categories.forEach(category => {
+        const item = document.createElement('div');
+        item.className = 'map-legend-panel__row';
 
-        categories.forEach(category => {
-            const item = document.createElement('div');
-            item.className = 'map-legend-panel__row';
+        const colorBox = document.createElement('span');
+        colorBox.className = 'map-legend-panel__swatch';
+        colorBox.style.opacity = '0.7';
+        colorBox.style.backgroundColor = category.color;
 
-            const colorBox = document.createElement('span');
-            colorBox.className = 'map-legend-panel__swatch';
-            colorBox.style.opacity = '0.7';
-            colorBox.style.backgroundColor = category.color;
+        const label = document.createElement('span');
+        label.className = 'map-legend-panel__label';
+        label.innerText = category.label;
 
-            const label = document.createElement('span');
-            label.className = 'map-legend-panel__label';
-            label.innerText = category.label;
+        item.appendChild(colorBox);
+        item.appendChild(label);
+        legendContainer.appendChild(item);
+    });
 
-            item.appendChild(colorBox);
-            item.appendChild(label);
-
-            legendContainer.appendChild(item);
-        });
-
-        // Agregar la leyenda al contenedor del mapa
-        mapContainer.appendChild(legendContainer);
-    }
-
-    addLegend();
+    mapContainer.appendChild(legendContainer);
 }

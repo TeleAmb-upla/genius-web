@@ -5,13 +5,13 @@ const endYear = 2024;
 const islaYearlyFiles_json = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: `/assets/data/geojson/LST/LST_SUHI_Yearly/LST_SUHI_Yearly_${year}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/LST/LST_SUHI_Yearly/LST_SUHI_Yearly_${year}.geojson`),
         name: `Isla_de_calor_${year}.geojson`
     };
 });
 
 const textFiles = [
-    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+    { url: resolveAssetUrl('assets/js/indicaciones.txt'), name: 'indicaciones.txt' },
 ];
 
 

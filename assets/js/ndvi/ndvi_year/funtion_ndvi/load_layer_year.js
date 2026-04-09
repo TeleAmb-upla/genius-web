@@ -6,6 +6,8 @@ import { map_ndvi_2021 } from '../js_ndvi_anual/ndvi_2021.js';
 import { map_ndvi_2022 } from '../js_ndvi_anual/ndvi_2022.js';
 import { map_ndvi_2023 } from '../js_ndvi_anual/ndvi_2023.js';
 import { map_ndvi_2024 } from '../js_ndvi_anual/ndvi_2024.js';
+import { map_ndvi_2025 } from '../js_ndvi_anual/ndvi_2025.js';
+import { getProductYears } from '../../../map_data_catalog.js';
 
 const ndviLoaders = [
     map_ndvi_2017,
@@ -15,11 +17,12 @@ const ndviLoaders = [
     map_ndvi_2021,
     map_ndvi_2022,
     map_ndvi_2023,
-    map_ndvi_2024
+    map_ndvi_2024,
+    map_ndvi_2025
 ];
 
 export async function loadNdviLayersyear(map) {
-    const years = [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024];
+    const years = getProductYears('ndvi');
     const ndviLayers = {};
     const georasters = {};
 

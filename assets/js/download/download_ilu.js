@@ -1,27 +1,15 @@
-﻿// Definir las rutas de archivos TIF específicos de NDVI
-const json = [
-    { url: '/assets/data/vectores/3M_Class_Vector.geojson', name: 'iluminacion.geojson' },
-
+﻿const iluminacionFiles = [
+    { url: resolveAssetUrl('assets/data/vectores/Quilpue_Class_Smoothed.webp'), name: 'iluminacion_clasificacion.webp' },
+    { url: resolveAssetUrl('assets/js/indicaciones.txt'), name: 'indicaciones.txt' },
 ];
 
-const textFiles = [
-    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
-];
-
-// Combina todos los archivos de hu en un solo array
-const alliluFiles = [...json, ...textFiles];
-
-
-// Función para crear y descargar un archivo ZIP con todos los archivos TIF de NDVI
 export async function createAndDownloadiluZip() {
     const zip = new JSZip();
 
-    // Agregar cada archivo TIF al ZIP
-    for (const file of alliluFiles) {
+    for (const file of iluminacionFiles) {
         try {
             const response = await fetch(file.url);
             if (!response.ok) throw new Error(`Error al cargar ${file.url}`);
-            
             const data = await response.blob();
             zip.file(file.name, data);
         } catch (error) {
@@ -29,13 +17,11 @@ export async function createAndDownloadiluZip() {
         }
     }
 
-    // Generar el archivo ZIP y crear un enlace de descarga
     zip.generateAsync({ type: 'blob' }).then(content => {
         const link = document.createElement('a');
         link.href = URL.createObjectURL(content);
         link.download = 'Iluminacion.zip';
         link.click();
-
         URL.revokeObjectURL(link.href);
     }).catch(error => console.error('Error al generar el ZIP:', error));
 }

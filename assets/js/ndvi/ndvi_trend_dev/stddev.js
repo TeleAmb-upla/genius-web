@@ -1,4 +1,4 @@
-﻿function valueToDevColor(value) {
+function valueToDevColor(value) {
   
 const domain = [0, 0.22]; // mínimo y máximo
 // Paleta de colores invertida que representa los diferentes valores de NDVI
@@ -24,7 +24,7 @@ return range[index];
     export async function map_stdev(map) {
         try {
             // Leer el archivo  
-            const response = await fetch(resolveAssetUrl('assets/data/raster/NDVI/NDVI_SD/NDVI_Monthly_SD2023_2025.tif'));
+            const response = await fetch(resolveAssetUrl('assets/data/raster/NDVI/NDVI_SD/NDVI_Monthly_StdDev_2024_2026.tif'));
             const arrayBuffer = await response.arrayBuffer();
     
             // Parsear el georaster
@@ -40,7 +40,7 @@ return range[index];
                     }
                     return valueToDevColor(Value);
                 },
-                resolution: 1080
+                resolution: 384
             });
     
             // Retornar un objeto con la capa y el georaster

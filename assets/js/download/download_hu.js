@@ -1,22 +1,22 @@
 ﻿// Definir las rutas de archivos TIF específicos de hu
 
 
-const huYearlyFiles_tif = Array.from({ length: 6 }, (_, i) => {
+const huYearlyFiles_tif = Array.from({ length: 9 }, (_, i) => {
     const year = 2018 + i;
     return {
-        url: `/assets/data/raster/Huella_Urbana/Huella_Urbana_Yearly_${year}.tif`,
+        url: resolveAssetUrl(`assets/data/raster/Huella_Urbana/Huella_Urbana_Yearly_${year}.tif`),
         name: `Huella_Urbana_Yearly_${year}.tif`
     };
 });
 
 const hucvsFiles_tif = [
-    { url: '/assets/data/csv/Huella_Urbana_Anual.csv', name: 'Huella_Urbana_Anual.csv' },
-    { url: '/assets/data/csv/Areas_Huella_Urbana_Yearly.csv', name: 'Areas_Huella_Urbana.csv' }
+    { url: resolveAssetUrl('assets/data/csv/Huella_Urbana_Anual.csv'), name: 'Huella_Urbana_Anual.csv' },
+    { url: resolveAssetUrl('assets/data/csv/Areas_Huella_Urbana_Yearly.csv'), name: 'Areas_Huella_Urbana.csv' }
 ];
 
 
 const textFiles = [
-    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+    { url: resolveAssetUrl('assets/js/indicaciones.txt'), name: 'indicaciones.txt' },
 ];
 
 

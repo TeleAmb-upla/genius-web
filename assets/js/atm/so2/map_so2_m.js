@@ -7,8 +7,11 @@ import {map_trend, createTrendLegend} from './so2_z_m/trend_m.js';
 import{ loadInfCriticaMapLibre } from '../inf_critica_map_libre.js';
 import { attachMapOpacityPanel } from '../../slider_opacity.js';
 import { applyOpacityToVectorTrendLayers } from '../../maplibre_opacity_util.js';
+import { getDefaultYearPair } from '../../map_data_catalog.js';
+import { setCompareSingleMapMode } from '../../map_compare_mode.js';
 
 export async function map_so2_m() {
+    const [defaultBeforeYear, defaultAfterYear] = getDefaultYearPair('so2');
 
     const container = document.getElementById('p43');
     container.innerHTML = `
@@ -173,18 +176,39 @@ function removeAllLayers(map) {
       }
   
       // Mostrar/ocultar los selectores y leyendas según el modo
+      setCompareSingleMapMode({
+          container,
+          beforeSelector: '#before_m_so2',
+          afterSelector: '#after_m_so2',
+          beforeMap,
+          afterMap,
+          enabled: mode === 'trend',
+      });
+
+      if (window.compareInstance && window.compareInstance.slider) {
+          window.compareInstance.slider.style.display = mode === 'trend' ? 'none' : 'block';
+      }
+
       if (mode === 'yearly') {
           yearSelectors.style.display = 'block';
           monthSelectors.style.display = 'none';
           yearLegend.style.display = 'block';
           monthLegend.style.display = 'none';
           trendLegend.style.display = 'none';
+          beforeYearSelector.value = defaultBeforeYear;
+          afterYearSelector.value = defaultAfterYear;
+          await updateMapLayerYear(beforeMap, 'vectorSourceBeforeYear', 'vectorLayerBeforeYear', defaultBeforeYear);
+          await updateMapLayerYear(afterMap, 'vectorSourceAfterYear', 'vectorLayerAfterYear', defaultAfterYear);
       } else if (mode === 'monthly') {
           yearSelectors.style.display = 'none';
           monthSelectors.style.display = 'block';
           yearLegend.style.display = 'none';
           monthLegend.style.display = 'block';
           trendLegend.style.display = 'none';
+          beforeMonthSelector.value = '01';
+          afterMonthSelector.value = '12';
+          await updateMapLayerMonth(beforeMap, 'vectorSourceBeforeMonth', 'vectorLayerBeforeMonth', '01');
+          await updateMapLayerMonth(afterMap, 'vectorSourceAfterMonth', 'vectorLayerAfterMonth', '12');
       } else if (mode === 'trend') {
           // Cargar capa de tendencia en ambos mapas
           await map_trend(beforeMap);
@@ -221,11 +245,6 @@ function removeAllLayers(map) {
           }
       }
   
-      // Reiniciar los selectores para evitar selecciones inconsistentes
-      beforeYearSelector.value = '';
-      afterYearSelector.value = '';
-      beforeMonthSelector.value = '';
-      afterMonthSelector.value = '';
   }
    
      const controls = new LayersControl(setMode);
@@ -237,6 +256,9 @@ function removeAllLayers(map) {
        if (mapsLoaded === 2) {
          // Ambos mapas han cargado, podemos inicializar el slider de opacidad
          createOpacitySlider();
+        const yearlyRadio = controls._container.querySelector('input[type="radio"]');
+        if (yearlyRadio) yearlyRadio.checked = true;
+        setMode('yearly');
        }
      }
    

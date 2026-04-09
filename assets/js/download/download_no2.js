@@ -5,7 +5,7 @@ const endYear = 2024;
 const no2MonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
     return {
-        url: `/assets/data/raster/NO2/NO2_Monthly/NO2_Monthly_${month}.tif`,
+        url: resolveAssetUrl(`assets/data/raster/NO2/NO2_Monthly/NO2_Monthly_${month}.tif`),
         name: `NO2_Monthly_${month}.tif`
     };
 });
@@ -13,15 +13,15 @@ const no2MonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
 const no2YearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: `/assets/data/raster/NO2/NO2_Yearly/NO2_Yearly_${year}.tif`,
+        url: resolveAssetUrl(`assets/data/raster/NO2/NO2_Yearly/NO2_Yearly_${year}.tif`),
         name: `NO2_Yearly_${year}.tif`
     };
 });
 
 const no2TrendFiles_tif = [
-    { url: '/assets/data/raster/NO2/NO2_Trend/NO2_Yearly_Trend.tif', name: 'NO2_Trend.tif' },
-    { url: '/assets/data/csv/NO2_Anual_Comunal.csv', name: 'NO2_Monthly.csv' },
-    { url: '/assets/data/csv/NO2_Mensual_Comunal.csv', name: 'NO2_Anual.csv' }
+    { url: resolveAssetUrl('assets/data/raster/NO2/NO2_Trend/NO2_Yearly_Trend.tif'), name: 'NO2_Trend.tif' },
+    { url: resolveAssetUrl('assets/data/csv/NO2_Anual_Comunal.csv'), name: 'NO2_Anual.csv' },
+    { url: resolveAssetUrl('assets/data/csv/NO2_Mensual_Comunal.csv'), name: 'NO2_Monthly.csv' }
  ];
 
 //////////////////////// BARRIO
@@ -29,7 +29,7 @@ const no2TrendFiles_tif = [
 const no2MonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
     return {
-        url: `/assets/data/geojson/NO2/NO2_Monthly_ZonalStats/NO2_Monthly_ZonalStats_Barrios/NO2_Monthly_ZonalStats_Barrios_${month}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/NO2/NO2_Monthly_ZonalStats/NO2_Monthly_ZonalStats_Barrios/NO2_Monthly_ZonalStats_Barrios_${month}.geojson`),
         name: `NO2_Monthly_${month}.geojson`
     };
 });
@@ -37,15 +37,15 @@ const no2MonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
 const no2YearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: `/assets/data/geojson/NO2/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Barrios/NO2_Yearly_ZonalStats_Barrios_${year}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/NO2/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Barrios/NO2_Yearly_ZonalStats_Barrios_${year}.geojson`),
         name: `NO2_Yearly_${year}.geojson`
     };
 });
 
 const no2TrendFiles_json_Barrio = [
-    { url: '/assets/data/geojson/NO2/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Barrios/Trend_NO2_ZonalStats_Barrios.geojson', name: 'NO2_Trend.geojson' },
-    { url: '/assets/data/csv/NO2_Anual_Comunal.csv', name: 'NO2_Monthly.csv' },
-    { url: '/assets/data/csv/NO2_Mensual_Comunal.csv', name: 'NO2_Anual.csv' }
+    { url: resolveAssetUrl('assets/data/geojson/NO2/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Barrios/Trend_NO2_ZonalStats_Barrios.geojson'), name: 'NO2_Trend.geojson' },
+    { url: resolveAssetUrl('assets/data/csv/NO2_Anual_Comunal.csv'), name: 'NO2_Anual.csv' },
+    { url: resolveAssetUrl('assets/data/csv/NO2_Mensual_Comunal.csv'), name: 'NO2_Monthly.csv' }
 ];
 
 ////////////////    MANZANAS
@@ -53,7 +53,7 @@ const no2TrendFiles_json_Barrio = [
 const no2MonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
     return {
-        url: `/assets/data/geojson/NO2/NO2_Monthly_ZonalStats/NO2_Monthly_ZonalStats_Manzanas/NO2_Monthly_ZonalStats_Manzanas_${month}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/NO2/NO2_Monthly_ZonalStats/NO2_Monthly_ZonalStats_Manzanas/NO2_Monthly_ZonalStats_Manzanas_${month}.geojson`),
         name: `NO2_Monthly_${month}.geojson`
     };
 });
@@ -61,20 +61,20 @@ const no2MonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
 const no2YearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: `/assets/data/geojson/NO2/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Manzanas/NO2_Yearly_ZonalStats_Manzanas_${year}.geojson`,
+        url: resolveAssetUrl(`assets/data/geojson/NO2/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Manzanas/NO2_Yearly_ZonalStats_Manzanas_${year}.geojson`),
         name: `NO2_Yearly_${year}.geojson`
     };
 });
 
 const no2TrendFiles_json_Manzanas = [
-    { url: '/assets/data/geojson/NO2/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Manzanas/Trend_NO2_ZonalStats_Manzanas.geojson', name: 'NO2_Trend.geojson' },
-    { url: '/assets/data/csv/NO2_Anual_Comunal.csv', name: 'NO2_Monthly.csv' },
-    { url: '/assets/data/csv/NO2_Mensual_Comunal.csv', name: 'NO2_Anual.csv' }
+    { url: resolveAssetUrl('assets/data/geojson/NO2/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Manzanas/Trend_NO2_ZonalStats_Manzanas.geojson'), name: 'NO2_Trend.geojson' },
+    { url: resolveAssetUrl('assets/data/csv/NO2_Anual_Comunal.csv'), name: 'NO2_Anual.csv' },
+    { url: resolveAssetUrl('assets/data/csv/NO2_Mensual_Comunal.csv'), name: 'NO2_Monthly.csv' }
 ];
 
 
 const textFiles = [
-    { url: '/assets/js/indicaciones.txt', name: 'indicaciones.txt' },
+    { url: resolveAssetUrl('assets/js/indicaciones.txt'), name: 'indicaciones.txt' },
 ];
 
 
