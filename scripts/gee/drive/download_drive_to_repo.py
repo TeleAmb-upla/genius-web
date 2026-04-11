@@ -17,11 +17,11 @@ de Drive. A partir de entonces solo se descargan archivos que aún no existan en
 
 Uso (desde la raíz del repositorio):
 
-    python -m scripts.gee.download_drive_to_repo
-    python -m scripts.gee.download_drive_to_repo --dry-run
-    python -m scripts.gee.download_drive_to_repo --only raster_monthly,csv
-    python -m scripts.gee.download_drive_to_repo --full-sync
-    python -m scripts.gee.download_drive_to_repo --incremental-only
+    python -m scripts.gee.drive.download_drive_to_repo
+    python -m scripts.gee.drive.download_drive_to_repo --dry-run
+    python -m scripts.gee.drive.download_drive_to_repo --only raster_monthly,csv
+    python -m scripts.gee.drive.download_drive_to_repo --full-sync
+    python -m scripts.gee.drive.download_drive_to_repo --incremental-only
     python scripts/gee/download_drive_to_repo.py
 
 Requisitos: haber ejecutado `earthengine authenticate` (incluye alcance de Drive).
@@ -530,11 +530,13 @@ SYNC_REGISTRY: dict[str, DriveSyncSpec] = {
         paths.DRIVE_GEO_YEARLY_B,
         paths.REPO_GEOJSON_NDVI_YEARLY_B,
         (".geojson", ".json"),
+        stem_prefixes=("NDVI_Yearly_ZonalStats_Barrios_",),
     ),
     "geo_yearly_m": DriveSyncSpec(
         paths.DRIVE_GEO_YEARLY_M,
         paths.REPO_GEOJSON_NDVI_YEARLY_M,
         (".geojson", ".json"),
+        stem_prefixes=("NDVI_Yearly_ZonalStats_Manzanas_",),
     ),
     "geo_sd_av": DriveSyncSpec(
         paths.DRIVE_GEO_SD_AV,
@@ -545,11 +547,13 @@ SYNC_REGISTRY: dict[str, DriveSyncSpec] = {
         paths.DRIVE_GEO_TREND_B,
         paths.REPO_GEOJSON_NDVI_TREND_B,
         (".geojson", ".json"),
+        stem_prefixes=("Trend_NDVI_ZonalStats_Barrios",),
     ),
     "geo_trend_m": DriveSyncSpec(
         paths.DRIVE_GEO_TREND_M,
         paths.REPO_GEOJSON_NDVI_TREND_M,
         (".geojson", ".json"),
+        stem_prefixes=("Trend_NDVI_ZonalStats_Manzanas",),
     ),
     # --- AOD ---
     "aod_raster_monthly": DriveSyncSpec(
@@ -572,13 +576,15 @@ SYNC_REGISTRY: dict[str, DriveSyncSpec] = {
     ),
     "aod_csv_monthly": DriveSyncSpec(
         paths.DRIVE_AOD_CSV_MONTHLY,
-        paths.REPO_RASTER_AOD_MONTHLY,
+        paths.REPO_CSV_AOD,
         (".csv",),
+        stem_prefixes=("AOD_m_region",),
     ),
     "aod_csv_yearly": DriveSyncSpec(
         paths.DRIVE_AOD_CSV_YEARLY,
-        paths.REPO_RASTER_AOD_YEARLY,
+        paths.REPO_CSV_AOD,
         (".csv",),
+        stem_prefixes=("AOD_y_region",),
     ),
     "aod_geo_monthly_b": DriveSyncSpec(
         paths.DRIVE_AOD_GEO_MONTHLY_B,
@@ -635,12 +641,12 @@ SYNC_REGISTRY: dict[str, DriveSyncSpec] = {
     ),
     "no2_csv_monthly": DriveSyncSpec(
         paths.DRIVE_NO2_CSV_MONTHLY,
-        paths.REPO_RASTER_NO2_MONTHLY,
+        paths.REPO_CSV_NO2,
         (".csv",),
     ),
     "no2_csv_yearly": DriveSyncSpec(
         paths.DRIVE_NO2_CSV_YEARLY,
-        paths.REPO_RASTER_NO2_YEARLY,
+        paths.REPO_CSV_NO2,
         (".csv",),
     ),
     "no2_geo_monthly_b": DriveSyncSpec(
@@ -698,12 +704,12 @@ SYNC_REGISTRY: dict[str, DriveSyncSpec] = {
     ),
     "so2_csv_monthly": DriveSyncSpec(
         paths.DRIVE_SO2_CSV_MONTHLY,
-        paths.REPO_RASTER_SO2_MONTHLY,
+        paths.REPO_CSV_SO2,
         (".csv",),
     ),
     "so2_csv_yearly": DriveSyncSpec(
         paths.DRIVE_SO2_CSV_YEARLY,
-        paths.REPO_RASTER_SO2_YEARLY,
+        paths.REPO_CSV_SO2,
         (".csv",),
     ),
     "so2_geo_monthly_b": DriveSyncSpec(
@@ -761,12 +767,12 @@ SYNC_REGISTRY: dict[str, DriveSyncSpec] = {
     ),
     "lst_csv_monthly": DriveSyncSpec(
         paths.DRIVE_LST_CSV_MONTHLY,
-        paths.REPO_RASTER_LST_MONTHLY,
+        paths.REPO_CSV_LST,
         (".csv",),
     ),
     "lst_csv_yearly": DriveSyncSpec(
         paths.DRIVE_LST_CSV_YEARLY,
-        paths.REPO_RASTER_LST_YEARLY,
+        paths.REPO_CSV_LST,
         (".csv",),
     ),
     "lst_geo_monthly_b": DriveSyncSpec(

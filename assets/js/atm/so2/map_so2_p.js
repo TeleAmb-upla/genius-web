@@ -8,13 +8,13 @@ import { createOpacitySlider } from '../../slider_opacity.js';
 import { loadinf_critica } from '../inf_critica_leaflet.js';
 import { LayersControl } from '../../control.js';
 import { getDefaultYearPair } from '../../map_data_catalog.js';
+import { so2UmolForDisplay } from './so2_units.js';
 
 let currentMap = null;
 let leftLayer = null;
 let rightLayer = null;
 let sideBySideControl = null;
 let legendDiv = null;
-let trendAdditionalTextDiv = null;
 
 let leftGeoraster = null;
 let rightGeoraster = null;
@@ -36,21 +36,6 @@ let layers = {
     rightLayer: null,
     trendLayer: null
 };
-
-function createTrendAdditionalText(content) {
-    const textDiv = document.createElement('div');
-    textDiv.id = 'trend-additional-text';
-    textDiv.style.position = 'absolute';
-    textDiv.style.top = 'calc(50% + 340px)';
-    textDiv.style.left = '10px';
-    textDiv.style.backgroundColor = 'white';
-    textDiv.style.padding = '10px';
-    textDiv.style.borderRadius = '8px';
-    textDiv.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
-    textDiv.style.zIndex = '1000';
-    textDiv.innerHTML = content;
-    return textDiv;
-}
 
 export async function map_so2_p() {
     if (currentMap) {
@@ -146,10 +131,6 @@ export async function map_so2_p() {
         if (trendLayer && currentMap.hasLayer(trendLayer)) {
             currentMap.removeLayer(trendLayer);
         }
-        if (trendAdditionalTextDiv) {
-            trendAdditionalTextDiv.remove();
-            trendAdditionalTextDiv = null;
-        }
         leftGeoraster = null;
         rightGeoraster = null;
         trendGeoraster = null;
@@ -215,11 +196,6 @@ export async function map_so2_p() {
         layers.trendLayer = trendLayer;
         layers.leftLayer = null;
         layers.rightLayer = null;
-        const additionalContent = `
-                <p>La tendencia raster se muestra solo donde el resultado supera la máscara estadística usada en el backend (p-value <= 0.025).</p>
-            `;
-        trendAdditionalTextDiv = createTrendAdditionalText(additionalContent);
-        currentMap.getContainer().appendChild(trendAdditionalTextDiv);
     }
 
     const controls = new LayersControl(
@@ -330,8 +306,13 @@ export async function map_so2_p() {
             valueArray = geoblaze.identify(rightGeoraster, [latlng.lng, latlng.lat]);
             valueRight = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
 
-            valueLeft = (valueLeft !== null && !isNaN(valueLeft)) ? valueLeft.toFixed(2) : 'No disponible';
-            valueRight = (valueRight !== null && !isNaN(valueRight)) ? valueRight.toFixed(2) : 'No disponible';
+            const fmt = (x) => {
+                if (x === null || x === undefined || Number.isNaN(Number(x))) return 'No disponible';
+                const u = so2UmolForDisplay(x);
+                return u != null ? `${u.toFixed(2)} µmol/m²` : 'No disponible';
+            };
+            valueLeft = fmt(valueLeft);
+            valueRight = fmt(valueRight);
 
             let labelLeft, labelRight;
 
@@ -353,7 +334,7 @@ export async function map_so2_p() {
                     </div>
                 `;
 
-            L.popup({ className: 'custom-popup' })
+            L.popup({ className: 'geo-popup' })
                 .setLatLng(latlng)
                 .setContent(content)
                 .openOn(currentMap);
@@ -374,7 +355,7 @@ export async function map_so2_p() {
                     </div>
                 `;
 
-            L.popup({ className: 'custom-popup' })
+            L.popup({ className: 'geo-popup' })
                 .setLatLng(latlng)
                 .setContent(content)
                 .openOn(currentMap);

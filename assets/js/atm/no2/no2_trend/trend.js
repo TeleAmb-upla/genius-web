@@ -1,4 +1,7 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { getProductYearRangeLabel } from '../../../map_data_catalog.js';
+
+const no2RangeLabel = getProductYearRangeLabel('no2');
 
 
 function valueToSTColor(value) {    
@@ -6,13 +9,13 @@ function valueToSTColor(value) {
 
     // Paleta de colores que representa los diferentes valores de la tendencia
     const range = [
-        "#ff0000", // Rojo intenso para los valores negativos bajos
-        "#ff3d66", // Rojo medio para valores negativos moderados
-        "#ff75ad", // Rojo suave para valores negativos más cercanos a 0
-        "transparent", // Transparente para valores entre -1 y 1
-        "#75aaff", // Azul claro para valores positivos bajos
-        "#4d66ff", // Azul medio para valores positivos moderados
-        "#0313ff"  // Azul intenso para valores positivos altos
+        "#0313ff",
+        "#4d66ff",
+        "#75aaff",
+        "#ffffff",
+        "#ff75ad",
+        "#ff3d66",
+        "#ff0000"
     ];
 
     // Calcular el paso entre cada color en función del dominio
@@ -76,9 +79,9 @@ export async function map_trend(map) {
 }
 
 export function createSTLegendSVG() {
-    const domain = [7, -7]; // Mínimo y máximo para tendencia NO²
+    const domain = [-7, 7];
     const steps = 9; // Cantidad de bloques: 4 rojos, 1 blanco, 4 azules
-    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse(); // 4 colores para rojos y azules, blanco en el centro
+    const colorsBase = ["#0313ff", "#4d66ff", "#75aaff", "#ffffff", "#ff75ad", "#ff3d66", "#ff0000"];
 
     // Crear una escala secuencial con los colores interpolados
     const colorScale = d3.scaleSequential()
@@ -126,7 +129,7 @@ export function createSTLegendSVG() {
             <text x="0" y="20" font-size="12" font-family="Arial" font-weight="bold">Dióxido de Nitrógeno Tendencia</text>
 
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="0" y="40" font-size="10" font-family="Arial">NO<tspan baseline-shift="sub">2</tspan>(µmol/m²) 2019-2024</text>
+            <text x="0" y="40" font-size="10" font-family="Arial">NO<tspan baseline-shift="sub">2</tspan> ${no2RangeLabel}</text>
 
             <!-- Bloques de colores -->
             ${legendItems}

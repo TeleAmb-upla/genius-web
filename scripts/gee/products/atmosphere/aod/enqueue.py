@@ -140,11 +140,14 @@ def enqueue_aod_exports(
     force_yearly_csv = bool(
         drive_freshness and drive_freshness.yearly_csv_missing_or_stale
     )
+    local_csv_needs_refresh = bool(
+        drive_freshness and drive_freshness.local_csv_stale
+    )
     force_yearly_geo = bool(
         drive_freshness and drive_freshness.yearly_geo_missing_or_stale
     )
     csv_run = (
-        (plan.run or plan.is_full_refresh or force_full or force_yearly_csv)
+        (plan.run or plan.is_full_refresh or force_full or force_yearly_csv or local_csv_needs_refresh)
         if tables_run_override is None
         else tables_run_override
     )
@@ -169,12 +172,12 @@ def enqueue_aod_exports(
         if drive_gate:
             drive_gate.clear_before_reexport(
                 paths.DRIVE_AOD_CSV_MONTHLY, extensions=(".csv",),
-                stem_prefixes=("AOD_Monthly_Region",),
+                stem_prefixes=("AOD_m_region",),
                 reason="re-export CSV mensual AOD",
             )
             drive_gate.clear_before_reexport(
                 paths.DRIVE_AOD_CSV_YEARLY, extensions=(".csv",),
-                stem_prefixes=("AOD_Yearly_Region",),
+                stem_prefixes=("AOD_y_region",),
                 reason="re-export CSV anual AOD",
             )
         _add_tasks(drive, csv_tasks.start_aod_csv_tasks(drive_gate=drive_gate))
@@ -254,8 +257,12 @@ def enqueue_aod_exports(
         missing_geo_yrs = list(
             drive_freshness.missing_yearly_geo_years
         ) if drive_freshness else []
+        local_invalid_geo_yrs = list(
+            drive_freshness.local_invalid_yearly_geo_years
+        ) if drive_freshness else []
         geo_yearly_needed = bool(missing_geo_yrs)
-        if (not skip_yearly or geo_yearly_needed) and geo_run:
+        local_needs_resync = bool(local_invalid_geo_yrs)
+        if (not skip_yearly or geo_yearly_needed or local_needs_resync) and geo_run:
             if missing_geo_yrs and drive_gate:
                 for yr in missing_geo_yrs:
                     drive_gate.clear_before_reexport(
@@ -270,15 +277,22 @@ def enqueue_aod_exports(
                         file_stems=(f"AOD_Yearly_ZonalStats_Manzanas_{yr}",),
                         reason=f"GeoJSON anual Manzanas {yr} inválido/faltante — re-export",
                     )
-            _add_tasks(
-                drive,
-                geojson_tasks.start_aod_y_geojson_tasks(
-                    year_numbers=missing_geo_yrs or None,
-                    drive_gate=drive_gate,
-                ),
-            )
-            sync.update({"aod_geo_yearly_b", "aod_geo_yearly_m"})
-            ran_derivative = True
+            if missing_geo_yrs:
+                _add_tasks(
+                    drive,
+                    geojson_tasks.start_aod_y_geojson_tasks(
+                        year_numbers=missing_geo_yrs or None,
+                        drive_gate=drive_gate,
+                    ),
+                )
+                sync.update({"aod_geo_yearly_b", "aod_geo_yearly_m"})
+                ran_derivative = True
+            elif local_invalid_geo_yrs:
+                sync.update({"aod_geo_yearly_b", "aod_geo_yearly_m"})
+                ran_derivative = True
+                messages.append(
+                    "GeoJSON anuales AOD válidos en Drive; re-descargando copia local sin re-export."
+                )
         elif not geo_run and not run_monthly_geo:
             messages.append("Omitidos GeoJSON AOD — sin datos faltantes/inválidos.")
 

@@ -4,7 +4,7 @@
 # Proyecto Cloud EE: scripts/gee/paths.py → EE_CLOUD_PROJECT (default ee-plataformagenius).
 #   Sobrescribir sin editar código: variable de entorno EARTH_ENGINE_PROJECT.
 # Encolar + esperar tareas Drive + descargar: python -m scripts.gee.pipeline
-# Solo descarga Drive → repo: python -m scripts.gee.download_drive_to_repo
+# Solo descarga Drive → repo: python -m scripts.gee.drive.download_drive_to_repo
 #   Primera sync por carpeta = espejo completo; luego solo faltantes (drive_sync_keys_state.json).
 
 earthengine-api>=1.0.0

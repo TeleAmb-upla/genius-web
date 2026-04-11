@@ -2,8 +2,8 @@
 Exportación GeoJSON NDVI (traducción de NDVI_geojson.txt — API Python).
 
 Tendencia multianual: Mann–Kendall + pendiente de Sen (espacial), misma lógica que el JS.
-Carpetas Drive de tendencia: ``Trend_NDVI_ZonalStats_Barrios`` y
-``Trend_NDVI_ZonalStats_Manzanas`` (no mezclar con zonal anual en ``NDVI_Yearly_*``).
+Los GeoJSON de tendencia comparten las carpetas Drive de zonal anual y se distinguen por
+el prefijo ``Trend_NDVI_ZonalStats_*``.
 """
 from __future__ import annotations
 

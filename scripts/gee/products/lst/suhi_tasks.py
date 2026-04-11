@@ -39,15 +39,15 @@ def _suhi_geojson_for_year(
         .rename("LST_mean")
     )
 
-    mean_dict = img.reduceRegion(
+    cold_point = ee.Geometry.Point([-71.44578562504384, -33.01561128157486])
+    pointstat = img.reduceRegion(
         reducer=ee.Reducer.mean(),
-        geometry=region,
+        geometry=cold_point,
         scale=30,
-        maxPixels=1e9,
     )
-    spatial_mean = ee.Number(mean_dict.get("LST_mean"))
+    baseline = ee.Number(pointstat.get("LST_mean"))
 
-    anomaly = img.subtract(spatial_mean)
+    anomaly = img.subtract(baseline)
 
     classified = (
         ee.Image(0)

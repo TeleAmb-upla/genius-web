@@ -37,7 +37,7 @@ function removeSource(map, sourceId) {
 }
 
 export async function updateMapLayerYear(map, sourceId, layerId, year) {
-    const url = resolveAssetUrl(`assets/data/geojson/LST/LST_Yearly_ZonalStats_Manzanas/LST_Yearly_ZonalStats_Manzanas_${year}.geojson`);
+    const url = resolveAssetUrl(`assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Manzanas/LST_Yearly_ZonalStats_Manzanas_${year}.geojson`);
     const data = await preprocessGeoJSON(url, 'yearly');
     if (!data) return;
 
@@ -58,13 +58,13 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const LSTFormatted = properties.LST_mean.toFixed(2);
-        new maplibregl.Popup()
+        const value = properties.LST_mean;
+        new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
             .setHTML(`
-                <strong>Total Personas:</strong> ${properties.TOTAL_PERS}<br>
-                <strong>Año:</strong> ${properties.Year}<br>
-                <strong>LST:</strong> ${LSTFormatted}
+                <div class="popup-title">${properties.NOMBRE || 'Manzana'}</div>
+                <div class="popup-row"><span class="popup-label">Año</span><span class="popup-value">${properties.Year}</span></div>
+                <div class="popup-row"><span class="popup-label">LST (°C)</span><span class="popup-value">${value != null && !isNaN(value) ? Number(value).toFixed(1) : 'Sin datos'}</span></div>
             `)
             .addTo(map);
     });
@@ -79,7 +79,7 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 }
 
 export async function updateMapLayerMonth(map, sourceId, layerId, month) {
-    const url = resolveAssetUrl(`assets/data/geojson/LST/LST_Monthly_ZonalStats_Manzanas/LST_Monthly_ZonalStats_Manzanas_${month}.geojson`)
+    const url = resolveAssetUrl(`assets/data/geojson/LST/LST_Monthly_ZonalStats/LST_Monthly_ZonalStats_Manzanas/LST_Monthly_ZonalStats_Manzanas_${month}.geojson`)
     const data = await preprocessGeoJSON(url, 'monthly');
     if (!data) return;
 
@@ -100,13 +100,13 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const LSTFormatted = properties.LST_mean.toFixed(2);
-        new maplibregl.Popup()
+        const value = properties.LST_mean;
+        new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
             .setHTML(`
-                <strong>Total Personas:</strong> ${properties.TOTAL_PERS}<br>
-                <strong>Mes:</strong> ${properties.Month}<br>
-                <strong>LST:</strong> ${LSTFormatted}
+                <div class="popup-title">${properties.NOMBRE || 'Manzana'}</div>
+                <div class="popup-row"><span class="popup-label">Mes</span><span class="popup-value">${properties.Month}</span></div>
+                <div class="popup-row"><span class="popup-label">LST (°C)</span><span class="popup-value">${value != null && !isNaN(value) ? Number(value).toFixed(1) : 'Sin datos'}</span></div>
             `)
             .addTo(map);
     });

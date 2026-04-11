@@ -101,7 +101,7 @@ export async function g_m_hu() {
 
     // Add Y axis
     var y = d3.scaleLinear()
-        .domain([1000, d3.max(data, d => +d.Area_DentroPRC + +d.Area_FueraPRC) * 1.1])
+        .domain([0, d3.max(data, d => +d.Area_DentroPRC + +d.Area_FueraPRC) * 1.1])
         .range([innerHeight, 0]);
     svg.append("g")
         .call(d3.axisLeft(y));
@@ -136,7 +136,7 @@ export async function g_m_hu() {
         // Asegurarse de que se está accediendo correctamente a los datos del círculo
         tooltip
             .html("Año: " + d.Year + "<br>Área Dentro PRC: " + d.Area_DentroPRC + " ha"
-                + "<br>Área Fuera PRC: " + d.Area_FueraPRC + " ha<br>Precisión Kappa: " + d.Precision_Kappa)
+                + "<br>Área Fuera PRC: " + d.Area_FueraPRC + " ha<br>Precisión Kappa: " + Number(d.Precision_Kappa).toFixed(2))
             .style("left", (event.pageX + 10) + "px")  // Ajusta la posición del tooltip
             .style("top", (event.pageY - 28) + "px");
     }
@@ -174,7 +174,7 @@ export async function g_m_hu() {
             // Tooltip para las barras (rectángulos)
             tooltip
                 .html("Año: " + d.data.Year + "<br>Área Dentro PRC: " + d.data.Area_DentroPRC + " ha"
-                    + "<br>Área Fuera PRC: " + d.data.Area_FueraPRC + " ha<br>Precisión Kappa: " + d.data.Precision_Kappa)
+                    + "<br>Área Fuera PRC: " + d.data.Area_FueraPRC + " ha<br>Precisión Kappa: " + Number(d.data.Precision_Kappa).toFixed(2))
                 .style("left", (event.pageX + 10) + "px")  // Ajusta la posición del tooltip
                 .style("top", (event.pageY - 28) + "px");
         })

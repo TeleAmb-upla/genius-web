@@ -36,7 +36,7 @@ function removeSource(map, sourceId) {
 }
 
 export async function updateMapLayerYear(map, sourceId, layerId, year) {
-    const url = resolveAssetUrl(`assets/data/geojson/NDVI/NDVI_Yearly_ZonalStats_Barrios/NDVI_Yearly_ZonalStats_Barrios_${year}.geojson`);
+    const url = resolveAssetUrl(`assets/data/geojson/NDVI/NDVI_Yearly_ZonalStats/NDVI_Yearly_ZonalStats_Barrios/NDVI_Yearly_ZonalStats_Barrios_${year}.geojson`);
     const data = await preprocessGeoJSON(url, 'yearly');
     if (!data) return;
 
@@ -57,14 +57,9 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const ndviFormatted = properties.NDVI.toFixed(2);
-        new maplibregl.Popup()
+        new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`
-                <strong>Barrio:</strong> ${properties.NOMBRE}<br>
-                <strong>Año:</strong> ${properties.Year}<br>
-                <strong>NDVI:</strong> ${ndviFormatted}
-            `)
+            .setHTML(`<div class="popup-title">${properties.NOMBRE}</div><div class="popup-row"><span class="popup-label">Año</span><span class="popup-value">${properties.Year}</span></div><div class="popup-row"><span class="popup-label">NDVI</span><span class="popup-value">${properties.NDVI != null ? properties.NDVI.toFixed(3) : 'Sin datos'}</span></div>`)
             .addTo(map);
     });
 
@@ -78,7 +73,7 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 }
 
 export async function updateMapLayerMonth(map, sourceId, layerId, month) {
-    const url = resolveAssetUrl(`assets/data/geojson/NDVI/NDVI_Monthly_ZonalStats_Barrios/NDVI_Monthly_ZonalStats_Barrios_${month}.geojson`);
+    const url = resolveAssetUrl(`assets/data/geojson/NDVI/NDVI_Monthly_ZonalStats/NDVI_Monthly_ZonalStats_Barrios/NDVI_Monthly_ZonalStats_Barrios_${month}.geojson`);
     const data = await preprocessGeoJSON(url, 'monthly');
     if (!data) return;
 
@@ -99,14 +94,9 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const ndviFormatted = properties.NDVI.toFixed(2);
-        new maplibregl.Popup()
+        new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`
-                <strong>Barrio:</strong> ${properties.NOMBRE}<br>
-                <strong>Mes:</strong> ${properties.Month}<br>
-                <strong>NDVI:</strong> ${ndviFormatted}
-            `)
+            .setHTML(`<div class="popup-title">${properties.NOMBRE}</div><div class="popup-row"><span class="popup-label">Mes</span><span class="popup-value">${properties.Month}</span></div><div class="popup-row"><span class="popup-label">NDVI</span><span class="popup-value">${properties.NDVI != null ? properties.NDVI.toFixed(3) : 'Sin datos'}</span></div>`)
             .addTo(map);
     });
 

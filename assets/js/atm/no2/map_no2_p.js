@@ -14,7 +14,6 @@ let leftLayer = null;
 let rightLayer = null;
 let sideBySideControl = null;
 let legendDiv = null;
-let trendAdditionalTextDiv = null;
 
 let leftGeoraster = null;
 let rightGeoraster = null;
@@ -36,21 +35,6 @@ let layers = {
     rightLayer: null,
     trendLayer: null
 };
-
-function createTrendAdditionalText(content) {
-    const textDiv = document.createElement('div');
-    textDiv.id = 'trend-additional-text';
-    textDiv.style.position = 'absolute';
-    textDiv.style.top = 'calc(50% + 340px)';
-    textDiv.style.left = '10px';
-    textDiv.style.backgroundColor = 'white';
-    textDiv.style.padding = '10px';
-    textDiv.style.borderRadius = '8px';
-    textDiv.style.boxShadow = '0 0 5px rgba(0,0,0,0.3)';
-    textDiv.style.zIndex = '1000';
-    textDiv.innerHTML = content;
-    return textDiv;
-}
 
 export async function map_no2_p() {
     if (currentMap) {
@@ -146,10 +130,6 @@ export async function map_no2_p() {
         if (trendLayer && currentMap.hasLayer(trendLayer)) {
             currentMap.removeLayer(trendLayer);
         }
-        if (trendAdditionalTextDiv) {
-            trendAdditionalTextDiv.remove();
-            trendAdditionalTextDiv = null;
-        }
         leftGeoraster = null;
         rightGeoraster = null;
         trendGeoraster = null;
@@ -215,11 +195,6 @@ export async function map_no2_p() {
         layers.trendLayer = trendLayer;
         layers.leftLayer = null;
         layers.rightLayer = null;
-        const additionalContent = `
-                <p>La tendencia raster se muestra solo donde el resultado supera la máscara estadística usada en el backend (p-value <= 0.025).</p>
-            `;
-        trendAdditionalTextDiv = createTrendAdditionalText(additionalContent);
-        currentMap.getContainer().appendChild(trendAdditionalTextDiv);
     }
 
     const controls = new LayersControl(
@@ -353,7 +328,7 @@ export async function map_no2_p() {
                     </div>
                 `;
 
-            L.popup({ className: 'custom-popup' })
+            L.popup({ className: 'geo-popup' })
                 .setLatLng(latlng)
                 .setContent(content)
                 .openOn(currentMap);
@@ -374,7 +349,7 @@ export async function map_no2_p() {
                     </div>
                 `;
 
-            L.popup({ className: 'custom-popup' })
+            L.popup({ className: 'geo-popup' })
                 .setLatLng(latlng)
                 .setContent(content)
                 .openOn(currentMap);

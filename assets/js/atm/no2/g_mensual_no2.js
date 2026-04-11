@@ -52,17 +52,17 @@ export async function g_m_no2(containerId = "p30") {
     `);
 
     // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/NO2_Mensual_Regional.csv"));
+    const data = await d3.csv(resolveAssetUrl("assets/data/csv/NO2_m_region.csv"));
 
     // Format the data
     data.forEach(d => {
         d.Month = +d.Month;
-        d.NO2_median_fixed = +d.NO2_median_fixed;
+        d.NO2_median = +d.NO2_median;
     });
 
     // Find the minimum and maximum NO2_median_fixed values
-    const min = d3.min(data, d => d.NO2_median_fixed);
-    const max = d3.max(data, d => d.NO2_median_fixed);
+    const min = d3.min(data, d => d.NO2_median);
+    const max = d3.max(data, d => d.NO2_median);
 
     // Add X axis
     var x = d3.scaleLinear()
@@ -102,7 +102,7 @@ export async function g_m_no2(containerId = "p30") {
 
     var mousemove = function (event, d) {
         tooltip
-            .html("NO²: " + d.NO2_median_fixed.toFixed(2) + "<br>Mes: " + d.Month)
+            .html("NO²: " + d.NO2_median.toFixed(2) + "<br>Mes: " + d.Month)
             .style("left", (event.pageX + 15) + "px")
             .style("top", (event.pageY - 15) + "px");
     }
@@ -117,7 +117,7 @@ export async function g_m_no2(containerId = "p30") {
     // Add the line with smoothing and animation
     var line = d3.line()
         .x(d => x(d.Month))
-        .y(d => y(d.NO2_median_fixed))
+        .y(d => y(d.NO2_median))
         .curve(d3.curveCatmullRom.alpha(0.5));
 
     var animation = svg.append("path")
@@ -144,7 +144,7 @@ export async function g_m_no2(containerId = "p30") {
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Month))
-        .attr("cy", d => y(d.NO2_median_fixed))
+        .attr("cy", d => y(d.NO2_median))
         .attr("r", 4)
         .attr("fill", "steelblue")
         .attr("pointer-events", "all")

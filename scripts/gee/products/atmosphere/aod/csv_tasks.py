@@ -9,6 +9,10 @@ from ....drive.drive_export_gate import DriveExportGate
 from ....lib import yearmonth as ym_lib
 
 
+def _attach_aod_csv_props(feature: ee.Feature, time_key: str, time_value: object) -> ee.Feature:
+    return ee.Feature(feature).set(time_key, time_value)
+
+
 def start_aod_csv_tasks(
     ic: ee.ImageCollection | None = None,
     *,
@@ -36,22 +40,22 @@ def start_aod_csv_tasks(
             collection=region,
             reducer=ee.Reducer.mean(),
             scale=1000,
-        ).map(lambda f: f.set("Month", image.get("month")))
+        ).map(lambda f: _attach_aod_csv_props(f, "Month", image.get("month")))
     ).flatten()
 
     if not (
         drive_gate
         and drive_gate.should_skip_export(
             paths.DRIVE_AOD_CSV_MONTHLY,
-            "AOD_Monthly_Region",
+            "AOD_m_region",
             (".csv",),
         )
     ):
         t1 = ee.batch.Export.table.toDrive(
             collection=triplets_m,
             selectors=["Month", "AOD_median"],
-            description="AOD_Monthly_Region",
-            fileNamePrefix="AOD_Monthly_Region",
+            description="AOD_m_region",
+            fileNamePrefix="AOD_m_region",
             folder=paths.DRIVE_AOD_CSV_MONTHLY,
             fileFormat="CSV",
         )
@@ -80,22 +84,22 @@ def start_aod_csv_tasks(
             collection=region,
             reducer=ee.Reducer.mean(),
             scale=1000,
-        ).map(lambda f: f.set("Year", image.get("year")))
+        ).map(lambda f: _attach_aod_csv_props(f, "Year", image.get("year")))
     ).flatten()
 
     if not (
         drive_gate
         and drive_gate.should_skip_export(
             paths.DRIVE_AOD_CSV_YEARLY,
-            "AOD_Yearly_Region",
+            "AOD_y_region",
             (".csv",),
         )
     ):
         t2 = ee.batch.Export.table.toDrive(
             collection=triplets_y,
             selectors=["Year", "AOD_median"],
-            description="AOD_Yearly_Region",
-            fileNamePrefix="AOD_Yearly_Region",
+            description="AOD_y_region",
+            fileNamePrefix="AOD_y_region",
             folder=paths.DRIVE_AOD_CSV_YEARLY,
             fileFormat="CSV",
         )

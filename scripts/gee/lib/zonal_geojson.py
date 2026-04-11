@@ -2,8 +2,18 @@
 from __future__ import annotations
 
 import ee
+from typing import Callable
 
 from ..drive.drive_export_gate import DriveExportGate
+
+
+def _attach_value_property(
+    feature: ee.Feature,
+    value_property: str,
+    time_key: str,
+    time_value: object,
+) -> ee.Feature:
+    return ee.Feature(feature).set(time_key, time_value)
 
 
 def months_zonal_geojson_tasks(
@@ -19,6 +29,7 @@ def months_zonal_geojson_tasks(
     scale_m: float,
     month_numbers: frozenset[int] | None = None,
     drive_gate: DriveExportGate | None = None,
+    image_transform: Callable[[ee.Image], ee.Image] | None = None,
 ) -> list[ee.batch.Task]:
     """
     Para cada mes en la colección: mediana de ``source_band``, renombrada a ``value_property``.
@@ -43,13 +54,24 @@ def months_zonal_geojson_tasks(
         ):
             continue
         selected = ic.select(source_band).filter(ee.Filter.eq("month", m))
-        median_img = selected.median().rename(value_property)
+        median_img = selected.median()
+        if image_transform is not None:
+            median_img = image_transform(median_img)
+        else:
+            median_img = median_img.rename(value_property)
         image_return = ee.Image([median_img]).clip(unidad_fc).set("month", m)
 
         triplets = (
             image_return.addBands(ee.Image(1))
             .reduceRegions(collection=unidad_fc, reducer=ee.Reducer.mean(), scale=scale_m)
-            .map(lambda f: f.set({"imageId": image_return.id(), "Month": m}))
+            .map(
+                lambda f: _attach_value_property(
+                    ee.Feature(f).set("imageId", image_return.id()),
+                    value_property,
+                    "Month",
+                    m,
+                )
+            )
         )
 
         t = ee.batch.Export.table.toDrive(
@@ -79,6 +101,7 @@ def yearly_zonal_geojson_tasks_last_year(
     selectores: list,
     scale_m: float,
     drive_gate: DriveExportGate | None = None,
+    image_transform: Callable[[ee.Image], ee.Image] | None = None,
 ) -> list[ee.batch.Task]:
     tasks: list[ee.batch.Task] = []
     years_loop = sorted(year_numbers) if year_numbers else [last_year]
@@ -105,12 +128,23 @@ def yearly_zonal_geojson_tasks_last_year(
                 f"— skipping GeoJSON export ({nombre_prefijo})"
             )
             continue
-        median_img = selected.median().rename(value_property)
+        median_img = selected.median()
+        if image_transform is not None:
+            median_img = image_transform(median_img)
+        else:
+            median_img = median_img.rename(value_property)
         image_return = ee.Image([median_img]).clip(unidad_fc).set("year", y)
         triplets = (
             image_return.addBands(ee.Image(1))
             .reduceRegions(collection=unidad_fc, reducer=ee.Reducer.mean(), scale=scale_m)
-            .map(lambda f: f.set({"imageId": image_return.id(), "Year": y}))
+            .map(
+                lambda f: _attach_value_property(
+                    ee.Feature(f).set("imageId", image_return.id()),
+                    value_property,
+                    "Year",
+                    y,
+                )
+            )
         )
         t = ee.batch.Export.table.toDrive(
             collection=triplets,

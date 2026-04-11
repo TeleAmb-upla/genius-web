@@ -33,10 +33,18 @@ REPO_NDVI_YEARMONTH_CSV = (
     PROJECT_ROOT / "assets" / "data" / "raster" / "NDVI" / "NDVI_YearMonth"
 )
 
-REPO_GEOJSON_NDVI_MONTHLY_B = PROJECT_ROOT / "assets" / "data" / "geojson" / "NDVI" / "NDVI_Monthly_ZonalStats_Barrios"
-REPO_GEOJSON_NDVI_MONTHLY_M = PROJECT_ROOT / "assets" / "data" / "geojson" / "NDVI" / "NDVI_Monthly_ZonalStats_Manzanas"
-REPO_GEOJSON_NDVI_YEARLY_B = PROJECT_ROOT / "assets" / "data" / "geojson" / "NDVI" / "NDVI_Yearly_ZonalStats_Barrios"
-REPO_GEOJSON_NDVI_YEARLY_M = PROJECT_ROOT / "assets" / "data" / "geojson" / "NDVI" / "NDVI_Yearly_ZonalStats_Manzanas"
+REPO_GEOJSON_NDVI_MONTHLY_B = (
+    PROJECT_ROOT / "assets" / "data" / "geojson" / "NDVI" / "NDVI_Monthly_ZonalStats" / "NDVI_Monthly_ZonalStats_Barrios"
+)
+REPO_GEOJSON_NDVI_MONTHLY_M = (
+    PROJECT_ROOT / "assets" / "data" / "geojson" / "NDVI" / "NDVI_Monthly_ZonalStats" / "NDVI_Monthly_ZonalStats_Manzanas"
+)
+REPO_GEOJSON_NDVI_YEARLY_B = (
+    PROJECT_ROOT / "assets" / "data" / "geojson" / "NDVI" / "NDVI_Yearly_ZonalStats" / "NDVI_Yearly_ZonalStats_Barrios"
+)
+REPO_GEOJSON_NDVI_YEARLY_M = (
+    PROJECT_ROOT / "assets" / "data" / "geojson" / "NDVI" / "NDVI_Yearly_ZonalStats" / "NDVI_Yearly_ZonalStats_Manzanas"
+)
 REPO_GEOJSON_NDVI_SD = PROJECT_ROOT / "assets" / "data" / "geojson" / "NDVI" / "NDVI_SD_ZonalStats"
 
 # Trend_NDVI_ZonalStats_*.geojson: el front sigue leyendo desde estas rutas locales
@@ -64,8 +72,8 @@ DRIVE_GEO_MONTHLY_M = "NDVI_Monthly_ZonalStats_Manzanas"
 DRIVE_GEO_YEARLY_B = "NDVI_Yearly_ZonalStats_Barrios"
 DRIVE_GEO_YEARLY_M = "NDVI_Yearly_ZonalStats_Manzanas"
 DRIVE_GEO_SD_AV = "NDVI_SD_ZonalStats"
-DRIVE_GEO_TREND_B = "Trend_NDVI_ZonalStats_Barrios"
-DRIVE_GEO_TREND_M = "Trend_NDVI_ZonalStats_Manzanas"
+DRIVE_GEO_TREND_B = DRIVE_GEO_YEARLY_B
+DRIVE_GEO_TREND_M = DRIVE_GEO_YEARLY_M
 
 # Asset intermedio (colección año-mes) — igual que en Code Editor JS
 ASSET_NDVI_YEARMONTH = "users/plataformagenius/Areas_Verdes/NDVI/NDVI_YearMonth"
@@ -75,7 +83,7 @@ ASSET_AOD_YEARMONTH = "users/plataformagenius/Calidad_de_Aire/AOD/AOD_YearMonth"
 REPO_RASTER_AOD_MONTHLY = PROJECT_ROOT / "assets" / "data" / "raster" / "AOD" / "AOD_Monthly"
 REPO_RASTER_AOD_YEARLY = PROJECT_ROOT / "assets" / "data" / "raster" / "AOD" / "AOD_Yearly"
 REPO_RASTER_AOD_TREND = PROJECT_ROOT / "assets" / "data" / "raster" / "AOD" / "AOD_Trend"
-REPO_CSV_AOD = REPO_RASTER_AOD_MONTHLY
+REPO_CSV_AOD = REPO_CSV
 REPO_GEOJSON_AOD_MONTHLY_B = (
     PROJECT_ROOT / "assets" / "data" / "geojson" / "AOD" / "AOD_Monthly_ZonalStats" / "AOD_Monthly_ZonalStats_Barrios"
 )
@@ -108,6 +116,8 @@ REPO_RASTER_NO2_TREND = PROJECT_ROOT / "assets" / "data" / "raster" / "NO2" / "N
 REPO_RASTER_SO2_MONTHLY = PROJECT_ROOT / "assets" / "data" / "raster" / "SO2" / "SO2_Monthly"
 REPO_RASTER_SO2_YEARLY = PROJECT_ROOT / "assets" / "data" / "raster" / "SO2" / "SO2_Yearly"
 REPO_RASTER_SO2_TREND = PROJECT_ROOT / "assets" / "data" / "raster" / "SO2" / "SO2_Trend"
+REPO_CSV_NO2 = REPO_CSV
+REPO_CSV_SO2 = REPO_CSV
 REPO_GEOJSON_NO2_MONTHLY_B = (
     PROJECT_ROOT / "assets" / "data" / "geojson" / "NO2" / "NO2_Monthly_ZonalStats" / "NO2_Monthly_ZonalStats_Barrios"
 )
@@ -168,17 +178,18 @@ ASSET_LST_YEARLY = (
 REPO_RASTER_LST_MONTHLY = PROJECT_ROOT / "assets" / "data" / "raster" / "LST" / "LST_Monthly"
 REPO_RASTER_LST_YEARLY = PROJECT_ROOT / "assets" / "data" / "raster" / "LST" / "LST_Yearly"
 REPO_RASTER_LST_TREND = PROJECT_ROOT / "assets" / "data" / "raster" / "LST" / "LST_Trend"
+REPO_CSV_LST = REPO_CSV
 REPO_GEOJSON_LST_MONTHLY_B = (
-    PROJECT_ROOT / "assets" / "data" / "geojson" / "LST" / "LST_Monthly_ZonalStats_Barrios"
+    PROJECT_ROOT / "assets" / "data" / "geojson" / "LST" / "LST_Monthly_ZonalStats" / "LST_Monthly_ZonalStats_Barrios"
 )
 REPO_GEOJSON_LST_MONTHLY_M = (
-    PROJECT_ROOT / "assets" / "data" / "geojson" / "LST" / "LST_Monthly_ZonalStats_Manzanas"
+    PROJECT_ROOT / "assets" / "data" / "geojson" / "LST" / "LST_Monthly_ZonalStats" / "LST_Monthly_ZonalStats_Manzanas"
 )
 REPO_GEOJSON_LST_YEARLY_B = (
-    PROJECT_ROOT / "assets" / "data" / "geojson" / "LST" / "LST_Yearly_ZonalStats_Barrios"
+    PROJECT_ROOT / "assets" / "data" / "geojson" / "LST" / "LST_Yearly_ZonalStats" / "LST_Yearly_ZonalStats_Barrios"
 )
 REPO_GEOJSON_LST_YEARLY_M = (
-    PROJECT_ROOT / "assets" / "data" / "geojson" / "LST" / "LST_Yearly_ZonalStats_Manzanas"
+    PROJECT_ROOT / "assets" / "data" / "geojson" / "LST" / "LST_Yearly_ZonalStats" / "LST_Yearly_ZonalStats_Manzanas"
 )
 DRIVE_LST_RASTER_MONTHLY = "LST_Monthly"
 DRIVE_LST_RASTER_YEARLY = "LST_Yearly"

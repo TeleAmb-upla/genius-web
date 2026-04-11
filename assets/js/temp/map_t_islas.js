@@ -5,7 +5,36 @@ import { legend_isla} from './isla_de_calor/legend_isla.js';
 import { attachMapOpacityPanel } from '../slider_opacity.js';
 import { applyOpacityToVectorTrendLayers } from '../maplibre_opacity_util.js';
 import { loadInfCriticaMapLibre } from '../inf_critica_map_libre.js';
-import { getDefaultYearPair } from '../map_data_catalog.js';
+import { getDefaultYearPair, getProductYears } from '../map_data_catalog.js';
+
+async function suhiGeoJsonExists(year) {
+    try {
+        const response = await fetch(
+            resolveAssetUrl(`assets/data/geojson/LST/LST_SUHI_Yearly/LST_SUHI_Yearly_${year}.geojson`),
+            { method: 'HEAD' }
+        );
+        return response.ok;
+    } catch (_error) {
+        return false;
+    }
+}
+
+async function pickClosestAvailableSuhiYear(preferredYear, fallbackYears) {
+    for (const year of fallbackYears) {
+        if (String(year) !== String(preferredYear) && year > Number(preferredYear)) {
+            continue;
+        }
+        if (await suhiGeoJsonExists(year)) {
+            return String(year);
+        }
+    }
+    for (const year of fallbackYears) {
+        if (await suhiGeoJsonExists(year)) {
+            return String(year);
+        }
+    }
+    return String(preferredYear);
+}
 
 export async function map_t_islas() {
     const container = document.getElementById('p71');
@@ -88,6 +117,12 @@ export async function map_t_islas() {
     afterMap.addControl(scaleControlAfter, 'top-right');
 
     const [defaultBefore, defaultAfter] = getDefaultYearPair('lst');
+    const lstYearsDesc = [...getProductYears('lst')].sort((a, b) => b - a);
+    const resolvedAfterYear = await pickClosestAvailableSuhiYear(defaultAfter, lstYearsDesc);
+    const resolvedBeforeYear = await pickClosestAvailableSuhiYear(
+        defaultBefore,
+        lstYearsDesc.filter((year) => String(year) !== resolvedAfterYear)
+    );
 
     const yearSelectors = document.createElement('div');
     const beforeYearSelector = createYearSelector('beforeYearSelector');
@@ -130,7 +165,11 @@ export async function map_t_islas() {
         (mode) => {
             yearSelectors.style.display = mode === 'yearly' ? 'block' : 'none';
         },
-        (enabled) => toggleInfra(enabled)
+        (enabled) => toggleInfra(enabled),
+        {
+            hideModePills: true,
+            modes: [{ key: 'yearly', label: 'Anual' }],
+        }
     );
     controls._container.style.position = 'absolute';
     controls._container.style.top = '10px';
@@ -189,13 +228,13 @@ export async function map_t_islas() {
 
     await Promise.all([beforeMapLoaded, afterMapLoaded]);
 
-    if (defaultBefore) {
-        beforeSelect.value = defaultBefore;
-        await updateMapLayerYear_isla(beforeMap, 'vectorSourceBeforeYear', 'vectorLayerBeforeYear', defaultBefore);
+    if (resolvedBeforeYear) {
+        beforeSelect.value = resolvedBeforeYear;
+        await updateMapLayerYear_isla(beforeMap, 'vectorSourceBeforeYear', 'vectorLayerBeforeYear', resolvedBeforeYear);
     }
-    if (defaultAfter) {
-        afterSelect.value = defaultAfter;
-        await updateMapLayerYear_isla(afterMap, 'vectorSourceAfterYear', 'vectorLayerAfterYear', defaultAfter);
+    if (resolvedAfterYear) {
+        afterSelect.value = resolvedAfterYear;
+        await updateMapLayerYear_isla(afterMap, 'vectorSourceAfterYear', 'vectorLayerAfterYear', resolvedAfterYear);
     }
 
     attachMapOpacityPanel(container, (opacity) => {

@@ -1,4 +1,7 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { getProductYearRangeLabel } from '../../map_data_catalog.js';
+
+const ndviRangeLabel = getProductYearRangeLabel('ndvi');
 // Función para asignar colores a los valores según el rango definido
 function valueToSTColor(value) {
     const domain = [-0.042, 0.001];
@@ -10,7 +13,7 @@ function valueToSTColor(value) {
         "#75aaff", // Azul claro para valores positivos bajos
         "#4d66ff", // Azul medio para valores positivos moderados
         "#0313ff"  // Azul intenso para valores positivos altos
-    ].reverse();
+    ];
 
     // Calcular el índice con más precisión
     const step = (domain[1] - domain[0]) / (range.length - 1);
@@ -39,7 +42,7 @@ function valueToSTColor(value) {
 
 
 export async function map_trend(map) {
-    const geojsonUrl = resolveAssetUrl('assets/data/geojson/NDVI/NDVI_Yearly_ZonalStats_Manzanas/Trend_NDVI_ZonalStats_Manzanas.geojson');
+    const geojsonUrl = resolveAssetUrl('assets/data/geojson/NDVI/NDVI_Yearly_ZonalStats/NDVI_Yearly_ZonalStats_Manzanas/Trend_NDVI_ZonalStats_Manzanas.geojson');
     const propertyName = 'slope_median';
 
     // Eliminar la fuente y la capa si ya existen
@@ -51,10 +54,16 @@ export async function map_trend(map) {
     const response = await fetch(geojsonUrl);
     const geojsonData = await response.json();
 
-    // Aplicar los colores a cada feature basado en su valor
     geojsonData.features.forEach(feature => {
         const value = feature.properties[propertyName];
-        feature.properties.color = valueToSTColor(value); // Asignar color calculado
+        const n = value == null ? NaN : Number(value);
+        if (Number.isNaN(n)) {
+            feature.properties.color = 'rgba(0,0,0,0)';
+            feature.properties.trendOutline = 'rgba(0,0,0,0)';
+        } else {
+            feature.properties.color = valueToSTColor(n);
+            feature.properties.trendOutline = '#000000';
+        }
     });
 
     // Agregar la fuente y la capa con los colores definidos
@@ -70,7 +79,7 @@ export async function map_trend(map) {
         paint: {
             'fill-opacity': 1,
             'fill-color': ['get', 'color'], // Usar el color precalculado
-            'fill-outline-color': 'black'    // Borde negro
+            'fill-outline-color': ['get', 'trendOutline']
         }
     });
 
@@ -78,14 +87,9 @@ export async function map_trend(map) {
     map.on('click', 'generic-trend-layer', (e) => {
         const properties = e.features[0].properties;
 
-        new maplibregl.Popup()
+        new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`
-                <strong>Rango de años:</strong> 2017 - 2024<br>
-                <strong>Cantidad de Personas:</strong> ${properties.TOTAL_PERS || 'No disponible'}<br>
-                <strong>Tendencia NDVI:</strong> ${properties.slope_median.toFixed(2) || 'No disponible'}<br>
-
-            `)
+            .setHTML(`<div class="popup-title">${properties.NOMBRE || 'Manzana'}</div><div class="popup-row"><span class="popup-label">Tendencia</span><span class="popup-value">${properties.slope_median != null && !Number.isNaN(Number(properties.slope_median)) ? Number(properties.slope_median).toFixed(4) : 'Sin datos'}</span></div>`)
             .addTo(map);
     });
 
@@ -97,6 +101,15 @@ export async function map_trend(map) {
     map.on('mouseleave', 'generic-trend-layer', () => {
         map.getCanvas().style.cursor = '';
     });
+
+    // Significance info box
+    const container = map.getContainer();
+    if (!container.querySelector('.trend-significance-box')) {
+        const infoBox = document.createElement('div');
+        infoBox.className = 'trend-significance-box';
+        infoBox.textContent = 'Las zonas sin tendencia estadísticamente significativa (p > 0.025) no se rellenan en el mapa vectorial; el raster puede mostrar píxeles sin la misma máscara de significancia.';
+        container.appendChild(infoBox);
+    }
 }
 
 
@@ -112,13 +125,13 @@ export function createTrendLegend() {
     legendContent.appendChild(title);
 
     const subtitle = document.createElement('div');
-    subtitle.textContent = '2017 - 2024';
+    subtitle.textContent = ndviRangeLabel;
     subtitle.className = 'map-legend-panel__subtitle';
     legendContent.appendChild(subtitle);
 
     const domain = [-0.042, 0.001];
     const steps = 7;
-    const colors = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse();
+    const colors = ["#0313ff", "#4d66ff", "#75aaff", "#ffffff", "#ff75ad", "#ff3d66", "#ff0000"];
     const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
 

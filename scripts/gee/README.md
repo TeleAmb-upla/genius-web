@@ -29,7 +29,7 @@ Por defecto `python -m scripts.gee.pipeline` hace eso en dos fases por producto.
 
 ## Sincronización Drive → repo
 
-`python -m scripts.gee.download_drive_to_repo --only <claves>`
+`python -m scripts.gee.drive.download_drive_to_repo --only <claves>`
 
 Las claves están en `SYNC_REGISTRY` en `download_drive_to_repo.py`. El `--only` del **pipeline** usa categorías (`asset`, `raster`, …); las claves concretas de Drive se derivan de las tareas encoladas o del fallback por categoría.
 

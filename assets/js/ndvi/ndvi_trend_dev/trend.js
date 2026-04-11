@@ -1,6 +1,8 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
 import { fetchGeoTiffTryPaths } from '../../raster_fetch.js';
 import { candidatePathsNdviTrend } from '../ndvi_raster_paths.js';
+import { getProductYearRangeLabel } from '../../map_data_catalog.js';
+const ndviRangeLabel = getProductYearRangeLabel('ndvi');
 function valueToSTColor(value) {
 
 const domain = [-0.107, 0.107]; // mínimo y máximo
@@ -89,7 +91,7 @@ export function createSTLegendSVG() {
     return `
         <svg class="map-legend-svg" width="165" height="${totalHeight + 80}" xmlns="http://www.w3.org/2000/svg">
             <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Tendencia NDVI</text>
-            <text x="5" y="40" font-size="12" font-family="Arial">2017 - 2025</text>
+            <text x="5" y="40" font-size="12" font-family="Arial">${ndviRangeLabel}</text>
             ${legendItems}
             ${valueLabels}
         </svg>

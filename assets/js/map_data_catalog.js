@@ -18,6 +18,12 @@ export function getProductYears(productKey) {
     return [...(PRODUCT_YEARS[productKey] || [])];
 }
 
+export function getProductYearRangeLabel(productKey) {
+    const years = getProductYears(productKey);
+    if (!years.length) return "";
+    return `${years[0]} - ${years[years.length - 1]}`;
+}
+
 export function getDefaultYearPair(productKey) {
     const years = getProductYears(productKey);
     if (!years.length) return [null, null];

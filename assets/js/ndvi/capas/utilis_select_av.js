@@ -38,7 +38,9 @@ const categoryNames = {
 // Función para cargar datos GeoJSON y configurar capas
 export async function loadGeoJSONAndSetupLayers(currentMap) {
     try {
-        const response = await fetch(resolveAssetUrl('assets/data/vectores/NDVI_SD_ZonalStats_2022_2024.geojson'));
+        const response = await fetch(
+            resolveAssetUrl('assets/data/geojson/NDVI/NDVI_SD_ZonalStats/NDVI_SD_ZonalStats_av.geojson')
+        );
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }

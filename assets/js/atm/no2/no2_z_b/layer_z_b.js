@@ -8,8 +8,7 @@ export async function preprocessGeoJSON(url, currentMode) {
         const data = await response.json();
         data.features.forEach(feature => {
             if (feature.properties && feature.properties.NO2_median !== undefined) {
-                feature.properties.color = currentMode === 'yearly',
-                feature.properties.color = currentMode === 'monthly'  
+                feature.properties.color = currentMode === 'yearly'
                     ? ToColorYear_z_b(feature.properties.NO2_median)
                     : ToColorMonth_z_b(feature.properties.NO2_median);
             }
@@ -58,13 +57,13 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const NO2Formatted = properties.NO2_median.toFixed(2);
-        new maplibregl.Popup()
+        const v = properties.NO2_median;
+        new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
             .setHTML(`
-                <strong>Barrio:</strong> ${properties.NOMBRE}<br>
-                <strong>Año:</strong> ${properties.Year}<br>
-                <strong>NO2:</strong> ${NO2Formatted}
+                <div class="popup-title">${properties.NOMBRE || 'Barrio'}</div>
+                <div class="popup-row"><span class="popup-label">Año</span><span class="popup-value">${properties.Year}</span></div>
+                <div class="popup-row"><span class="popup-label">NO₂ (µg/m³)</span><span class="popup-value">${v != null ? v.toFixed(2) : 'Sin datos'}</span></div>
             `)
             .addTo(map);
     });
@@ -100,13 +99,13 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const NO2Formatted = properties.NO2_median.toFixed(2);
-        new maplibregl.Popup()
+        const v = properties.NO2_median;
+        new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
             .setHTML(`
-                <strong>Barrio:</strong> ${properties.NOMBRE}<br>
-                <strong>Mes:</strong> ${properties.Month}<br>
-                <strong>NO2:</strong> ${NO2Formatted}
+                <div class="popup-title">${properties.NOMBRE || 'Barrio'}</div>
+                <div class="popup-row"><span class="popup-label">Mes</span><span class="popup-value">${properties.Month}</span></div>
+                <div class="popup-row"><span class="popup-label">NO₂ (µg/m³)</span><span class="popup-value">${v != null ? v.toFixed(2) : 'Sin datos'}</span></div>
             `)
             .addTo(map);
     });

@@ -53,17 +53,17 @@ export async function g_a_so2_m(containerId = "p44") {
     `);
 
     // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/SO2_Anual_Comunal.csv"));
+    const data = await d3.csv(resolveAssetUrl("assets/data/csv/SO2_y_region.csv"));
 
     // Format the data
     data.forEach(d => {
         d.Year = +d.Year;
-        d.SO2_median_fixed = +d.SO2_median_fixed;
+        d.SO2 = +d.SO2;
     });
 
     // Find the minimum and maximum SO2_median_fixed values
-    const minNDVI = d3.min(data, d => d.SO2_median_fixed);
-    const maxNDVI = d3.max(data, d => d.SO2_median_fixed);
+    const minNDVI = d3.min(data, d => d.SO2);
+    const maxNDVI = d3.max(data, d => d.SO2);
 
     // Add X axis
     var x = d3.scaleBand()
@@ -104,7 +104,7 @@ export async function g_a_so2_m(containerId = "p44") {
 
     var mousemove = function (event, d) {
         tooltip
-            .html("SO²: " + d.SO2_median_fixed.toFixed(2) + "<br>Año: " + d.Year)
+            .html("SO²: " + d.SO2.toFixed(2) + "<br>Año: " + d.Year)
             .style("left", (event.pageX + 15) + "px")
             .style("top", (event.pageY - 15) + "px");
     }
@@ -119,7 +119,7 @@ export async function g_a_so2_m(containerId = "p44") {
     // Add the line with smoothing and animation
     var line = d3.line()
         .x(d => x(d.Year) + x.bandwidth() / 2)
-        .y(d => y(d.SO2_median_fixed))
+        .y(d => y(d.SO2))
         .curve(d3.curveCatmullRom.alpha(0.5));
 
     var animation = svg.append("path")
@@ -146,7 +146,7 @@ export async function g_a_so2_m(containerId = "p44") {
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
-        .attr("cy", d => y(d.SO2_median_fixed))
+        .attr("cy", d => y(d.SO2))
         .attr("r", 4)
         .attr("fill", "steelblue")
         .attr("pointer-events", "all")

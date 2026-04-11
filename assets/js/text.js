@@ -1,6 +1,6 @@
 import { createAndDownloadNDVIZip_tif, createAndDownloadNDVIZip_json_Barrio, createAndDownloadNDVIZip_json_Manzanas } from './download/download_ndvi.js';
 import{ createAndDownloadlstZip_tif_lst, createAndDownloadlstZip_json_Barrios_lst, createAndDownloadlstZip_json_Manzanas_lst} from'./download/download_lst.js';
- import { createAndDownloadAODZip, createAndDownloadAODZip_json_Barrio, createAndDownloadAODZip_json_Manzanas } from './download/download_oad.js';
+ import { createAndDownloadAODZip, createAndDownloadAODZip_json_Barrio, createAndDownloadAODZip_json_Manzanas } from './download/download_aod.js';
 import {createAndDownloadno2Zip,createAndDownloadno2Zip_json_Barrio,createAndDownloadno2Zip_json_Manzanas} from './download/download_no2.js';
 import {createAndDownloadso2Zip, createAndDownloadso2Zip_json_Barrio, createAndDownloadso2Zip_json_Manzanas} from './download/download_so2.js';
 import{createAndDownloadiluZip} from './download/download_ilu.js';

@@ -12,7 +12,6 @@ from __future__ import annotations
 import csv
 import datetime
 import io
-import json
 import math
 import re
 from dataclasses import dataclass, field
@@ -140,16 +139,51 @@ _LOCAL_YEARLY_CSV_TARGETS: dict[str, list[tuple[Path, str, list[str]]]] = {
         (paths.REPO_CSV / "NDVI_y_urban.csv", "Year", ["NDVI"]),
     ],
     "aod": [
-        (paths.REPO_RASTER_AOD_YEARLY / "AOD_y_region.csv", "Year", ["AOD_median"]),
+        (paths.REPO_CSV_AOD / "AOD_y_region.csv", "Year", ["AOD_median"]),
     ],
     "no2": [
-        (paths.REPO_RASTER_NO2_YEARLY / "NO2_y_region.csv", "Year", ["NO2_median"]),
+        (paths.REPO_CSV_NO2 / "NO2_y_region.csv", "Year", ["NO2_median"]),
     ],
     "so2": [
-        (paths.REPO_RASTER_SO2_YEARLY / "SO2_y_region.csv", "Year", ["SO2"]),
+        (paths.REPO_CSV_SO2 / "SO2_y_region.csv", "Year", ["SO2"]),
     ],
     "lst": [
-        (paths.REPO_RASTER_LST_YEARLY / "LST_y_urban.csv", "Year", ["LST_mean"]),
+        (paths.REPO_CSV_LST / "LST_y_urban.csv", "Year", ["LST_mean"]),
+    ],
+}
+
+_LOCAL_MONTHLY_CSV_TARGETS: dict[str, list[tuple[Path, str, list[int], list[str]]]] = {
+    "aod": [
+        (
+            paths.REPO_CSV_AOD / "AOD_m_region.csv",
+            "Month",
+            list(range(1, 13)),
+            ["AOD_median"],
+        ),
+    ],
+    "no2": [
+        (
+            paths.REPO_CSV_NO2 / "NO2_m_region.csv",
+            "Month",
+            list(range(1, 13)),
+            ["NO2_median"],
+        ),
+    ],
+    "so2": [
+        (
+            paths.REPO_CSV_SO2 / "SO2_m_region.csv",
+            "Month",
+            list(range(1, 13)),
+            ["SO2"],
+        ),
+    ],
+    "lst": [
+        (
+            paths.REPO_CSV_LST / "LST_m_urban.csv",
+            "Month",
+            list(range(1, 13)),
+            ["LST_mean"],
+        ),
     ],
 }
 
@@ -196,6 +230,7 @@ def _validate_local_csv(
 
     check_cols = value_columns or [c for c in fieldnames if c != year_column]
     years_found_valid: set[int] = set()
+    unexpected_years: set[int] = set()
 
     for row in reader:
         raw_year = (row.get(year_column) or "").strip()
@@ -206,6 +241,7 @@ def _validate_local_csv(
         except (ValueError, OverflowError):
             continue
         if yr not in expected_years:
+            unexpected_years.add(yr)
             continue
         has_value = False
         for col in check_cols:
@@ -253,6 +289,26 @@ def _validate_all_local_csvs(
             if expected_years and n_missing >= len(expected_years) * 0.8:
                 completely_invalid = True
     return all_ok, reasons, completely_invalid
+
+
+def _validate_all_local_monthly_csvs(
+    product: str,
+) -> tuple[bool, list[str], list[Path]]:
+    specs = _LOCAL_MONTHLY_CSV_TARGETS.get(product, [])
+    if not specs:
+        return True, [], []
+    all_ok = True
+    reasons: list[str] = []
+    invalid_paths: list[Path] = []
+    for csv_path, time_col, expected_values, val_cols in specs:
+        ok, reason, _n_missing = _validate_local_csv(
+            csv_path, expected_values, time_col, val_cols
+        )
+        if not ok:
+            all_ok = False
+            reasons.append(reason)
+            invalid_paths.append(csv_path)
+    return all_ok, reasons, invalid_paths
 
 
 # ---------------------------------------------------------------------------
@@ -356,6 +412,7 @@ class DriveFreshnessHints:
     yearly_raster_missing_or_stale: bool = False
     yearly_tables_missing_or_stale: bool = False
     yearly_csv_missing_or_stale: bool = False
+    local_csv_stale: bool = False
     yearly_geo_missing_or_stale: bool = False
     yearly_raster_enqueue_bypass: bool = False
     mirror_full_monthly_local: bool = False
@@ -364,6 +421,8 @@ class DriveFreshnessHints:
 
     missing_yearly_raster_years: tuple[int, ...] = ()
     missing_yearly_geo_years: tuple[int, ...] = ()
+    drive_missing_yearly_geo_years: tuple[int, ...] = ()
+    local_invalid_yearly_geo_years: tuple[int, ...] = ()
 
     sync_full_mirror_extra_keys: frozenset[str] = field(default_factory=frozenset)
     audit_messages: tuple[str, ...] = ()
@@ -396,6 +455,15 @@ def _yearly_csv_missing_or_stale(
     return newest.year <= target_year
 
 
+def _drive_has_exact_file(files: list[dict], filename: str) -> bool:
+    target = filename.lower()
+    for f in files:
+        name = (f.get("name") or "").lower()
+        if name == target:
+            return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Main computation
 # ---------------------------------------------------------------------------
@@ -423,7 +491,10 @@ def compute_drive_freshness_hints(
     yearly_folder: str
     yearly_stem_prefix: str
     mirror_key: str
+    monthly_csv_folder: str | None = None
     yearly_csv_folder: str
+    monthly_csv_expected_name: str | None = None
+    yearly_csv_expected_name: str | None = None
     yearly_geo_folder_b: str
     yearly_geo_folder_m: str
     yearly_geo_stem_prefix_b: str
@@ -436,7 +507,10 @@ def compute_drive_freshness_hints(
         yearly_folder = paths.DRIVE_RASTER_YEARLY
         yearly_stem_prefix = "NDVI_Yearly_"
         mirror_key = "raster_monthly"
+        monthly_csv_folder = paths.DRIVE_CSV_MONTHLY
         yearly_csv_folder = paths.DRIVE_CSV_YEARLY
+        monthly_csv_expected_name = None
+        yearly_csv_expected_name = None
         yearly_geo_folder_b = paths.DRIVE_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_GEO_YEARLY_M
         yearly_geo_stem_prefix_b = "NDVI_Yearly_ZonalStats_Barrios_"
@@ -448,7 +522,10 @@ def compute_drive_freshness_hints(
         yearly_folder = paths.DRIVE_AOD_RASTER_YEARLY
         yearly_stem_prefix = "AOD_Yearly_"
         mirror_key = "aod_raster_monthly"
+        monthly_csv_folder = paths.DRIVE_AOD_CSV_MONTHLY
         yearly_csv_folder = paths.DRIVE_AOD_CSV_YEARLY
+        monthly_csv_expected_name = "AOD_m_region.csv"
+        yearly_csv_expected_name = "AOD_y_region.csv"
         yearly_geo_folder_b = paths.DRIVE_AOD_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_AOD_GEO_YEARLY_M
         yearly_geo_stem_prefix_b = "AOD_Yearly_ZonalStats_Barrios_"
@@ -460,7 +537,10 @@ def compute_drive_freshness_hints(
         yearly_folder = paths.DRIVE_NO2_RASTER_YEARLY
         yearly_stem_prefix = "NO2_Yearly_"
         mirror_key = "no2_raster_monthly"
+        monthly_csv_folder = paths.DRIVE_NO2_CSV_MONTHLY
         yearly_csv_folder = paths.DRIVE_NO2_CSV_YEARLY
+        monthly_csv_expected_name = "NO2_m_region.csv"
+        yearly_csv_expected_name = "NO2_y_region.csv"
         yearly_geo_folder_b = paths.DRIVE_NO2_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_NO2_GEO_YEARLY_M
         yearly_geo_stem_prefix_b = "NO2_Yearly_ZonalStats_Barrios_"
@@ -472,7 +552,10 @@ def compute_drive_freshness_hints(
         yearly_folder = paths.DRIVE_SO2_RASTER_YEARLY
         yearly_stem_prefix = "SO2_Yearly_"
         mirror_key = "so2_raster_monthly"
+        monthly_csv_folder = paths.DRIVE_SO2_CSV_MONTHLY
         yearly_csv_folder = paths.DRIVE_SO2_CSV_YEARLY
+        monthly_csv_expected_name = "SO2_m_region.csv"
+        yearly_csv_expected_name = "SO2_y_region.csv"
         yearly_geo_folder_b = paths.DRIVE_SO2_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_SO2_GEO_YEARLY_M
         yearly_geo_stem_prefix_b = "SO2_Yearly_ZonalStats_Barrios_"
@@ -484,7 +567,10 @@ def compute_drive_freshness_hints(
         yearly_folder = paths.DRIVE_LST_RASTER_YEARLY
         yearly_stem_prefix = "LST_Yearly_"
         mirror_key = "lst_raster_monthly"
+        monthly_csv_folder = paths.DRIVE_LST_CSV_MONTHLY
         yearly_csv_folder = paths.DRIVE_LST_CSV_YEARLY
+        monthly_csv_expected_name = "LST_m_urban.csv"
+        yearly_csv_expected_name = "LST_y_urban.csv"
         yearly_geo_folder_b = paths.DRIVE_LST_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_LST_GEO_YEARLY_M
         yearly_geo_stem_prefix_b = "LST_Yearly_ZonalStats_Barrios_"
@@ -524,11 +610,27 @@ def compute_drive_freshness_hints(
             "no se fuerza reexport hasta completar ese año en GEE."
         )
 
-    # --- Yearly CSV: modifiedTime check ---
+    # --- Yearly CSV: modifiedTime check + canonical filename presence ---
     csv_y_files = _list_folder_files(service, yearly_csv_folder)
     yearly_csv_missing = _yearly_csv_missing_or_stale(
         csv_y_files, target_year=target_yearly_year,
     )
+    if yearly_csv_expected_name and not _drive_has_exact_file(
+        csv_y_files, yearly_csv_expected_name
+    ):
+        yearly_csv_missing = True
+        msgs.append(
+            f"[Drive audit] CSV anual «{yearly_csv_folder}»: falta archivo canónico "
+            f"{yearly_csv_expected_name}."
+        )
+    if monthly_csv_expected_name and monthly_csv_folder:
+        csv_m_files = _list_folder_files(service, monthly_csv_folder)
+        if not _drive_has_exact_file(csv_m_files, monthly_csv_expected_name):
+            yearly_csv_missing = True
+            msgs.append(
+                f"[Drive audit] CSV mensual «{monthly_csv_folder}»: falta archivo canónico "
+                f"{monthly_csv_expected_name}."
+            )
     if yearly_csv_missing:
         msgs.append(
             f"[Drive audit] CSV anual «{yearly_csv_folder}»: faltante o desactualizado "
@@ -538,15 +640,15 @@ def compute_drive_freshness_hints(
     # --- Yearly GeoJSON: full gap detection ---
     geo_y_files_b = _list_folder_files(service, yearly_geo_folder_b)
     geo_y_files_m = _list_folder_files(service, yearly_geo_folder_m)
-    missing_geo_years = _find_missing_yearly_geo(
+    drive_missing_geo_years = _find_missing_yearly_geo(
         geo_y_files_b, geo_y_files_m,
         yearly_geo_stem_prefix_b, yearly_geo_stem_prefix_m,
         (".geojson", ".json"),
         expected_years,
     )
-    yearly_geo_missing = bool(missing_geo_years)
-    if missing_geo_years:
-        yrs_str = ", ".join(str(y) for y in missing_geo_years)
+    yearly_geo_missing = bool(drive_missing_geo_years)
+    if drive_missing_geo_years:
+        yrs_str = ", ".join(str(y) for y in drive_missing_geo_years)
         msgs.append(
             f"[Drive audit] GeoJSON anual: faltan años [{yrs_str}] en Barrios/Manzanas."
         )
@@ -557,9 +659,8 @@ def compute_drive_freshness_hints(
         yrs_str = ", ".join(str(y) for y in local_geo_invalid_years)
         msgs.append(
             f"[Drive audit] GeoJSON local con valores nulos: años [{yrs_str}] — "
-            f"se marcará para re-export."
+            "se eliminarán en local para re-descargar desde Drive."
         )
-        missing_geo_years = sorted(set(missing_geo_years) | set(local_geo_invalid_years))
         yearly_geo_missing = True
         # Delete invalid local files so incremental download will replace them
         specs = _LOCAL_YEARLY_GEO_TARGETS.get(product, {})
@@ -578,7 +679,10 @@ def compute_drive_freshness_hints(
     local_csv_ok, csv_reasons, csv_completely_invalid = _validate_all_local_csvs(
         product, expected_years
     )
-    local_csv_stale = not local_csv_ok
+    local_monthly_csv_ok, monthly_csv_reasons, monthly_invalid_paths = (
+        _validate_all_local_monthly_csvs(product)
+    )
+    local_csv_stale = (not local_csv_ok) or (not local_monthly_csv_ok)
 
     if csv_completely_invalid:
         msgs.append(
@@ -593,6 +697,20 @@ def compute_drive_freshness_hints(
     if local_csv_stale:
         for reason in csv_reasons:
             msgs.append(f"[Drive audit] CSV local inválido: {reason}")
+        for reason in monthly_csv_reasons:
+            msgs.append(f"[Drive audit] CSV local inválido: {reason}")
+        for csv_path, _year_col, _val_cols in _LOCAL_YEARLY_CSV_TARGETS.get(product, []):
+            if csv_path.is_file() and any(csv_path.name in reason for reason in csv_reasons):
+                csv_path.unlink()
+                msgs.append(
+                    f"[Drive audit] Eliminado local inválido: {csv_path.name}"
+                )
+        for csv_path in monthly_invalid_paths:
+            if csv_path.is_file():
+                csv_path.unlink()
+                msgs.append(
+                    f"[Drive audit] Eliminado local inválido: {csv_path.name}"
+                )
         if local_stale_drive_ok:
             msgs.append(
                 "[Drive audit] Drive parece tener CSV reciente — "
@@ -612,14 +730,17 @@ def compute_drive_freshness_hints(
         force_full_monthly_raster_export=force_monthly,
         yearly_raster_missing_or_stale=yearly_missing,
         yearly_tables_missing_or_stale=yearly_tables_missing,
-        yearly_csv_missing_or_stale=(yearly_csv_missing or local_csv_stale),
+        yearly_csv_missing_or_stale=yearly_csv_missing,
+        local_csv_stale=local_csv_stale,
         yearly_geo_missing_or_stale=yearly_geo_missing,
         yearly_raster_enqueue_bypass=yearly_bypass,
         mirror_full_monthly_local=force_monthly,
         target_yearly_year=target_yearly_year,
         local_tables_stale_drive_ok=local_stale_drive_ok,
         missing_yearly_raster_years=tuple(missing_raster_years),
-        missing_yearly_geo_years=tuple(missing_geo_years),
+        missing_yearly_geo_years=tuple(drive_missing_geo_years),
+        drive_missing_yearly_geo_years=tuple(drive_missing_geo_years),
+        local_invalid_yearly_geo_years=tuple(local_geo_invalid_years),
         sync_full_mirror_extra_keys=frozenset(extra),
         audit_messages=tuple(msgs),
     )

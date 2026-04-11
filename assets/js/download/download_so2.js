@@ -22,8 +22,8 @@ const so2YearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, i
 
 const so2TrendFiles_tif = [
     { url: resolveAssetUrl('assets/data/raster/SO2/SO2_Trend/SO2_Yearly_Trend.tif'), name: 'SO2_Trend.tif' },
-    { url: resolveAssetUrl('assets/data/csv/SO2_Mensual_Comunal.csv'), name: 'SO2_Monthly.csv' },
-    { url: resolveAssetUrl('assets/data/csv/SO2_Anual_Comunal.csv'), name: 'SO2_Anual.csv' }
+    { url: resolveAssetUrl('assets/data/csv/SO2_m_region.csv'), name: 'SO2_m_region.csv' },
+    { url: resolveAssetUrl('assets/data/csv/SO2_y_region.csv'), name: 'SO2_y_region.csv' }
  ];
 
 // //////////////////////// BARRIO
@@ -46,8 +46,8 @@ const so2YearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 
 
 const so2TrendFiles_json_Barrio = [
     { url: resolveAssetUrl('assets/data/geojson/SO2/SO2_Yearly_ZonalStats/SO2_Yearly_ZonalStats_Barrios/Trend_SO2_ZonalStats_Barrios.geojson'), name: 'SO2_Trend.geojson' },
-    { url: resolveAssetUrl('assets/data/csv/SO2_Mensual_Comunal.csv'), name: 'SO2_Monthly.csv' },
-    { url: resolveAssetUrl('assets/data/csv/SO2_Anual_Comunal.csv'), name: 'SO2_Anual.csv' }
+    { url: resolveAssetUrl('assets/data/csv/SO2_m_region.csv'), name: 'SO2_m_region.csv' },
+    { url: resolveAssetUrl('assets/data/csv/SO2_y_region.csv'), name: 'SO2_y_region.csv' }
 ];
 
 // /// Manzanas
@@ -72,8 +72,8 @@ const so2YearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 
 
 const so2TrendFiles_json_Manzanas = [
     { url: resolveAssetUrl('assets/data/geojson/SO2/SO2_Yearly_ZonalStats/SO2_Yearly_ZonalStats_Manzanas/Trend_SO2_ZonalStats_Manzanas.geojson'), name: 'SO2_Trend.geojson' },
-    { url: resolveAssetUrl('assets/data/csv/SO2_Mensual_Comunal.csv'), name: 'SO2_Monthly.csv' },
-    { url: resolveAssetUrl('assets/data/csv/SO2_Anual_Comunal.csv'), name: 'SO2_Anual.csv' }
+    { url: resolveAssetUrl('assets/data/csv/SO2_m_region.csv'), name: 'SO2_m_region.csv' },
+    { url: resolveAssetUrl('assets/data/csv/SO2_y_region.csv'), name: 'SO2_y_region.csv' }
 ];
 
 

@@ -28,7 +28,7 @@ function valueToSTColor(value) {
     }
 
 export async function map_trend(map) {
-    const geojsonUrl = resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson');
+    const geojsonUrl = resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson');
     const propertyName = 'slope_median';
 
     // Eliminar la fuente y la capa si ya existen
@@ -40,10 +40,16 @@ export async function map_trend(map) {
     const response = await fetch(geojsonUrl);
     const geojsonData = await response.json();
 
-    // Aplicar los colores a cada feature basado en su valor
     geojsonData.features.forEach(feature => {
         const value = feature.properties[propertyName];
-        feature.properties.color = valueToSTColor(value); // Asignar color calculado
+        const n = value == null ? NaN : Number(value);
+        if (Number.isNaN(n)) {
+            feature.properties.color = 'rgba(0,0,0,0)';
+            feature.properties.trendOutline = 'rgba(0,0,0,0)';
+        } else {
+            feature.properties.color = valueToSTColor(n);
+            feature.properties.trendOutline = '#000000';
+        }
     });
 
     // Agregar la fuente y la capa con los colores definidos
@@ -59,22 +65,21 @@ export async function map_trend(map) {
         paint: {
             'fill-opacity': 1,
             'fill-color': ['get', 'color'], // Usar el color precalculado
-            'fill-outline-color': 'black'    // Borde negro
+            'fill-outline-color': ['get', 'trendOutline']
         }
     });
 
     // Evento de clic para mostrar un popup con información de la capa
     map.on('click', 'generic-trend-layer', (e) => {
         const properties = e.features[0].properties;
-        const trendValue = properties[propertyName] ? properties[propertyName].toFixed(2) : 'No disponible';
+        const value = properties[propertyName];
 
-        new maplibregl.Popup()
+        new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
             .setHTML(`
-                <strong>Rango de años:</strong> ${lstRangeLabel} <br>
-                <strong>Nombre del Barrio:</strong> ${properties.NOMBRE || 'No disponible'}<br>
-                <strong>Tendencia LST:</strong> ${properties.slope_median.toFixed(2)}<br>
-
+                <div class="popup-title">${properties.NOMBRE || 'Barrio'}</div>
+                <div class="popup-row"><span class="popup-label">Período</span><span class="popup-value">${lstRangeLabel}</span></div>
+                <div class="popup-row"><span class="popup-label">Tendencia (°C/año)</span><span class="popup-value">${value != null && !Number.isNaN(Number(value)) ? Number(value).toFixed(1) : 'Sin datos'}</span></div>
             `)
             .addTo(map);
     });
@@ -87,6 +92,15 @@ export async function map_trend(map) {
     map.on('mouseleave', 'generic-trend-layer', () => {
         map.getCanvas().style.cursor = '';
     });
+
+    // Significance info box
+    const container = map.getContainer();
+    if (!container.querySelector('.trend-significance-box')) {
+        const infoBox = document.createElement('div');
+        infoBox.className = 'trend-significance-box';
+        infoBox.textContent = 'Las zonas sin tendencia estadísticamente significativa (p > 0.025) no se rellenan en el mapa vectorial; el raster puede mostrar píxeles sin la misma máscara de significancia.';
+        container.appendChild(infoBox);
+    }
 }
 
 

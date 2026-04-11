@@ -52,17 +52,17 @@ export async function g_a_aod
       // Parse the Data
   
       // Parse the Data
-      const data = await d3.csv(resolveAssetUrl("assets/data/csv/AOD_Anual.csv"));
+      const data = await d3.csv(resolveAssetUrl("assets/data/csv/AOD_y_region.csv"));
   
       // Format the data
       data.forEach(d => {
           d.Year = +d.Year;
-          d.mean = +d.mean;
+          d.AOD_median = +d.AOD_median;
       });
   
       // Find the minimum and maximum LST_mean values
-    const minNDVI = d3.min(data, d => d.mean);
-    const maxNDVI = d3.max(data, d => d.mean);
+    const minNDVI = d3.min(data, d => d.AOD_median);
+    const maxNDVI = d3.max(data, d => d.AOD_median);
   
       // X axis
       var x = d3.scaleBand()
@@ -108,7 +108,7 @@ export async function g_a_aod
   
       var mousemove = function (event, d) {
           tooltip
-              .html("AOD: " + d.mean.toFixed(2) + "<br>Año: " + d.Year)
+              .html("AOD: " + d.AOD_median.toFixed(2) + "<br>Año: " + d.Year)
               .style("left", (event.pageX + 15) + "px")
               .style("top", (event.pageY - 15) + "px");
       }
@@ -123,7 +123,7 @@ export async function g_a_aod
       // Add the line with smoothing and animation
       var line = d3.line()
           .x(d => x(d.Year) + x.bandwidth() / 2)
-          .y(d => y(d.mean))
+          .y(d => y(d.AOD_median))
           .curve(d3.curveCatmullRom.alpha(0.5));
   
       var animation = svg.append("path")
@@ -150,7 +150,7 @@ export async function g_a_aod
           .enter()
           .append("circle")
           .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
-          .attr("cy", d => y(d.mean))
+          .attr("cy", d => y(d.AOD_median))
           .attr("r", 4)
           .attr("fill", "steelblue")
           .attr("pointer-events", "all")

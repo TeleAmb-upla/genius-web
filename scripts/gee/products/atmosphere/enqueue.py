@@ -146,11 +146,14 @@ def _enqueue_s5p(
     force_yearly_csv = bool(
         drive_freshness and drive_freshness.yearly_csv_missing_or_stale
     )
+    local_csv_needs_refresh = bool(
+        drive_freshness and drive_freshness.local_csv_stale
+    )
     force_yearly_geo = bool(
         drive_freshness and drive_freshness.yearly_geo_missing_or_stale
     )
     csv_run = (
-        (plan.run or plan.is_full_refresh or force_full or force_yearly_csv)
+        (plan.run or plan.is_full_refresh or force_full or force_yearly_csv or local_csv_needs_refresh)
         if tables_run_override is None
         else tables_run_override
     )
@@ -274,13 +277,33 @@ def _enqueue_s5p(
             )
 
         # Yearly GeoJSON: only when geo files are missing/invalid
-        missing_geo_yrs = list(
-            drive_freshness.missing_yearly_geo_years
+        drive_missing_geo_yrs = list(
+            drive_freshness.drive_missing_yearly_geo_years
         ) if drive_freshness else []
-        geo_yearly_needed = bool(missing_geo_yrs)
-        if (not skip_yearly or geo_yearly_needed) and geo_run:
-            if missing_geo_yrs and drive_gate:
-                for yr in missing_geo_yrs:
+        local_invalid_geo_yrs = list(
+            drive_freshness.local_invalid_yearly_geo_years
+        ) if drive_freshness else []
+        full_refresh_geo_yrs: list[int] = []
+        if (
+            not skip_yearly
+            and (force_full or plan.is_full_refresh)
+            and not drive_missing_geo_yrs
+            and not local_invalid_geo_yrs
+        ):
+            ic_for_years = ee.ImageCollection(spec.asset_ym)
+            max_year = ym_lib.effective_yearly_export_year(ic_for_years)
+            all_years_raw = (
+                ic_for_years.aggregate_array("year").distinct().sort().getInfo() or []
+            )
+            full_refresh_geo_yrs = [
+                int(y) for y in all_years_raw if int(y) <= max_year
+            ]
+        years_to_export = drive_missing_geo_yrs or full_refresh_geo_yrs
+        geo_yearly_needed = bool(drive_missing_geo_yrs)
+        local_needs_resync = bool(local_invalid_geo_yrs)
+        if (not skip_yearly or geo_yearly_needed or local_needs_resync) and geo_run:
+            if years_to_export and drive_gate:
+                for yr in years_to_export:
                     drive_gate.clear_before_reexport(
                         spec.drive_geo_y_b, extensions=(".geojson", ".json"),
                         file_stems=(f"{spec.key.upper()}_Yearly_ZonalStats_Barrios_{yr}",),
@@ -291,21 +314,33 @@ def _enqueue_s5p(
                         file_stems=(f"{spec.key.upper()}_Yearly_ZonalStats_Manzanas_{yr}",),
                         reason=f"GeoJSON anual Manzanas {yr} inválido/faltante — re-export",
                     )
-            _add_tasks(
-                drive,
-                tc.start_y_geojson_tasks(
-                    spec,
-                    year_numbers=missing_geo_yrs or None,
-                    drive_gate=drive_gate,
-                ),
-            )
-            sync.update(
-                {
-                    f"{sync_prefix}_geo_yearly_b",
-                    f"{sync_prefix}_geo_yearly_m",
-                }
-            )
-            ran_derivative = True
+            if years_to_export:
+                _add_tasks(
+                    drive,
+                    tc.start_y_geojson_tasks(
+                        spec,
+                        year_numbers=years_to_export,
+                        drive_gate=drive_gate,
+                    ),
+                )
+                sync.update(
+                    {
+                        f"{sync_prefix}_geo_yearly_b",
+                        f"{sync_prefix}_geo_yearly_m",
+                    }
+                )
+                ran_derivative = True
+            elif local_invalid_geo_yrs:
+                sync.update(
+                    {
+                        f"{sync_prefix}_geo_yearly_b",
+                        f"{sync_prefix}_geo_yearly_m",
+                    }
+                )
+                ran_derivative = True
+                messages.append(
+                    f"GeoJSON anuales {spec.key.upper()} válidos en Drive; re-descargando copia local sin re-export."
+                )
         elif not geo_run and not run_monthly_geo:
             messages.append(
                 f"Omitidos GeoJSON {spec.key.upper()} — sin datos faltantes/inválidos."

@@ -1,17 +1,19 @@
-
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { getProductYearRangeLabel } from '../../../map_data_catalog.js';
+
+const aodRangeLabel = getProductYearRangeLabel('aod');
 function valueToSTColor(value) {
     const domain = [-38, 38]; // mínimo y máximo
     // Paleta de colores que representa los diferentes valores de la tendencia
     const range = [
-        "#ff0000", // Rojo intenso para los valores negativos bajos
-        "#ff3d66", // Rojo medio para valores negativos moderados
-        "#ff75ad", // Rojo suave para valores negativos más cercanos a 0
-        "transparent", // Transparente para valores entre -1 y 1
-        "#75aaff", // Azul claro para valores positivos bajos
-        "#4d66ff", // Azul medio para valores positivos moderados
-        "#0313ff"  // Azul intenso para valores positivos altos
-    ].reverse();
+        "#0313ff",
+        "#4d66ff",
+        "#75aaff",
+        "#ffffff",
+        "#ff75ad",
+        "#ff3d66",
+        "#ff0000"
+    ];
 
     // Calcular el paso entre cada color en función del dominio
     const step = (domain[1] - domain[0]) / (range.length - 1);
@@ -80,7 +82,7 @@ export async function map_trend(map) {
 export function createSTLegendSVG()  {
     const domain = [-38, 38];  // Mínimo y máximo
     const steps = 9; // Cantidad de bloques: 4 rojos, 1 blanco, 4 azules
-    const colorsBase = ["#ff0000", "#ff3d66", "#ff75ad", "#ffffff", "#75aaff", "#4d66ff", "#0313ff"].reverse(); // 4 colores para rojos y azules, blanco en el centro
+    const colorsBase = ["#0313ff", "#4d66ff", "#75aaff", "#ffffff", "#ff75ad", "#ff3d66", "#ff0000"];
 
     // Crear una escala secuencial con los colores interpolados
     const colorScale = d3.scaleSequential()
@@ -128,7 +130,7 @@ export function createSTLegendSVG()  {
             <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Tendencia AOD</text>
 
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="5" y="40" font-size="12" font-family="Arial">2001 - 2024</text>
+            <text x="5" y="40" font-size="12" font-family="Arial">${aodRangeLabel}</text>
 
             <!-- Bloques de colores -->
             ${legendItems}

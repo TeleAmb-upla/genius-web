@@ -112,6 +112,6 @@ def start_aod_t_geojson_tasks(
         stem_m="Trend_AOD_ZonalStats_Manzanas",
         selectors_b=["NOMBRE", "POBLACION", "slope_median", "p_value", ".geo"],
         selectors_m=["MANZENT", "TOTAL_PERS", "slope_median", "p_value", ".geo"],
-        scale_m=1000,
+        scale_m=500,
         drive_gate=drive_gate,
     )

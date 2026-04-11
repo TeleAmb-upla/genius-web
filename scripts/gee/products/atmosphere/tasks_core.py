@@ -103,6 +103,15 @@ def _to_export_band(median_img: ee.Image, spec: PollutantSpec) -> ee.Image:
     return median_img.multiply(1e6).rename(spec.export_band_name)
 
 
+def _attach_csv_props(
+    feature: ee.Feature,
+    time_key: str,
+    time_value: object,
+    value_property: str,
+) -> ee.Feature:
+    return ee.Feature(feature).set(time_key, time_value)
+
+
 def start_ym_asset_tasks(spec: PollutantSpec) -> list[ee.batch.Task]:
     region = vectors.region_valparaiso()
     geom = region.geometry()
@@ -335,7 +344,14 @@ def start_csv_tasks(
     triplets_m = by_month.map(
         lambda image: image.reduceRegions(
             collection=region, reducer=ee.Reducer.mean(), scale=1113.2
-        ).map(lambda f: f.set("Month", image.get("month")))
+        ).map(
+            lambda f: _attach_csv_props(
+                f,
+                "Month",
+                image.get("month"),
+                spec.export_band_name,
+            )
+        )
     ).flatten()
     prefix = spec.key.upper()
     fn_m = f"{prefix}_m_region"
@@ -355,9 +371,9 @@ def start_csv_tasks(
         tasks.append(t1)
 
     max_export_year = ym_lib.last_completed_wall_clock_calendar_year()
-    years = (
-        ee.List(ic.aggregate_array("year")).distinct().sort()
-        .filter(ee.Filter.lte("item", max_export_year))
+    all_years_raw = ic.aggregate_array("year").distinct().sort().getInfo() or []
+    years = ee.List(
+        [y for y in all_years_raw if int(y) <= max_export_year]
     )
     by_year = ee.ImageCollection.fromImages(
         years.map(
@@ -372,7 +388,14 @@ def start_csv_tasks(
     triplets_y = by_year.map(
         lambda image: image.reduceRegions(
             collection=region, reducer=ee.Reducer.mean(), scale=1113.2
-        ).map(lambda f: f.set("Year", image.get("year")))
+        ).map(
+            lambda f: _attach_csv_props(
+                f,
+                "Year",
+                image.get("year"),
+                spec.export_band_name,
+            )
+        )
     ).flatten()
     fn_y = f"{prefix}_y_region"
     if not (
@@ -415,6 +438,7 @@ def start_m_geojson_tasks(
         scale_m=1113.2,
         month_numbers=month_numbers,
         drive_gate=drive_gate,
+        image_transform=lambda image: _to_export_band(image, spec),
     )
     tasks += zonal_geojson.months_zonal_geojson_tasks(
         ic,
@@ -428,6 +452,7 @@ def start_m_geojson_tasks(
         scale_m=1113.2,
         month_numbers=month_numbers,
         drive_gate=drive_gate,
+        image_transform=lambda image: _to_export_band(image, spec),
     )
     return tasks
 
@@ -458,6 +483,7 @@ def start_y_geojson_tasks(
         selectores=["NOMBRE", "POBLACION", "Year", spec.export_band_name, ".geo"],
         scale_m=1113.2,
         drive_gate=drive_gate,
+        image_transform=lambda image: _to_export_band(image, spec),
     )
     tasks += zonal_geojson.yearly_zonal_geojson_tasks_last_year(
         ic,
@@ -472,6 +498,7 @@ def start_y_geojson_tasks(
         selectores=["MANZENT", "TOTAL_PERS", "Year", spec.export_band_name, ".geo"],
         scale_m=1113.2,
         drive_gate=drive_gate,
+        image_transform=lambda image: _to_export_band(image, spec),
     )
     return tasks
 

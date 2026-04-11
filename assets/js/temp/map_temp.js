@@ -359,7 +359,7 @@ export async function map_t() {
             </div>
         `;
 
-            L.popup({ className: 'custom-popup' })
+            L.popup({ className: 'geo-popup' })
                 .setLatLng(latlng)
                 .setContent(content)
                 .openOn(currentMap);
@@ -380,7 +380,7 @@ export async function map_t() {
             </div>
         `;
 
-            L.popup({ className: 'custom-popup' })
+            L.popup({ className: 'geo-popup' })
                 .setLatLng(latlng)
                 .setContent(content)
                 .openOn(currentMap);

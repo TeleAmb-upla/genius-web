@@ -1,13 +1,13 @@
-﻿import { map_2018 } from './funtion/year_2018.js';
-import { map_2019 } from './funtion/year_2019.js';
-import { map_2020 } from './funtion/year_2020.js';
-import { map_2021 } from './funtion/year_2021.js';
-import { map_2022 } from './funtion/year_2022.js';
-import { map_2023 } from './funtion/year_2023.js';
-import { map_2024 } from './funtion/year_2024.js';
-import { map_2025 } from './funtion/year_2025.js';
-import { map_2026 } from './funtion/year_2026.js';
-import { addCenteredTitle, createLegendSVG } from './funtion/map_utilities_p.js';
+﻿import { map_2018 } from './function/year_2018.js';
+import { map_2019 } from './function/year_2019.js';
+import { map_2020 } from './function/year_2020.js';
+import { map_2021 } from './function/year_2021.js';
+import { map_2022 } from './function/year_2022.js';
+import { map_2023 } from './function/year_2023.js';
+import { map_2024 } from './function/year_2024.js';
+import { map_2025 } from './function/year_2025.js';
+import { map_2026 } from './function/year_2026.js';
+import { addCenteredTitle, createLegendSVG } from './function/map_utilities_p.js';
 import { loadinf_critica } from '../inf_critica_leaflet.js';
 import { attachMapOpacityPanel } from '../slider_opacity.js';
 

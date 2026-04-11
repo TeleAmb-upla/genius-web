@@ -47,7 +47,7 @@ export async function g_a_aod_m() {
         .text("AOD");
 
     // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/AOD_Yearly_Urbano.csv"));
+    const data = await d3.csv(resolveAssetUrl("assets/data/csv/AOD_y_region.csv"));
 
     // Format the data
     data.forEach(d => {

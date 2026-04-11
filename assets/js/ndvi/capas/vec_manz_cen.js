@@ -1,7 +1,7 @@
 ﻿// Función para cargar datos GeoJSON y configurar capas
 export async function geojm_censales(currentMap) {
     try {
-        const response = await fetch(resolveAssetUrl('assets/data/geojson/NDVI/NDVI_Monthly_ZonalStats_Manzanas/NDVI_Monthly_ZonalStats_Manzanas_01.geojson'));
+        const response = await fetch(resolveAssetUrl('assets/data/geojson/NDVI/NDVI_Monthly_ZonalStats/NDVI_Monthly_ZonalStats_Manzanas/NDVI_Monthly_ZonalStats_Manzanas_01.geojson'));
         const data = await response.json();
 
         // Crear capa GeoJSON y agregarla al mapa

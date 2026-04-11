@@ -5,7 +5,6 @@ import { attachMapOpacityPanel } from '../slider_opacity.js';
 let currentMap = null;
 let luminosityOverlay = null;
 let droneOverlay = null;
-let compareControl = null;
 
 async function loadWebpOverlay(imagePath, boundsPath) {
     try {
@@ -44,14 +43,42 @@ async function loadTifOverlay(tifPath, colorFn) {
     }
 }
 
+/** TIF: 1 = fuera de ámbito (transparente); 2–4 = Baja / Media / Alta (tras corrección vs. WebP). */
 const CLASS_COLOR_FN = function (values) {
     const v = values[0];
     if (v === undefined || v === null || isNaN(v)) return null;
-    if (v === 3) return 'yellow';
-    if (v === 2) return 'red';
-    if (v === 1) return '#000080';
+    if (v === 1) return null;
+    if (v === 2) return '#000080';
+    if (v === 3) return 'red';
+    if (v === 4) return 'yellow';
     return null;
 };
+
+function createPillSelector(mapContainer, onSelect) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'lum-pill-selector';
+
+    const pills = [
+        { id: 'clasificacion', label: 'Clasificación' },
+        { id: 'dron', label: 'Dron' },
+    ];
+
+    pills.forEach((pill, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'lum-pill' + (idx === 0 ? ' lum-pill--active' : '');
+        btn.textContent = pill.label;
+        btn.dataset.layer = pill.id;
+        btn.addEventListener('click', () => {
+            wrapper.querySelectorAll('.lum-pill').forEach(b => b.classList.remove('lum-pill--active'));
+            btn.classList.add('lum-pill--active');
+            onSelect(pill.id);
+        });
+        wrapper.appendChild(btn);
+    });
+
+    mapContainer.appendChild(wrapper);
+    return wrapper;
+}
 
 export async function map_lum() {
     if (currentMap) {
@@ -72,8 +99,8 @@ export async function map_lum() {
 
     luminosityOverlay =
         await loadWebpOverlay(
-            'assets/data/vectores/Quilpue_Class_Smoothed.webp',
-            'assets/data/vectores/illumination_class_bounds.json'
+            'assets/data/raster/Iluminacion/ILU_CLASS_RESAMPLE_1m.webp',
+            'assets/data/raster/Iluminacion/illumination_class_bounds.json'
         ) ||
         await loadTifOverlay(
             'assets/data/raster/Iluminacion/ILU_CLASS_RESAMPLE_1m.tif',
@@ -87,19 +114,23 @@ export async function map_lum() {
         ) ||
         await loadTifOverlay('assets/data/raster/Iluminacion/M3T_RGB_QUI_2024_07.tif');
 
+    if (luminosityOverlay) {
+        luminosityOverlay.addTo(currentMap);
+        if (luminosityOverlay.getBounds) currentMap.fitBounds(luminosityOverlay.getBounds());
+    }
+
+    const mapContainer = currentMap.getContainer();
+
     if (luminosityOverlay && droneOverlay) {
-        luminosityOverlay.addTo(currentMap);
-        droneOverlay.addTo(currentMap);
-        compareControl = L.control.sideBySide(luminosityOverlay, droneOverlay).addTo(currentMap);
-        if (luminosityOverlay.getBounds) currentMap.fitBounds(luminosityOverlay.getBounds());
-    } else if (luminosityOverlay) {
-        luminosityOverlay.addTo(currentMap);
-        if (luminosityOverlay.getBounds) currentMap.fitBounds(luminosityOverlay.getBounds());
-    } else if (droneOverlay) {
-        droneOverlay.addTo(currentMap);
-        if (droneOverlay.getBounds) currentMap.fitBounds(droneOverlay.getBounds());
-    } else {
-        console.error('No se encontraron overlays de iluminación listos para el visor.');
+        createPillSelector(mapContainer, (layerId) => {
+            if (layerId === 'clasificacion') {
+                if (!currentMap.hasLayer(luminosityOverlay)) luminosityOverlay.addTo(currentMap);
+                if (currentMap.hasLayer(droneOverlay)) currentMap.removeLayer(droneOverlay);
+            } else {
+                if (!currentMap.hasLayer(droneOverlay)) droneOverlay.addTo(currentMap);
+                if (currentMap.hasLayer(luminosityOverlay)) currentMap.removeLayer(luminosityOverlay);
+            }
+        });
     }
 
     const infCriticaData = await loadinf_critica(currentMap);
@@ -112,27 +143,26 @@ export async function map_lum() {
     }
 
     attachMapOpacityPanel(
-        currentMap.getContainer(),
+        mapContainer,
         (opacity) => {
-            if (luminosityOverlay) luminosityOverlay.setOpacity(opacity);
-            if (droneOverlay) droneOverlay.setOpacity(opacity);
+            if (luminosityOverlay && currentMap.hasLayer(luminosityOverlay)) luminosityOverlay.setOpacity(opacity);
+            if (droneOverlay && currentMap.hasLayer(droneOverlay)) droneOverlay.setOpacity(opacity);
         },
         { leafletMap: currentMap },
     );
 
-    const mapContainer = currentMap.getContainer();
     const legendContainer = document.createElement('div');
     legendContainer.className = 'map-legend-panel info legend';
 
     const legendTitle = document.createElement('div');
     legendTitle.className = 'map-legend-panel__title';
-    legendTitle.innerText = droneOverlay && luminosityOverlay ? 'Clasificación y dron' : 'Luminosidad';
+    legendTitle.innerText = 'Clasificación luminosidad';
     legendContainer.appendChild(legendTitle);
 
     const categories = [
         { label: 'Alta', color: 'yellow' },
         { label: 'Media', color: 'red' },
-        { label: 'Baja', color: '#000080' }
+        { label: 'Baja', color: '#000080' },
     ];
 
     categories.forEach(category => {

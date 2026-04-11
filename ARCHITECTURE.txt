@@ -761,9 +761,9 @@ read_state() and merge_state() for all products.
     python -m scripts.gee.export_all
 
   Drive-only download:
-    python -m scripts.gee.download_drive_to_repo
-    python -m scripts.gee.download_drive_to_repo --dry-run
-    python -m scripts.gee.download_drive_to_repo --only raster_monthly,csv
+    python -m scripts.gee.drive.download_drive_to_repo
+    python -m scripts.gee.drive.download_drive_to_repo --dry-run
+    python -m scripts.gee.drive.download_drive_to_repo --only raster_monthly,csv
 
 
 ================================================================================

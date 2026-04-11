@@ -49,16 +49,16 @@ export async function g_m_t_islas(containerId = "p73") {
         .text("LST (C°)");
 
     // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/LST_Mensual.csv"));
+    const data = await d3.csv(resolveAssetUrl("assets/data/csv/LST_m_urban.csv"));
 
     // Format the data
     data.forEach(d => {
         d.Month = +d.Month;           // Convert month to number
-        d.LST_median = +d.LST_median;    // Convert LST_median to number
+        d.LST_mean = +d.LST_mean;    // Convert LST_mean to number
     });
-    // Find the minimum and maximum LST_median values
-    const min = d3.min(data, d => d.LST_median);
-    const max = d3.max(data, d => d.LST_median);
+    // Find the minimum and maximum LST_mean values
+    const min = d3.min(data, d => d.LST_mean);
+    const max = d3.max(data, d => d.LST_mean);
 
     // Add X axis
     var x = d3.scaleLinear()
@@ -99,7 +99,7 @@ export async function g_m_t_islas(containerId = "p73") {
 
 var mousemove = function (event, d) {
     tooltip
-        .html("LST: " + d.LST_median.toFixed(2) + "<br>Mes: " + d.Month)
+        .html("LST: " + d.LST_mean.toFixed(2) + "<br>Mes: " + d.Month)
         .style("left", (event.pageX + 15) + "px")
         .style("top", (event.pageY - 15) + "px");
 }
@@ -116,7 +116,7 @@ var mouseleave = function (event, d) {
         // Add the line with smoothing and animation
         var line = d3.line()
         .x(d => x(d.Month)) // Ensure the line passes through the center of the band
-        .y(d => y(d.LST_median))
+        .y(d => y(d.LST_mean))
         .curve(d3.curveCatmullRom.alpha(0.5)); // Use curveCatmullRom for smoothing
     
         var animation = svg.append("path")
@@ -144,7 +144,7 @@ var mouseleave = function (event, d) {
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Month))
-        .attr("cy", d => y(d.LST_median))
+        .attr("cy", d => y(d.LST_mean))
         .attr("r", 4) // Larger radius for easier interaction
         .attr("fill", "steelblue")
         .attr("pointer-events", "all") // Ensure these circles capture mouse events

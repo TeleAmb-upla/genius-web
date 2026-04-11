@@ -1,8 +1,7 @@
-﻿// Definir las rutas de archivos TIF específicos de hu
+﻿import { getProductYears } from '../map_data_catalog.js';
 
-
-const huYearlyFiles_tif = Array.from({ length: 9 }, (_, i) => {
-    const year = 2018 + i;
+// Definir las rutas de archivos TIF específicos de hu
+const huYearlyFiles_tif = getProductYears('hu').map((year) => {
     return {
         url: resolveAssetUrl(`assets/data/raster/Huella_Urbana/Huella_Urbana_Yearly_${year}.tif`),
         name: `Huella_Urbana_Yearly_${year}.tif`
@@ -11,7 +10,7 @@ const huYearlyFiles_tif = Array.from({ length: 9 }, (_, i) => {
 
 const hucvsFiles_tif = [
     { url: resolveAssetUrl('assets/data/csv/Huella_Urbana_Anual.csv'), name: 'Huella_Urbana_Anual.csv' },
-    { url: resolveAssetUrl('assets/data/csv/Areas_Huella_Urbana_Yearly.csv'), name: 'Areas_Huella_Urbana.csv' }
+    { url: resolveAssetUrl('assets/data/csv/Areas_Huella_Urbana_Yearly.csv'), name: 'Areas_Huella_Urbana_Yearly.csv' }
 ];
 
 

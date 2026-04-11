@@ -155,11 +155,14 @@ def enqueue_lst_exports(
     force_yearly_csv = bool(
         drive_freshness and drive_freshness.yearly_csv_missing_or_stale
     )
+    local_csv_needs_refresh = bool(
+        drive_freshness and drive_freshness.local_csv_stale
+    )
     force_yearly_geo = bool(
         drive_freshness and drive_freshness.yearly_geo_missing_or_stale
     )
     csv_run = (
-        (plan.run or plan.is_full_refresh or force_full or force_yearly_csv)
+        (plan.run or plan.is_full_refresh or force_full or force_yearly_csv or local_csv_needs_refresh)
         if tables_run_override is None
         else tables_run_override
     )
@@ -266,15 +269,21 @@ def enqueue_lst_exports(
             )
 
         # Yearly GeoJSON: only when geo files are missing/invalid
-        missing_geo_yrs = [
+        drive_missing_geo_yrs = [
             y
-            for y in (drive_freshness.missing_yearly_geo_years if drive_freshness else [])
+            for y in (drive_freshness.drive_missing_yearly_geo_years if drive_freshness else [])
             if y >= LST_START_YEAR
         ]
-        geo_yearly_needed = bool(missing_geo_yrs)
-        if (not skip_yearly or geo_yearly_needed) and not missing_years and geo_run:
-            if missing_geo_yrs and drive_gate:
-                for yr in missing_geo_yrs:
+        local_invalid_geo_yrs = [
+            y
+            for y in (drive_freshness.local_invalid_yearly_geo_years if drive_freshness else [])
+            if y >= LST_START_YEAR
+        ]
+        geo_yearly_needed = bool(drive_missing_geo_yrs)
+        local_needs_resync = bool(local_invalid_geo_yrs)
+        if (not skip_yearly or geo_yearly_needed or local_needs_resync) and not missing_years and geo_run:
+            if drive_missing_geo_yrs and drive_gate:
+                for yr in drive_missing_geo_yrs:
                     drive_gate.clear_before_reexport(
                         paths.DRIVE_LST_GEO_YEARLY_B,
                         extensions=(".geojson", ".json"),
@@ -287,15 +296,22 @@ def enqueue_lst_exports(
                         file_stems=(f"LST_Yearly_ZonalStats_Manzanas_{yr}",),
                         reason=f"GeoJSON anual Manzanas {yr} inválido/faltante — re-export",
                     )
-            _add_tasks(
-                drive,
-                geojson_tasks.start_lst_y_geojson_tasks(
-                    year_numbers=missing_geo_yrs or None,
-                    drive_gate=drive_gate,
-                ),
-            )
-            sync.update({"lst_geo_yearly_b", "lst_geo_yearly_m"})
-            ran_derivative = True
+            if drive_missing_geo_yrs:
+                _add_tasks(
+                    drive,
+                    geojson_tasks.start_lst_y_geojson_tasks(
+                        year_numbers=drive_missing_geo_yrs or None,
+                        drive_gate=drive_gate,
+                    ),
+                )
+                sync.update({"lst_geo_yearly_b", "lst_geo_yearly_m"})
+                ran_derivative = True
+            elif local_invalid_geo_yrs:
+                sync.update({"lst_geo_yearly_b", "lst_geo_yearly_m"})
+                ran_derivative = True
+                messages.append(
+                    "GeoJSON anuales LST válidos en Drive; re-descargando copia local sin re-export."
+                )
         elif want("geojson") and missing_years:
             messages.append("Omitidos GeoJSON anuales/trend LST (asset anual incompleto).")
         elif not geo_run:

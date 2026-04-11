@@ -1,5 +1,5 @@
 export class LayersControl {
-    constructor(onModeChange, onInfraToggle) {
+    constructor(onModeChange, onInfraToggle, options = {}) {
         LayersControl._nextId = (LayersControl._nextId || 0) + 1;
         this._controlId = `layers-control-${LayersControl._nextId}`;
         this._container = document.createElement("div");
@@ -12,33 +12,32 @@ export class LayersControl {
         this._onInfraToggle = onInfraToggle || null;
         this._activeMode = null;
         this._infraEnabled = false;
-        this._createModeSwitchButtons();
-    }
-
-    _createModeSwitchButtons() {
-        const pillRow = document.createElement("div");
-        pillRow.className = "layers-control__pills";
-
-        const modes = [
+        this._modes = options.modes || [
             { key: "yearly", label: "Anual" },
             { key: "monthly", label: "Mensual" },
             { key: "trend", label: "Tendencia" },
         ];
+        this._hideModePills = Boolean(options.hideModePills);
+        this._createModeSwitchButtons();
+    }
 
+    _createModeSwitchButtons() {
         this._pillButtons = {};
-        modes.forEach(({ key, label }) => {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "layers-control__pill";
-            btn.textContent = label;
-            btn.dataset.mode = key;
-            btn.addEventListener("click", () => this._selectMode(key));
-            pillRow.appendChild(btn);
-            this._pillButtons[key] = btn;
-        });
-
-        const divider = document.createElement("hr");
-        divider.className = "layers-control__divider";
+        if (!this._hideModePills && this._modes.length) {
+            const pillRow = document.createElement("div");
+            pillRow.className = "layers-control__pills";
+            this._modes.forEach(({ key, label }) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "layers-control__pill";
+                btn.textContent = label;
+                btn.dataset.mode = key;
+                btn.addEventListener("click", () => this._selectMode(key));
+                pillRow.appendChild(btn);
+                this._pillButtons[key] = btn;
+            });
+            this._container.appendChild(pillRow);
+        }
 
         const infraRow = document.createElement("label");
         infraRow.className = "layers-control__toggle";
@@ -57,8 +56,11 @@ export class LayersControl {
         infraRow.appendChild(infraCb);
         infraRow.appendChild(infraLabel);
 
-        this._container.appendChild(pillRow);
-        this._container.appendChild(divider);
+        if (!this._hideModePills && this._modes.length) {
+            const divider = document.createElement("hr");
+            divider.className = "layers-control__divider";
+            this._container.appendChild(divider);
+        }
         this._container.appendChild(infraRow);
     }
 

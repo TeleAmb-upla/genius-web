@@ -63,24 +63,24 @@ EJEMPLOS DE USO:
 ================
 
 # Ejecutar todos (NDVI, AOD, NO2, SO2, LST):
-python pipeline.py
+python -m scripts.gee.pipeline
 
 # Solo un producto:
-python pipeline.py --product ndvi
-python pipeline.py --product aod
+python -m scripts.gee.pipeline --product ndvi
+python -m scripts.gee.pipeline --product aod
 
 # Sin esperar a tareas completen:
-python pipeline.py --skip-wait
+python -m scripts.gee.pipeline --skip-wait
 
 # Sin verificar Drive (más rápido, pero puede duplicar):
-python pipeline.py --skip-drive-preflight
+python -m scripts.gee.pipeline --skip-drive-preflight
 
 # Solo encolar, no descargar:
-python pipeline.py --enqueue-only
+python -m scripts.gee.pipeline --enqueue-only
 
 # Solo descargar (debe haber tareas completadas en Drive):
-python pipeline.py --download-only
+python -m scripts.gee.pipeline --download-only
 
 # Ver ayuda completa:
-python pipeline.py --help
+python -m scripts.gee.pipeline --help
 """

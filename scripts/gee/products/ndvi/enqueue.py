@@ -55,6 +55,9 @@ def enqueue_ndvi_exports(
     force_yearly_csv = bool(
         drive_freshness and drive_freshness.yearly_csv_missing_or_stale
     )
+    local_csv_needs_refresh = bool(
+        drive_freshness and drive_freshness.local_csv_stale
+    )
     force_yearly_geo = bool(
         drive_freshness and drive_freshness.yearly_geo_missing_or_stale
     )
@@ -63,10 +66,11 @@ def enqueue_ndvi_exports(
         or (last_calendar_year in plan.years_touched)
         or (tables_run_override is True)
         or force_yearly_csv
+        or local_csv_needs_refresh
         or force_yearly_geo
     )
     csv_run = (
-        (plan.run or force_yearly_csv)
+        (plan.run or force_yearly_csv or local_csv_needs_refresh)
         if tables_run_override is None
         else tables_run_override
     )
@@ -242,14 +246,18 @@ def enqueue_ndvi_exports(
             messages.append("Omitidos: CSV — sin datos nuevos ni CSV inválidos.")
 
     if want("geojson"):
-        missing_geo_years = list(
-            drive_freshness.missing_yearly_geo_years
+        drive_missing_geo_years = list(
+            drive_freshness.drive_missing_yearly_geo_years
         ) if drive_freshness else []
-        geo_yearly_needed = bool(missing_geo_years)
+        local_invalid_geo_years = list(
+            drive_freshness.local_invalid_yearly_geo_years
+        ) if drive_freshness else []
+        geo_yearly_needed = bool(drive_missing_geo_years)
 
-        if (not skip_yearly or geo_yearly_needed) and geo_run and refresh_yearly_products:
-            if missing_geo_years and drive_gate:
-                for yr in missing_geo_years:
+        local_needs_resync = bool(local_invalid_geo_years)
+        if (not skip_yearly or geo_yearly_needed or local_needs_resync) and geo_run and refresh_yearly_products:
+            if drive_missing_geo_years and drive_gate:
+                for yr in drive_missing_geo_years:
                     drive_gate.clear_before_reexport(
                         paths.DRIVE_GEO_YEARLY_B,
                         extensions=(".geojson", ".json"),
@@ -262,23 +270,23 @@ def enqueue_ndvi_exports(
                         file_stems=(f"NDVI_Yearly_ZonalStats_Manzanas_{yr}",),
                         reason=f"GeoJSON anual Manzanas {yr} inválido/faltante — re-export",
                     )
-            _add_tasks(
-                drive,
-                raster_tasks.start_ndvi_yearly_zonal_geojson_tasks(
-                    year_numbers=missing_geo_years or None,
-                    drive_gate=drive_gate,
-                ),
-            )
-            _add_tasks(
-                drive,
-                geojson_tasks.start_ndvi_y_geojson_tasks(
-                    year_numbers=missing_geo_years or None,
-                    drive_gate=drive_gate,
-                ),
-            )
-            sync.update({"geo_yearly_b", "geo_yearly_m"})
-            ran_derivative = True
-        elif skip_yearly and not geo_yearly_needed:
+            if drive_missing_geo_years:
+                _add_tasks(
+                    drive,
+                    geojson_tasks.start_ndvi_y_geojson_tasks(
+                        year_numbers=drive_missing_geo_years or None,
+                        drive_gate=drive_gate,
+                    ),
+                )
+                sync.update({"geo_yearly_b", "geo_yearly_m"})
+                ran_derivative = True
+            elif local_invalid_geo_years:
+                sync.update({"geo_yearly_b", "geo_yearly_m"})
+                ran_derivative = True
+                messages.append(
+                    "GeoJSON anuales NDVI válidos en Drive; re-descargando copia local sin re-export."
+                )
+        elif skip_yearly and not geo_yearly_needed and not local_needs_resync:
             messages.append(
                 "Omitidos: GeoJSON anuales (zonal último año y NDVI_y_geojson; "
                 "--include-yearly para encolarlos)."

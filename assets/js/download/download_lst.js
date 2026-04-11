@@ -33,7 +33,7 @@ const lstTrendFiles_tif = [
 const lstMonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
     return {
-        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Monthly_ZonalStats_Barrios/LST_Monthly_ZonalStats_Barrios_${month}.geojson`),
+        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Monthly_ZonalStats/LST_Monthly_ZonalStats_Barrios/LST_Monthly_ZonalStats_Barrios_${month}.geojson`),
         name: `LST_Monthly_${month}.geojson`
     };
 });
@@ -41,13 +41,13 @@ const lstMonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
 const lstYearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Yearly_ZonalStats_Barrios/LST_Yearly_ZonalStats_Barrios_${year}.geojson`),
+        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Barrios/LST_Yearly_ZonalStats_Barrios_${year}.geojson`),
         name: `LST_Yearly_${year}.geojson`
     };
 });
 
 const lstTrendFiles_json_Barrio = [
-    { url: resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson'), name: 'LST_Trend.geojson' },
+    { url: resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson'), name: 'LST_Trend.geojson' },
     { url: resolveAssetUrl('assets/data/csv/LST_m_urban.csv'), name: 'LST_Monthly.csv' },
     { url: resolveAssetUrl('assets/data/csv/LST_y_urban.csv'), name: 'LST_Anual.csv' }
 ];
@@ -56,7 +56,7 @@ const lstTrendFiles_json_Barrio = [
 const lstMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
     return {
-        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Monthly_ZonalStats_Manzanas/LST_Monthly_ZonalStats_Manzanas_${month}.geojson`),
+        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Monthly_ZonalStats/LST_Monthly_ZonalStats_Manzanas/LST_Monthly_ZonalStats_Manzanas_${month}.geojson`),
         name: `LST_Monthly_${month}.geojson`
     };
 });
@@ -64,12 +64,12 @@ const lstMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
 const lstYearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;
     return {
-        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Yearly_ZonalStats_Manzanas/LST_Yearly_ZonalStats_Manzanas_${year}.geojson`),
+        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Manzanas/LST_Yearly_ZonalStats_Manzanas_${year}.geojson`),
         name: `LST_Yearly_${year}.geojson`
     };
 });
 const lstTrendFiles_json_Manzanas = [
-    { url: resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson'), name: 'LST_Trend.geojson' },
+    { url: resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson'), name: 'LST_Trend.geojson' },
     { url: resolveAssetUrl('assets/data/csv/LST_m_urban.csv'), name: 'LST_Monthly.csv' },
     { url: resolveAssetUrl('assets/data/csv/LST_y_urban.csv'), name: 'LST_Anual.csv' }
 ];

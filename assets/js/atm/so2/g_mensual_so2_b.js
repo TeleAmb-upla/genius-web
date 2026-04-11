@@ -52,17 +52,17 @@ export async function g_m_so2_b(containerId = "p42") {
     `);
 
     // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/SO2_Mensual_Comunal.csv"));
+    const data = await d3.csv(resolveAssetUrl("assets/data/csv/SO2_m_region.csv"));
 
     // Format the data
     data.forEach(d => {
         d.Month = +d.Month;
-        d.SO2_median_fixed = +d.SO2_median_fixed;
+        d.SO2 = +d.SO2;
     });
 
     // Find the minimum and maximum SO2_median_fixed values
-    const min = d3.min(data, d => d.SO2_median_fixed);
-    const max = d3.max(data, d => d.SO2_median_fixed);
+    const min = d3.min(data, d => d.SO2);
+    const max = d3.max(data, d => d.SO2);
 
     // Add X axis
     var x = d3.scaleLinear()
@@ -102,7 +102,7 @@ export async function g_m_so2_b(containerId = "p42") {
 
     var mousemove = function (event, d) {
         tooltip
-            .html("SO²: " + d.SO2_median_fixed.toFixed(2) + "<br>Mes: " + d.Month)
+            .html("SO²: " + d.SO2.toFixed(2) + "<br>Mes: " + d.Month)
             .style("left", (event.pageX + 15) + "px")
             .style("top", (event.pageY - 15) + "px");
     }
@@ -117,7 +117,7 @@ export async function g_m_so2_b(containerId = "p42") {
     // Add the line with smoothing and animation
     var line = d3.line()
         .x(d => x(d.Month))
-        .y(d => y(d.SO2_median_fixed))
+        .y(d => y(d.SO2))
         .curve(d3.curveCatmullRom.alpha(0.5));
 
     var animation = svg.append("path")
@@ -144,7 +144,7 @@ export async function g_m_so2_b(containerId = "p42") {
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Month))
-        .attr("cy", d => y(d.SO2_median_fixed))
+        .attr("cy", d => y(d.SO2))
         .attr("r", 4)
         .attr("fill", "steelblue")
         .attr("pointer-events", "all")

@@ -20,8 +20,8 @@ const no2YearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, i
 
 const no2TrendFiles_tif = [
     { url: resolveAssetUrl('assets/data/raster/NO2/NO2_Trend/NO2_Yearly_Trend.tif'), name: 'NO2_Trend.tif' },
-    { url: resolveAssetUrl('assets/data/csv/NO2_Anual_Comunal.csv'), name: 'NO2_Anual.csv' },
-    { url: resolveAssetUrl('assets/data/csv/NO2_Mensual_Comunal.csv'), name: 'NO2_Monthly.csv' }
+    { url: resolveAssetUrl('assets/data/csv/NO2_y_region.csv'), name: 'NO2_y_region.csv' },
+    { url: resolveAssetUrl('assets/data/csv/NO2_m_region.csv'), name: 'NO2_m_region.csv' }
  ];
 
 //////////////////////// BARRIO
@@ -44,8 +44,8 @@ const no2YearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 
 
 const no2TrendFiles_json_Barrio = [
     { url: resolveAssetUrl('assets/data/geojson/NO2/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Barrios/Trend_NO2_ZonalStats_Barrios.geojson'), name: 'NO2_Trend.geojson' },
-    { url: resolveAssetUrl('assets/data/csv/NO2_Anual_Comunal.csv'), name: 'NO2_Anual.csv' },
-    { url: resolveAssetUrl('assets/data/csv/NO2_Mensual_Comunal.csv'), name: 'NO2_Monthly.csv' }
+    { url: resolveAssetUrl('assets/data/csv/NO2_y_region.csv'), name: 'NO2_y_region.csv' },
+    { url: resolveAssetUrl('assets/data/csv/NO2_m_region.csv'), name: 'NO2_m_region.csv' }
 ];
 
 ////////////////    MANZANAS
@@ -68,8 +68,8 @@ const no2YearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 
 
 const no2TrendFiles_json_Manzanas = [
     { url: resolveAssetUrl('assets/data/geojson/NO2/NO2_Yearly_ZonalStats/NO2_Yearly_ZonalStats_Manzanas/Trend_NO2_ZonalStats_Manzanas.geojson'), name: 'NO2_Trend.geojson' },
-    { url: resolveAssetUrl('assets/data/csv/NO2_Anual_Comunal.csv'), name: 'NO2_Anual.csv' },
-    { url: resolveAssetUrl('assets/data/csv/NO2_Mensual_Comunal.csv'), name: 'NO2_Monthly.csv' }
+    { url: resolveAssetUrl('assets/data/csv/NO2_y_region.csv'), name: 'NO2_y_region.csv' },
+    { url: resolveAssetUrl('assets/data/csv/NO2_m_region.csv'), name: 'NO2_m_region.csv' }
 ];
 
 
