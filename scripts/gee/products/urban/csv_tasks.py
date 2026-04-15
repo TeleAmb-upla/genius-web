@@ -24,9 +24,8 @@ def start_hu_csv_tasks(
 
     aoi = rt._aoi()
     classifier = rt._train_rf_model(aoi)
-    urbanos = ee.FeatureCollection(rt.DISTRITOS_URBANOS)
     prc = ee.FeatureCollection(rt.PRC_QUILPUE)
-    table = ee.FeatureCollection(rt.AOI_UPLA)
+    table = aoi
 
     images = [rt._classify_year(y, classifier, aoi) for y in years]
     hu_ic = ee.ImageCollection.fromImages(images)
@@ -57,7 +56,7 @@ def start_hu_csv_tasks(
                         image.select("pixel_area")
                         .reduceRegion(
                             reducer=ee.Reducer.sum(),
-                            geometry=urbanos.geometry(),
+                            geometry=aoi.geometry(),
                             scale=10,
                             maxPixels=1e10,
                         )

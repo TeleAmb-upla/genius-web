@@ -4,6 +4,9 @@ Huella Urbana classification from Sentinel-1 GRD + Sentinel-2 SR Harmonized.
 Translates the JS code from ``clean_class.txt`` into the Python GEE API.
 Training: 2018 data with existing training points.
 Classification: one image per year (2019 onward), exported to Drive.
+
+The working AOI is **zona urbana de Quilpué** (distritos urbanos ∩ comuna), not the
+full comuna polygon — rasters and exports are clipped to that geometry.
 """
 from __future__ import annotations
 
@@ -11,10 +14,10 @@ import ee
 
 from ...config import paths
 from ...drive.drive_export_gate import DriveExportGate
+from ...earth_engine_init import vectors
 
 
 # ── Vector assets ──────────────────────────────────────────────────────────
-AOI_UPLA = "users/plataformagenius/Vectores/Division_Administrativa/Comuna_Quilpue2017"
 DISTRITOS_URBANOS = "users/plataformagenius/Vectores/Division_Administrativa/Distritos_Urbanos"
 PRC_QUILPUE = "users/plataformagenius/Vectores/Division_Administrativa/PRC_Quilpue"
 TRAINING_POINTS = "projects/ee-franciscagutierrez-cmm/assets/training-sample-3857float"
@@ -25,7 +28,7 @@ OPTICAL_BANDS = ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B8A", "B11", "
 
 
 def _aoi() -> ee.FeatureCollection:
-    return ee.FeatureCollection(AOI_UPLA)
+    return vectors.area_urbana_quilpue_as_collection()
 
 
 def _radar_stack(
