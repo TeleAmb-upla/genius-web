@@ -22,6 +22,7 @@
     window.text_lum = text_lum;
     window.text_hu = text_hu;
     window.text_isla = text_isla;
+    window.dispatchEvent(new Event('genius-explorer-text-ready'));
   } catch (e) {
     console.error('[GENIUS] index2-explorer-text failed:', e);
   }

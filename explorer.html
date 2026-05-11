@@ -1198,7 +1198,13 @@ function scheduleMapLayoutRefresh(type) {
       var bootDone = false;
       function tryStart() {
         try {
-          if (typeof window.map_ndvi === 'function' && typeof window.toggleNDVIButtons === 'function') {
+          /* text_ndvi viene de index2-explorer-text.js (módulo aparte). Si maps listo antes que textos,
+             toggleTable llama window.text_ndvi y falla — típico en web con red lenta o sin caché. */
+          if (
+            typeof window.map_ndvi === 'function' &&
+            typeof window.toggleNDVIButtons === 'function' &&
+            typeof window.text_ndvi === 'function'
+          ) {
             if (bootDone) return true;
             bootDone = true;
             window.toggleNDVIButtons();
@@ -1215,15 +1221,24 @@ function scheduleMapLayoutRefresh(type) {
           n += 1;
           if (tryStart() || n > 200) {
             clearInterval(t);
-            if (n > 200 && typeof window.map_ndvi !== 'function') {
-              console.error(
-                '[GENIUS bootExplorer] No se registró map_ndvi. Revisa consola/red (D3 en cdn.jsdelivr.net, 404 de .js).'
-              );
+            if (n > 200) {
+              if (typeof window.map_ndvi !== 'function') {
+                console.error(
+                  '[GENIUS bootExplorer] No se registró map_ndvi. Revisa consola/red (404 de módulos .js o CDN).'
+                );
+              } else if (typeof window.text_ndvi !== 'function') {
+                console.error(
+                  '[GENIUS bootExplorer] No se cargaron textos (text_ndvi). Revisa red o index2-explorer-text.js / text.js.'
+                );
+              }
             }
           }
         }, 50);
       }
       window.addEventListener('genius-explorer-maps-ready', function () {
+        tryStart();
+      });
+      window.addEventListener('genius-explorer-text-ready', function () {
         tryStart();
       });
       window.addEventListener('load', function () {
