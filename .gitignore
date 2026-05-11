@@ -9,6 +9,11 @@ assets/data/raster/Iluminacion/M3T_RGB_QUI_2024_07*.tif
 # OS-generated noise
 **/desktop.ini
 
+# Local venv for legend script (see scripts/repo/legends/compute_legend_histogram_ranges.py)
+.venv-legend/
+.venv-gee/
+.venv-ilu/
+
 # Python cache / bytecode
 **/__pycache__/
 *.py[cod]
@@ -19,3 +24,9 @@ scripts/gee/drive_sync_keys_state.json
 
 # Accidental duplicate downloads
 *.geojson(1)
+
+# Quantization backups (scripts/repo/rasters/quantize_rasters_web.py); not for git nor sitio
+*.floatbak.tif
+
+# Cursor agent debug noise
+.cursor/debug*.log

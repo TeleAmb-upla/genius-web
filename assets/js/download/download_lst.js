@@ -1,34 +1,28 @@
-﻿
-const startYear = 1997;
-const endYear = 2024;
+﻿import { getProductYears } from '../map_data_catalog.js';
+import { downloadZipFromManifest } from './build_genius_zip.js';
 
-
+/** Años LST según catálogo (unión de TIF / GeoJSON / CSV en disco). */
+const _lstZipYears = getProductYears('lst');
 
 // Definir las rutas de archivos TIF específicos de lst
 const lstMonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
-    const month = String(i + 1).padStart(2, '0'); // Genera '01', '02', ..., '12'
-    return { 
+    const month = String(i + 1).padStart(2, '0');
+    return {
         url: resolveAssetUrl(`assets/data/raster/LST/LST_Monthly/LST_Monthly_${month}.tif`),
         name: `LST_Monthly_${month}.tif`
     };
 });
 
-const lstYearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
-    const year = startYear + i;
-    return {
-        url: resolveAssetUrl(`assets/data/raster/LST/LST_Yearly/LST_Yearly_${year}.tif`),
-        name: `LST_Yearly_${year}.tif`
-    };
-});
+const lstYearlyFiles_tif = _lstZipYears.map((year) => ({
+    url: resolveAssetUrl(`assets/data/raster/LST/LST_Yearly/LST_Yearly_${year}.tif`),
+    name: `LST_Yearly_${year}.tif`,
+}));
 
 const lstTrendFiles_tif = [
     { url: resolveAssetUrl('assets/data/raster/LST/LST_Trend/LST_Yearly_Trend.tif'), name: 'LST_Trend.tif' },
     { url: resolveAssetUrl('assets/data/csv/LST_m_urban.csv'), name: 'LST_Monthly.csv' },
     { url: resolveAssetUrl('assets/data/csv/LST_y_urban.csv'), name: 'LST_Anual.csv' }
- ];
-
-
-///////////////// BARRIo
+];
 
 const lstMonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
@@ -38,20 +32,18 @@ const lstMonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
     };
 });
 
-const lstYearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
-    const year = startYear + i;
-    return {
-        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Barrios/LST_Yearly_ZonalStats_Barrios_${year}.geojson`),
-        name: `LST_Yearly_${year}.geojson`
-    };
-});
+const lstYearlyFiles_json_Barrio = _lstZipYears.map((year) => ({
+    url: resolveAssetUrl(
+        `assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Barrios/LST_Yearly_ZonalStats_Barrios_${year}.geojson`,
+    ),
+    name: `LST_Yearly_${year}.geojson`,
+}));
 
 const lstTrendFiles_json_Barrio = [
     { url: resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson'), name: 'LST_Trend.geojson' },
     { url: resolveAssetUrl('assets/data/csv/LST_m_urban.csv'), name: 'LST_Monthly.csv' },
     { url: resolveAssetUrl('assets/data/csv/LST_y_urban.csv'), name: 'LST_Anual.csv' }
 ];
-
 
 const lstMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
@@ -61,15 +53,15 @@ const lstMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
     };
 });
 
-const lstYearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
-    const year = startYear + i;
-    return {
-        url: resolveAssetUrl(`assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Manzanas/LST_Yearly_ZonalStats_Manzanas_${year}.geojson`),
-        name: `LST_Yearly_${year}.geojson`
-    };
-});
+const lstYearlyFiles_json_Manzanas = _lstZipYears.map((year) => ({
+    url: resolveAssetUrl(
+        `assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Manzanas/LST_Yearly_ZonalStats_Manzanas_${year}.geojson`,
+    ),
+    name: `LST_Yearly_${year}.geojson`,
+}));
+
 const lstTrendFiles_json_Manzanas = [
-    { url: resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Barrios/Trend_LST_ZonalStats_Barrios.geojson'), name: 'LST_Trend.geojson' },
+    { url: resolveAssetUrl('assets/data/geojson/LST/LST_Yearly_ZonalStats/LST_Yearly_ZonalStats_Manzanas/Trend_LST_ZonalStats_Manzanas.geojson'), name: 'LST_Trend.geojson' },
     { url: resolveAssetUrl('assets/data/csv/LST_m_urban.csv'), name: 'LST_Monthly.csv' },
     { url: resolveAssetUrl('assets/data/csv/LST_y_urban.csv'), name: 'LST_Anual.csv' }
 ];
@@ -78,97 +70,18 @@ const textFiles = [
     { url: resolveAssetUrl('assets/js/indicaciones.txt'), name: 'indicaciones.txt' },
 ];
 
-
-// Combina todos los archivos de lst en un solo array
 const alllstFiles_tif = [...lstMonthlyFiles_tif, ...lstYearlyFiles_tif, ...lstTrendFiles_tif, ...textFiles];
-
-// Combina todos los archivos de lst en un solo array
-
 const alllstFiles_json_Barrio = [...lstMonthlyFiles_json_Barrio, ...lstYearlyFiles_json_Barrio, ...lstTrendFiles_json_Barrio, ...textFiles];
-
-// Combina todos los archivos de lst en un solo array
-
 const alllstFiles_json_Manzanas = [...lstMonthlyFiles_json_Manzanas, ...lstYearlyFiles_json_Manzanas, ...lstTrendFiles_json_Manzanas, ...textFiles];
 
-
-// Función para crear y descargar un archivo ZIP con todos los archivos TIF de lst
 export async function createAndDownloadlstZip_tif_lst() {
-    const zip = new JSZip();
-
-    // Agregar cada archivo TIF al ZIP
-    for (const file of alllstFiles_tif) {
-        try {
-            const response = await fetch(file.url);
-            if (!response.ok) throw new Error(`Error al cargar ${file.url}`);
-            
-            const data = await response.blob();
-            zip.file(file.name, data);
-        } catch (error) {
-            console.error(`Error al agregar el archivo ${file.url}:`, error);
-        }
-    }
-
-    // Generar el archivo ZIP y crear un enlace de descarga
-    zip.generateAsync({ type: 'blob' }).then(content => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = 'lst_Tif.zip';
-        link.click();
-
-        URL.revokeObjectURL(link.href);
-    }).catch(error => console.error('Error al generar el ZIP:', error));
+    await downloadZipFromManifest(alllstFiles_tif, 'lst_Tif.zip');
 }
 
 export async function createAndDownloadlstZip_json_Barrios_lst() {
-    const zip = new JSZip();
-
-    // Agregar cada archivo TIF al ZIP
-    for (const file of alllstFiles_json_Barrio) {
-        try {
-            const response = await fetch(file.url);
-            if (!response.ok) throw new Error(`Error al cargar ${file.url}`);
-            
-            const data = await response.blob();
-            zip.file(file.name, data);
-        } catch (error) {
-            console.error(`Error al agregar el archivo ${file.url}:`, error);
-        }
-    }
-
-    // Generar el archivo ZIP y crear un enlace de descarga
-    zip.generateAsync({ type: 'blob' }).then(content => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = 'lst_Tif.zip';
-        link.click();
-
-        URL.revokeObjectURL(link.href);
-    }).catch(error => console.error('Error al generar el ZIP:', error));
+    await downloadZipFromManifest(alllstFiles_json_Barrio, 'lst_Json_Barrio.zip');
 }
 
 export async function createAndDownloadlstZip_json_Manzanas_lst() {
-    const zip = new JSZip();
-
-    // Agregar cada archivo TIF al ZIP
-    for (const file of alllstFiles_json_Manzanas) {
-        try {
-            const response = await fetch(file.url);
-            if (!response.ok) throw new Error(`Error al cargar ${file.url}`);
-            
-            const data = await response.blob();
-            zip.file(file.name, data);
-        } catch (error) {
-            console.error(`Error al agregar el archivo ${file.url}:`, error);
-        }
-    }
-
-    // Generar el archivo ZIP y crear un enlace de descarga
-    zip.generateAsync({ type: 'blob' }).then(content => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = 'lst_Tif.zip';
-        link.click();
-
-        URL.revokeObjectURL(link.href);
-    }).catch(error => console.error('Error al generar el ZIP:', error));
+    await downloadZipFromManifest(alllstFiles_json_Manzanas, 'lst_Json_Manzanas.zip');
 }

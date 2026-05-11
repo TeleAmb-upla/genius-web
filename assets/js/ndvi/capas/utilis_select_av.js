@@ -1,25 +1,4 @@
-﻿// colores
-function valueToDevColor(value) {
-    const domain = [0, 0.22]; // mínimo y máximo
-    // Paleta de colores invertida que representa los diferentes valores de NDVI
-    const range = ["#B9B0B9","#C7979E","#D57E83","#E36468","#F14B4D","#FF3232"]
-   
-    
-    // Calcular el paso entre cada color en función del dominio
-    const step = (domain[1] - domain[0]) / (range.length - 1);
-    
-    // Asignar los colores basado en el valor
-    if (value < domain[0]) {
-        return range[0]; // Si es menor que el mínimo, devolver el primer color
-    } 
-    if (value > domain[1]) {
-        return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
-    }
-    
-    // Encontrar el color adecuado dentro del rango
-    const index = Math.floor((value - domain[0]) / step);
-    return range[index];
-}
+﻿import { ndviStdDevRawToColor } from "../ndvi_stdev_color.js";
 
 // Mapa de nombres de categorías a nombres amigables
 const categoryNames = {
@@ -67,11 +46,13 @@ export async function loadGeoJSONAndSetupLayers(currentMap) {
                 filter: feature => feature.properties.CATEGORIA === category,
                 style: function (feature) {
                     const ndvi_sd = feature.properties.NDVI_SD;
+                    const fill =
+                        ndviStdDevRawToColor(ndvi_sd) ?? "#cbd5e1";
                     return {
                         color: '#000000',   // Color del borde
                         weight: 1,          // Grosor del borde
                         opacity: 1,         // Opacidad del borde
-                        fillColor: valueToDevColor(ndvi_sd), // Color de relleno basado en NDVI_SD
+                        fillColor: fill,
                         fillOpacity: 0.6    // Opacidad del relleno
                     };
                 },
@@ -130,6 +111,15 @@ export function createAvSelector(id, categoryLayers, currentMap) {
     const body = document.createElement('div');
     body.className = 'av-selector-panel__body';
     body.style.display = 'none';
+
+    const hint = document.createElement('div');
+    hint.className = 'av-selector-panel__hint';
+    hint.style.cssText =
+        'font-size:11px;line-height:1.35;color:#475569;margin:0 0 10px 0;max-width:300px;';
+    hint.innerHTML =
+        '<strong>Gestión vs. planificación:</strong> las <strong>AV de gestión</strong> son las listadas bajo <strong>Municipalidad Quilpué</strong>. Las <strong>AV de planificación</strong> son todas las demás (Plan Regulador Comunal y MINVU).<br><br>' +
+        'El relleno del polígono sigue la escala de DE del mapa (leyenda); el cuadrito de color solo identifica la categoría administrativa.';
+    body.appendChild(hint);
 
     const categoryGroups = [
         {
@@ -225,6 +215,8 @@ export function positionAvSelector(container, position, offsetX = 0, offsetY = 0
     } else if (position === 'top-right') {
         container.style.top = (10 + offsetY) + 'px';
         container.style.right = (10 + offsetX) + 'px';
+        container.style.left = 'auto';
+        container.style.transform = 'none';
     } else if (position === 'bottom-left') {
         container.style.bottom = (10 + offsetY) + 'px';
         container.style.left = (10 + offsetX) + 'px';

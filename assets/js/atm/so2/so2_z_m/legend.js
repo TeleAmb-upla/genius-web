@@ -1,5 +1,6 @@
 import { ToColorYear_z_m } from './ndvi_palette_z_m_y.js'; 
 import { ToColorMonth_z_m } from './ndvi_palette_z_m_m.js';
+import { legendDomain } from '../../../legend_ranges.js';
 
 
 export function createYearLegend() {
@@ -20,7 +21,7 @@ export function createYearLegend() {
    legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda
-  const domain = [82,332]; // O rangos
+  const domain = legendDomain('so2', 'zonalManzana', 'yearly');
   const steps = 7; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores
 
@@ -77,7 +78,7 @@ export function createMonthLegend() {
   legendContent.appendChild(subtitle);
 
   // Dominio de valores para la leyenda
-  const domain = [0,2864];
+  const domain = legendDomain('so2', 'zonalManzana', 'monthly');
   const steps = 7; // Dividimos en 6 partes
   const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular paso entre valores 0	2864
 

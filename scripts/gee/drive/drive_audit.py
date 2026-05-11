@@ -2,16 +2,27 @@
 Auditoría de frescura en Google Drive antes de encolar exportaciones EE.
 
 Reglas:
-- **Mensual**: solo para espejo local (Drive → repo). No se usa para disparar re-exports GEE.
-- **Anual**: se buscan TODAS las brechas anuales (no solo el último año) comparando los
-  años disponibles en el asset GEE (hasta ``target_yearly_year``) vs los archivos en Drive.
-- **CSV**: se valida el contenido local (años presentes, datos no vacíos / NaN).
+- **Alineación asset / reloj**: el máximo (año, mes) de la ImageCollection año-mes en GEE
+  debe alcanzar el **último mes civil cerrado UTC** antes de marcar faltantes **anuales**
+  (raster, CSV, GeoJSON anual) u ofrecer espejo completo por validación local de tablas
+  anuales. Hasta entonces solo se audita la parte mensual en Drive (mtime vs ese mes).
+- **Mensual (rasters climatología, y vía enqueue el CSV/GeoJSON mensual)**: el ``modifiedTime``
+  en Drive debe ser del último mes cerrado UTC o posterior; si el asset va rezagado, no se
+  fuerza espejo mensual aunque Drive parezca viejo.
+- **Anual**: brechas año a año en Drive frente a años disponibles en el asset (cuando el
+  asset ya cubre el último mes cerrado).
+- **CSV**: validación de contenido local (años presentes, datos no vacíos / NaN).
+  Los mensuales con «año actual» en el front deben incluir columna(s) ``anio_actual``
+  con valores válidos en todos los meses 1..último_mes_cerrado_UTC para
+  ``NDVI_m_urban`` / ``LST_m_urban`` (y al menos una entidad por mes en zonal); si no,
+  se fuerza reexport (solo cuando el asset está alineado para la parte anual).
 """
 from __future__ import annotations
 
 import csv
 import datetime
 import io
+import json
 import math
 import re
 from dataclasses import dataclass, field
@@ -19,6 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from ..config import paths
+from ..lib.lst_csv_semantics_audit import audit_lst_y_urban_semantics_vs_yearmonth
 from . import download_drive_to_repo
 from ..lib import yearmonth as ym_lib
 
@@ -82,12 +94,23 @@ def monthly_stale_from_drive_mtime(
     files: list[dict],
     monthly_name_prefix: str,
     extensions: tuple[str, ...],
+    *,
+    wall_month: tuple[int, int] | None = None,
 ) -> bool:
-    """True when the monthly Drive folder looks stale (for mirror/sync decisions only)."""
-    last_cy = ym_lib.last_completed_wall_clock_calendar_year()
+    """True cuando la carpeta mensual en Drive parece desactualizada (solo mirror/sync).
+
+    Con *wall_month* = último mes civil cerrado UTC, se considera desactualizado si el
+    ``modifiedTime`` más reciente (prefijo mensual) es de un mes **estrictamente anterior**
+    a ese año-mes. Sin *wall_month* se mantiene la regla previa (año del mtime vs último
+    año civil cerrado).
+    """
     newest = newest_modified_time_for_prefix(files, monthly_name_prefix, extensions)
     if newest is None:
         return True
+    if wall_month is not None:
+        mt_ym = (newest.year, newest.month)
+        return ym_lib.ym_strictly_before(mt_ym, wall_month)
+    last_cy = ym_lib.last_completed_wall_clock_calendar_year()
     return newest.year < last_cy
 
 
@@ -133,48 +156,140 @@ def _find_missing_yearly_geo(
 # CSV content validation
 # ---------------------------------------------------------------------------
 
+# Mensajes cortos cuando falta un CSV en disco (sync selectiva Drive → repo).
+_LOCAL_MISSING_CSV_SYNC_HINTS: dict[str, str] = {
+    "LST_y_zonal_barrios.csv": (
+        "python3 -m scripts.gee.drive.download_drive_to_repo --only lst_csv_yearly "
+        "--only-files LST_y_zonal_barrios.csv"
+    ),
+    "LST_y_urban.csv": (
+        "python3 -m scripts.gee.drive.download_drive_to_repo --only lst_csv_yearly "
+        "--only-files LST_y_urban.csv"
+    ),
+}
+
 _LOCAL_YEARLY_CSV_TARGETS: dict[str, list[tuple[Path, str, list[str]]]] = {
     # (csv_path, year_column, value_columns_to_check)
     "ndvi": [
         (paths.REPO_CSV / "NDVI_y_urban.csv", "Year", ["NDVI"]),
+        (
+            paths.REPO_CSV / "NDVI_y_zonal_barrios.csv",
+            "Year",
+            ["NDVI", "NDVI_p25", "NDVI_p75"],
+        ),
     ],
     "aod": [
-        (paths.REPO_CSV_AOD / "AOD_y_region.csv", "Year", ["AOD_median"]),
+        (
+            paths.REPO_CSV_AOD / "AOD_y_urban.csv",
+            "Year",
+            ["AOD_median", "AOD_p25", "AOD_p75"],
+        ),
     ],
     "no2": [
-        (paths.REPO_CSV_NO2 / "NO2_y_region.csv", "Year", ["NO2_median"]),
+        (
+            paths.REPO_CSV_NO2 / "NO2_y_urban.csv",
+            "Year",
+            ["NO2_median", "NO2_p25", "NO2_p75"],
+        ),
     ],
     "so2": [
-        (paths.REPO_CSV_SO2 / "SO2_y_region.csv", "Year", ["SO2"]),
+        (
+            paths.REPO_CSV_SO2 / "SO2_y_urban.csv",
+            "Year",
+            ["SO2", "SO2_p25", "SO2_p75"],
+        ),
     ],
     "lst": [
-        (paths.REPO_CSV_LST / "LST_y_urban.csv", "Year", ["LST_mean"]),
+        (
+            paths.REPO_CSV_LST / "LST_y_urban.csv",
+            "Year",
+            ["LST_mean", "LST_p25", "LST_p75"],
+        ),
+        (
+            paths.REPO_CSV_LST / "LST_y_zonal_barrios.csv",
+            "Year",
+            ["LST_mean", "LST_p25", "LST_p75"],
+        ),
     ],
 }
 
+# CSV largo (Year, Month, …) para «estado actual» en gráficos mensuales del front.
+_LOCAL_YEARMONTH_CSV_PATHS: dict[str, Path] = {
+    "aod": paths.REPO_CSV_AOD / "AOD_YearMonth_urban.csv",
+    "no2": paths.REPO_CSV_NO2 / "NO2_YearMonth_urban.csv",
+    "so2": paths.REPO_CSV_SO2 / "SO2_YearMonth_urban.csv",
+    "lst": paths.REPO_CSV_LST / "LST_YearMonth_urban.csv",
+}
+
+_LOCAL_YEARMONTH_CSV_COLUMNS: dict[str, tuple[str, ...]] = {
+    "aod": ("Year", "Month", "AOD_median"),
+    "no2": ("Year", "Month", "NO2_median"),
+    "so2": ("Year", "Month", "SO2"),
+    "lst": ("Year", "Month", "LST_mean"),
+}
+
 _LOCAL_MONTHLY_CSV_TARGETS: dict[str, list[tuple[Path, str, list[int], list[str]]]] = {
-    "aod": [
+    "ndvi": [
         (
-            paths.REPO_CSV_AOD / "AOD_m_region.csv",
+            paths.REPO_CSV / "NDVI_m_urban.csv",
             "Month",
             list(range(1, 13)),
-            ["AOD_median"],
+            ["NDVI", "NDVI_p25", "NDVI_p75", "anio_actual"],
+        ),
+        (
+            paths.REPO_CSV / "NDVI_m_av.csv",
+            "Month",
+            list(range(1, 13)),
+            [
+                "NDVI_Gestion",
+                "NDVI_Planificacion",
+                "NDVI_Urbano",
+                "NDVI_Gestion_anio_actual",
+                "NDVI_Planificacion_anio_actual",
+                "NDVI_Urbano_anio_actual",
+            ],
+        ),
+        (
+            paths.REPO_CSV / "NDVI_m_zonal_barrios.csv",
+            "Month",
+            list(range(1, 13)),
+            ["NDVI", "NDVI_p25", "NDVI_p75", "anio_actual"],
+        ),
+    ],
+    "aod": [
+        (
+            paths.REPO_CSV_AOD / "AOD_m_urban.csv",
+            "Month",
+            list(range(1, 13)),
+            ["AOD_median", "AOD_p25", "AOD_p75", "anio_actual"],
         ),
     ],
     "no2": [
         (
-            paths.REPO_CSV_NO2 / "NO2_m_region.csv",
+            paths.REPO_CSV_NO2 / "NO2_m_urban.csv",
             "Month",
             list(range(1, 13)),
-            ["NO2_median"],
+            ["NO2_median", "NO2_p25", "NO2_p75", "anio_actual"],
+        ),
+        (
+            paths.REPO_CSV_NO2 / "NO2_m_zonal_barrios.csv",
+            "Month",
+            list(range(1, 13)),
+            ["NO2_median", "NO2_p25", "NO2_p75", "anio_actual"],
         ),
     ],
     "so2": [
         (
-            paths.REPO_CSV_SO2 / "SO2_m_region.csv",
+            paths.REPO_CSV_SO2 / "SO2_m_urban.csv",
             "Month",
             list(range(1, 13)),
-            ["SO2"],
+            ["SO2", "SO2_p25", "SO2_p75", "anio_actual"],
+        ),
+        (
+            paths.REPO_CSV_SO2 / "SO2_m_zonal_barrios.csv",
+            "Month",
+            list(range(1, 13)),
+            ["SO2", "SO2_p25", "SO2_p75", "anio_actual"],
         ),
     ],
     "lst": [
@@ -182,9 +297,26 @@ _LOCAL_MONTHLY_CSV_TARGETS: dict[str, list[tuple[Path, str, list[int], list[str]
             paths.REPO_CSV_LST / "LST_m_urban.csv",
             "Month",
             list(range(1, 13)),
-            ["LST_mean"],
+            ["LST_mean", "LST_p25", "LST_p75", "anio_actual"],
+        ),
+        (
+            paths.REPO_CSV_LST / "LST_m_zonal_barrios.csv",
+            "Month",
+            list(range(1, 13)),
+            ["LST_mean", "LST_p25", "LST_p75", "anio_actual"],
         ),
     ],
+}
+
+# Claves de SYNC_REGISTRY: espejo completo (full_replace) cuando tablas CSV están
+# desfasadas. NDVI usa un solo bundle «csv»; el resto separa mensual vs anual — si solo
+# se fuerza la clave anual, el mensual queda en modo incremental y no sobrescribe un
+# .csv local antiguo aunque Drive tenga versión con percentiles.
+_CSV_TABLE_MIRROR_KEYS: dict[str, frozenset[str]] = {
+    "ndvi": frozenset({"csv"}),
+    "no2": frozenset({"no2_csv_monthly"}),
+    "so2": frozenset({"so2_csv_monthly"}),
+    "lst": frozenset({"lst_csv_monthly", "lst_csv_yearly"}),
 }
 
 
@@ -211,10 +343,16 @@ def _validate_local_csv(
     Checks:
     1. File exists and is non-empty.
     2. All *expected_years* have at least one row.
-    3. The *value_columns* for those rows are not empty / NaN.
+    3. If *value_columns* is set: every name exists in the header, and for each
+       expected row **every** listed column is non-empty / non-NaN (no basta con
+       una sola columna, p. ej. mediana sin P25/P75).
     """
     if not csv_path.is_file():
-        return False, f"archivo no existe: {csv_path.name}", len(expected_years)
+        msg = f"archivo no existe: {csv_path.name}"
+        hint = _LOCAL_MISSING_CSV_SYNC_HINTS.get(csv_path.name)
+        if hint:
+            msg += f" — {hint}"
+        return False, msg, len(expected_years)
     text = csv_path.read_text(encoding="utf-8", errors="replace").strip()
     if not text:
         return False, f"archivo vacío: {csv_path.name}", len(expected_years)
@@ -227,6 +365,15 @@ def _validate_local_csv(
 
     if year_column not in fieldnames:
         return False, f"columna '{year_column}' no encontrada en {csv_path.name}", len(expected_years)
+
+    if value_columns:
+        for col in value_columns:
+            if col not in fieldnames:
+                return (
+                    False,
+                    f"falta columna requerida '{col}' en {csv_path.name}",
+                    len(expected_years),
+                )
 
     check_cols = value_columns or [c for c in fieldnames if c != year_column]
     years_found_valid: set[int] = set()
@@ -243,11 +390,11 @@ def _validate_local_csv(
         if yr not in expected_years:
             unexpected_years.add(yr)
             continue
-        has_value = False
+        has_value = True
         for col in check_cols:
             cell = row.get(col, "")
-            if not _is_value_empty_or_nan(cell):
-                has_value = True
+            if _is_value_empty_or_nan(cell):
+                has_value = False
                 break
         if has_value:
             years_found_valid.add(yr)
@@ -291,6 +438,392 @@ def _validate_all_local_csvs(
     return all_ok, reasons, completely_invalid
 
 
+# Sentinela GEE en CSV de climatología cuando no hay muestras (coherente con mcp / exports).
+_CLIM_CSV_PLACEHOLDER_SENTINEL = -9999.0
+
+
+def _ndvi_anio_actual_cell_valid(raw: str) -> bool:
+    """``anio_actual`` distinto de sentinela y en rango NDVI físico [-1, 1]."""
+    s = (raw or "").strip()
+    if not s:
+        return False
+    try:
+        v = float(s)
+    except (TypeError, ValueError, OverflowError):
+        return False
+    if not math.isfinite(v):
+        return False
+    if abs(v - _CLIM_CSV_PLACEHOLDER_SENTINEL) < 1e-3:
+        return False
+    return -1.0 <= v <= 1.0
+
+
+def _lst_anio_actual_cell_valid(raw: str) -> bool:
+    """``anio_actual`` distinto de sentinela y en rango LST superficial (°C, holgado)."""
+    s = (raw or "").strip()
+    if not s:
+        return False
+    try:
+        v = float(s)
+    except (TypeError, ValueError, OverflowError):
+        return False
+    if not math.isfinite(v):
+        return False
+    if abs(v - _CLIM_CSV_PLACEHOLDER_SENTINEL) < 1e-3:
+        return False
+    return -100.0 <= v <= 100.0
+
+
+def _ndvi_m_urban_anio_covers_wall_months(csv_path: Path) -> tuple[bool, str]:
+    """
+    ``NDVI_m_urban``: exactamente 12 filas Month=1..12; para cada mes ``m`` en
+    ``1 .. último_mes_cerrado_UTC`` se exige ``anio_actual`` válido (datos del año
+    ``last_complete_calendar_month`` coherente con ``csv_tasks`` / front).
+    """
+    if not csv_path.is_file():
+        return True, ""
+    ly, lm = ym_lib.last_complete_calendar_month_utc()
+    try:
+        text = csv_path.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError as exc:
+        return False, f"no se pudo leer {csv_path.name}: {exc}"
+    if not text:
+        return False, f"archivo vacío: {csv_path.name}"
+    try:
+        reader = csv.DictReader(io.StringIO(text))
+        fieldnames = reader.fieldnames or []
+    except Exception as exc:
+        return False, f"error leyendo {csv_path.name}: {exc}"
+    if "Month" not in fieldnames or "anio_actual" not in fieldnames:
+        return True, ""
+    by_m: dict[int, str] = {}
+    for row in reader:
+        raw_m = (row.get("Month") or "").strip()
+        if not raw_m:
+            continue
+        try:
+            mo = int(float(raw_m))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        by_m[mo] = (row.get("anio_actual") or "").strip()
+    missing_rows: list[int] = []
+    bad_vals: list[int] = []
+    for m in range(1, lm + 1):
+        if m not in by_m:
+            missing_rows.append(m)
+        elif not _ndvi_anio_actual_cell_valid(by_m[m]):
+            bad_vals.append(m)
+    if missing_rows:
+        return (
+            False,
+            f"{csv_path.name}: faltan mes(es) {missing_rows} — se espera fila por mes "
+            f"1–{lm} con anio_actual del año civil {ly} (último mes cerrado UTC: {ly}-{lm:02d}). "
+            "Reexportar ``start_ndvi_m_csv_tasks`` y sincronizar.",
+        )
+    if bad_vals:
+        return (
+            False,
+            f"{csv_path.name}: anio_actual ausente o sentinela {_CLIM_CSV_PLACEHOLDER_SENTINEL:g} "
+            f"en mes(es) {bad_vals} (faltan datos {ly} en asset NDVI año-mes o export viejo). "
+            "Reexportar CSV mensual NDVI y sincronizar.",
+        )
+    return True, ""
+
+
+def _lst_m_urban_anio_covers_wall_months(csv_path: Path) -> tuple[bool, str]:
+    """
+    ``LST_m_urban``: una fila por ``Month=1..12``; para cada mes ``m`` en
+    ``1 .. último_mes_cerrado_UTC`` se exige ``anio_actual`` válido (LST °C).
+    """
+    if not csv_path.is_file():
+        return True, ""
+    ly, lm = ym_lib.last_complete_calendar_month_utc()
+    try:
+        text = csv_path.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError as exc:
+        return False, f"no se pudo leer {csv_path.name}: {exc}"
+    if not text:
+        return False, f"archivo vacío: {csv_path.name}"
+    try:
+        reader = csv.DictReader(io.StringIO(text))
+        fieldnames = reader.fieldnames or []
+    except Exception as exc:
+        return False, f"error leyendo {csv_path.name}: {exc}"
+    if "Month" not in fieldnames or "anio_actual" not in fieldnames:
+        return True, ""
+    by_m: dict[int, str] = {}
+    for row in reader:
+        raw_m = (row.get("Month") or "").strip()
+        if not raw_m:
+            continue
+        try:
+            mo = int(float(raw_m))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        by_m[mo] = (row.get("anio_actual") or "").strip()
+    missing_rows: list[int] = []
+    bad_vals: list[int] = []
+    for m in range(1, lm + 1):
+        if m not in by_m:
+            missing_rows.append(m)
+        elif not _lst_anio_actual_cell_valid(by_m[m]):
+            bad_vals.append(m)
+    if missing_rows:
+        return (
+            False,
+            f"{csv_path.name}: faltan mes(es) {missing_rows} — se espera fila por mes "
+            f"1–{lm} con anio_actual del año civil {ly} (último mes cerrado UTC: {ly}-{lm:02d}). "
+            "Reexportar ``start_lst_csv_tasks`` y sincronizar.",
+        )
+    if bad_vals:
+        return (
+            False,
+            f"{csv_path.name}: anio_actual ausente o sentinela {_CLIM_CSV_PLACEHOLDER_SENTINEL:g} "
+            f"en mes(es) {bad_vals} (faltan datos {ly} en Landsat LST año-mes o export viejo). "
+            "Reexportar CSV mensual LST y sincronizar.",
+        )
+    return True, ""
+
+
+def _ndvi_zonal_m_anio_covers_wall_months(csv_path: Path) -> tuple[bool, str]:
+    """
+    Zonal: por cada mes ``1..lm`` debe existir **al menos** una fila (cualquier entidad)
+    con ``anio_actual`` válido.
+    """
+    if not csv_path.is_file():
+        return True, ""
+    ly, lm = ym_lib.last_complete_calendar_month_utc()
+    try:
+        text = csv_path.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError as exc:
+        return False, f"no se pudo leer {csv_path.name}: {exc}"
+    if not text:
+        return False, f"archivo vacío: {csv_path.name}"
+    try:
+        reader = csv.DictReader(io.StringIO(text))
+        fieldnames = reader.fieldnames or []
+    except Exception as exc:
+        return False, f"error leyendo {csv_path.name}: {exc}"
+    if "Month" not in fieldnames or "anio_actual" not in fieldnames:
+        return True, ""
+    found: dict[int, bool] = {m: False for m in range(1, lm + 1)}
+    for row in reader:
+        raw_m = (row.get("Month") or "").strip()
+        if not raw_m:
+            continue
+        try:
+            mo = int(float(raw_m))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if mo < 1 or mo > lm:
+            continue
+        if _ndvi_anio_actual_cell_valid(row.get("anio_actual") or ""):
+            found[mo] = True
+    missing = [m for m in range(1, lm + 1) if not found[m]]
+    if missing:
+        return (
+            False,
+            f"{csv_path.name}: ningún anio_actual válido para mes(es) {missing} "
+            f"(año referencia {ly} hasta mes {lm} UTC). Reexportar NDVI_m_zonal_* y sincronizar.",
+        )
+    return True, ""
+
+
+def _lst_zonal_m_anio_covers_wall_months(csv_path: Path) -> tuple[bool, str]:
+    """
+    Zonal LST: por cada mes ``1..lm`` debe existir **al menos** una fila (cualquier entidad)
+    con ``anio_actual`` válido.
+    """
+    if not csv_path.is_file():
+        return True, ""
+    ly, lm = ym_lib.last_complete_calendar_month_utc()
+    try:
+        text = csv_path.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError as exc:
+        return False, f"no se pudo leer {csv_path.name}: {exc}"
+    if not text:
+        return False, f"archivo vacío: {csv_path.name}"
+    try:
+        reader = csv.DictReader(io.StringIO(text))
+        fieldnames = reader.fieldnames or []
+    except Exception as exc:
+        return False, f"error leyendo {csv_path.name}: {exc}"
+    if "Month" not in fieldnames or "anio_actual" not in fieldnames:
+        return True, ""
+    found: dict[int, bool] = {m: False for m in range(1, lm + 1)}
+    for row in reader:
+        raw_m = (row.get("Month") or "").strip()
+        if not raw_m:
+            continue
+        try:
+            mo = int(float(raw_m))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if mo < 1 or mo > lm:
+            continue
+        if _lst_anio_actual_cell_valid(row.get("anio_actual") or ""):
+            found[mo] = True
+    missing = [m for m in range(1, lm + 1) if not found[m]]
+    if missing:
+        return (
+            False,
+            f"{csv_path.name}: ningún anio_actual válido para mes(es) {missing} "
+            f"(año referencia {ly} hasta mes {lm} UTC). Reexportar LST_m_zonal_* y sincronizar.",
+        )
+    return True, ""
+
+
+def _climatology_column_names(val_cols: list[str]) -> list[str]:
+    """Solo columnas de climatología (P25/P50/P75), sin ``anio_actual`` ni ``*_anio_actual``."""
+    return [
+        c
+        for c in val_cols
+        if c != "anio_actual" and not str(c).endswith("_anio_actual")
+    ]
+
+
+def _monthly_climatology_not_all_placeholder_sentinel(
+    csv_path: Path,
+    time_col: str,
+    expected_values: list[int],
+    clim_cols: list[str],
+    *,
+    sentinel: float = _CLIM_CSV_PLACEHOLDER_SENTINEL,
+) -> tuple[bool, str]:
+    """
+    Rechaza CSV donde toda la climatología es el sentinela (export roto o plantilla).
+    """
+    if not clim_cols:
+        return True, ""
+    text = csv_path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text:
+        return False, f"archivo vacío: {csv_path.name}"
+    try:
+        reader = csv.DictReader(io.StringIO(text))
+        fieldnames = reader.fieldnames or []
+    except Exception as exc:
+        return False, f"error leyendo CSV: {exc}"
+    if time_col not in fieldnames:
+        return True, ""
+    expected_set = set(expected_values)
+    any_non_sentinel = False
+    for row in reader:
+        raw_t = (row.get(time_col) or "").strip()
+        if not raw_t:
+            continue
+        try:
+            t = int(float(raw_t))
+        except (ValueError, OverflowError):
+            continue
+        if t not in expected_set:
+            continue
+        for col in clim_cols:
+            if col not in fieldnames:
+                continue
+            cell = (row.get(col, "") or "").strip()
+            try:
+                v = float(cell)
+            except (ValueError, OverflowError):
+                any_non_sentinel = True
+                break
+            if math.isfinite(v) and abs(v - sentinel) > 1e-3:
+                any_non_sentinel = True
+                break
+        if any_non_sentinel:
+            break
+    if not any_non_sentinel:
+        return (
+            False,
+            f"climatología solo sentinela ({sentinel:g}) en {csv_path.name} — "
+            "reexportar CSV mensual desde GEE o restaurar desde Drive",
+        )
+    return True, ""
+
+
+def _triplet_max_spread(med_s: str, p25_s: str, p75_s: str) -> float | None:
+    """Máx. |med-p25|, |med-p75|, |p25-p75|; None si no son números finitos."""
+    try:
+        m = float(med_s)
+        a = float(p25_s)
+        b = float(p75_s)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if not all(math.isfinite(x) for x in (m, a, b)):
+        return None
+    return max(abs(m - a), abs(m - b), abs(a - b))
+
+
+def _monthly_percentile_triplets_nondegenerate(
+    csv_path: Path,
+    time_col: str,
+    expected_values: list[int],
+    value_columns: list[str],
+    *,
+    min_spread: float = 1e-5,
+) -> tuple[bool, str]:
+    """
+    Tras pasar cabecera y celdas no vacías, rechaza CSV rellenado copiando la mediana
+    en p25/p75 (placeholder) para todas las filas de cada trío (mediana, p25, p75).
+    """
+    if not value_columns:
+        return True, ""
+    if not any(
+        str(c).endswith("_p25") or str(c).endswith("_p75") for c in value_columns
+    ):
+        return True, ""
+    if len(value_columns) % 3 != 0:
+        return True, ""
+    triplets = [
+        (value_columns[i], value_columns[i + 1], value_columns[i + 2])
+        for i in range(0, len(value_columns), 3)
+    ]
+    text = csv_path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text:
+        return False, f"archivo vacío: {csv_path.name}"
+    try:
+        reader = csv.DictReader(io.StringIO(text))
+        fieldnames = reader.fieldnames or []
+    except Exception as exc:
+        return False, f"error leyendo CSV: {exc}"
+
+    if time_col not in fieldnames:
+        return True, ""
+
+    expected_set = set(expected_values)
+    rows: list[dict[str, str]] = []
+    for row in reader:
+        raw_t = (row.get(time_col) or "").strip()
+        if not raw_t:
+            continue
+        try:
+            t = int(float(raw_t))
+        except (ValueError, OverflowError):
+            continue
+        if t in expected_set:
+            rows.append(row)
+
+    for med_c, p25_c, p75_c in triplets:
+        if med_c not in fieldnames or p25_c not in fieldnames or p75_c not in fieldnames:
+            continue
+        saw_spread = False
+        for row in rows:
+            spread = _triplet_max_spread(
+                row.get(med_c, ""),
+                row.get(p25_c, ""),
+                row.get(p75_c, ""),
+            )
+            if spread is not None and spread > min_spread:
+                saw_spread = True
+                break
+        if rows and not saw_spread:
+            return (
+                False,
+                f"percentiles degenerados (p25≈p75≈{med_c}) en {csv_path.name} — "
+                "posible placeholder; reexportar o descargar desde Drive",
+            )
+    return True, ""
+
+
 def _validate_all_local_monthly_csvs(
     product: str,
 ) -> tuple[bool, list[str], list[Path]]:
@@ -308,7 +841,145 @@ def _validate_all_local_monthly_csvs(
             all_ok = False
             reasons.append(reason)
             invalid_paths.append(csv_path)
+            continue
+        clim_cols = _climatology_column_names(val_cols)
+        ok2, reason2 = _monthly_percentile_triplets_nondegenerate(
+            csv_path, time_col, expected_values, clim_cols
+        )
+        if not ok2:
+            all_ok = False
+            reasons.append(reason2)
+            invalid_paths.append(csv_path)
+            continue
+        ok3, reason3 = _monthly_climatology_not_all_placeholder_sentinel(
+            csv_path, time_col, expected_values, clim_cols
+        )
+        if not ok3:
+            all_ok = False
+            reasons.append(reason3)
+            invalid_paths.append(csv_path)
+            continue
+        if product == "ndvi" and csv_path.name == "NDVI_m_urban.csv":
+            ok4, reason4 = _ndvi_m_urban_anio_covers_wall_months(csv_path)
+            if not ok4:
+                all_ok = False
+                reasons.append(reason4)
+                invalid_paths.append(csv_path)
+        elif product == "ndvi" and csv_path.name == "NDVI_m_zonal_barrios.csv":
+            ok4, reason4 = _ndvi_zonal_m_anio_covers_wall_months(csv_path)
+            if not ok4:
+                all_ok = False
+                reasons.append(reason4)
+                invalid_paths.append(csv_path)
+        elif product == "lst" and csv_path.name == "LST_m_urban.csv":
+            ok4, reason4 = _lst_m_urban_anio_covers_wall_months(csv_path)
+            if not ok4:
+                all_ok = False
+                reasons.append(reason4)
+                invalid_paths.append(csv_path)
+        elif product == "lst" and csv_path.name == "LST_m_zonal_barrios.csv":
+            ok4, reason4 = _lst_zonal_m_anio_covers_wall_months(csv_path)
+            if not ok4:
+                all_ok = False
+                reasons.append(reason4)
+                invalid_paths.append(csv_path)
+    if product == "ndvi" and not all_ok:
+        _u_path = paths.REPO_CSV / "NDVI_m_urban.csv"
+        _zb = paths.REPO_CSV / "NDVI_m_zonal_barrios.csv"
+        if _u_path.is_file() and _zb.is_file():
+            _u_ok, _ = _ndvi_m_urban_anio_covers_wall_months(_u_path)
+            _b_ok, _ = _ndvi_zonal_m_anio_covers_wall_months(_zb)
+            if not _u_ok and _b_ok:
+                reasons.append(
+                    "NDVI: ``NDVI_m_zonal_barrios`` tiene "
+                    "``anio_actual`` válido para el muro UTC pero ``NDVI_m_urban`` no — "
+                    "suele ser CSV urbano viejo en disco o sync parcial; reexportar el "
+                    "lote mensual (``start_ndvi_m_csv_tasks``) y sincronizar."
+                )
+    if product == "lst" and not all_ok:
+        _u_path = paths.REPO_CSV_LST / "LST_m_urban.csv"
+        _zb = paths.REPO_CSV_LST / "LST_m_zonal_barrios.csv"
+        if _u_path.is_file() and _zb.is_file():
+            _u_ok, _ = _lst_m_urban_anio_covers_wall_months(_u_path)
+            _b_ok, _ = _lst_zonal_m_anio_covers_wall_months(_zb)
+            if not _u_ok and _b_ok:
+                reasons.append(
+                    "LST: ``LST_m_zonal_barrios`` tiene "
+                    "``anio_actual`` válido para el muro UTC pero ``LST_m_urban`` no — "
+                    "suele ser CSV urbano viejo en disco o sync parcial; reexportar "
+                    "``start_lst_csv_tasks`` y sincronizar."
+                )
+
     return all_ok, reasons, invalid_paths
+
+
+def validate_local_monthly_csvs(
+    product: str,
+) -> tuple[bool, list[str], list[Path]]:
+    """Valida CSV mensuales del repo (sin API Drive). Usado por el pipeline / enqueue."""
+    return _validate_all_local_monthly_csvs(product)
+
+
+def _validate_local_yearmonth_csvs(
+    product: str,
+) -> tuple[bool, list[str], list[Path]]:
+    """
+    Comprueba que exista el CSV año–mes esperado en local y que tenga cabecera + ≥1 fila
+    con las columnas mínimas (estado actual en el front).
+    """
+    csv_path = _LOCAL_YEARMONTH_CSV_PATHS.get(product)
+    if csv_path is None:
+        return True, [], []
+    cols = _LOCAL_YEARMONTH_CSV_COLUMNS.get(product, ())
+    if not cols:
+        return True, [], []
+    if not csv_path.is_file():
+        return False, [f"CSV año-mes no existe: {csv_path.name}"], []
+    text = csv_path.read_text(encoding="utf-8", errors="replace").strip()
+    if not text:
+        return False, [f"CSV año-mes vacío: {csv_path.name}"], [csv_path]
+    try:
+        reader = csv.DictReader(io.StringIO(text))
+        fieldnames = reader.fieldnames or []
+    except Exception as exc:
+        return False, [f"error leyendo {csv_path.name}: {exc}"], [csv_path]
+    for c in cols:
+        if c not in fieldnames:
+            return (
+                False,
+                [f"falta columna '{c}' en {csv_path.name}"],
+                [csv_path],
+            )
+    cy = datetime.datetime.utcnow().year
+    value_col = cols[-1]
+    any_data = False
+    has_current_year = False
+    for row in reader:
+        if any((row.get(c) or "").strip() for c in cols):
+            any_data = True
+        y_raw = (row.get("Year") or "").strip()
+        if not y_raw:
+            continue
+        try:
+            yr = int(float(y_raw))
+        except (ValueError, OverflowError):
+            continue
+        if yr == cy:
+            cell = row.get(value_col, "")
+            if not _is_value_empty_or_nan(cell):
+                has_current_year = True
+    if not any_data:
+        return False, [f"sin filas con datos en {csv_path.name}"], [csv_path]
+    if not has_current_year:
+        return (
+            False,
+            [
+                f"CSV año-mes sin fila válida para el año calendario actual ({cy}) en "
+                f"{csv_path.name} — reexportar desde GEE."
+            ],
+            [csv_path],
+        )
+    return True, [], []
 
 
 # ---------------------------------------------------------------------------
@@ -338,6 +1009,56 @@ _LOCAL_YEARLY_GEO_TARGETS: dict[str, dict[str, tuple[Path, str, str]]] = {
         "manzanas": (paths.REPO_GEOJSON_LST_YEARLY_M, "LST_Yearly_ZonalStats_Manzanas_", "LST_mean"),
     },
 }
+
+
+def _geojson_zone_value_status(geojson_path: Path, value_property: str) -> str:
+    """
+    Return ``missing`` | ``ok`` | ``all_null`` | ``bad`` for one zonal GeoJSON file.
+    """
+    if not geojson_path.is_file():
+        return "missing"
+    try:
+        text = geojson_path.read_text(encoding="utf-8", errors="replace")
+        data = json.loads(text)
+    except Exception:
+        return "bad"
+    features = data.get("features") or []
+    if not features:
+        return "bad"
+    for feat in features:
+        props = feat.get("properties") or {}
+        val = props.get(value_property)
+        if val is None:
+            continue
+        try:
+            if not math.isnan(float(val)):
+                return "ok"
+        except (ValueError, TypeError):
+            return "ok"
+    return "all_null"
+
+
+def _local_yearly_geo_all_null_years_for_product(
+    product: str, expected_years: list[int]
+) -> list[int]:
+    """
+    Years where **every** local yearly zonal file exists but all features are null
+    in the value column (bad GEE export / stale Drive). Not the same as missing files.
+    """
+    specs = _LOCAL_YEARLY_GEO_TARGETS.get(product, {})
+    if not specs:
+        return []
+    out: list[int] = []
+    for year in expected_years:
+        statuses: list[str] = []
+        for _zone, (directory, prefix, value_prop) in specs.items():
+            fpath = directory / f"{prefix}{year}.geojson"
+            statuses.append(_geojson_zone_value_status(fpath, value_prop))
+        if "missing" in statuses or "bad" in statuses or "ok" in statuses:
+            continue
+        if statuses and all(s == "all_null" for s in statuses):
+            out.append(year)
+    return sorted(out)
 
 
 def _validate_local_geojson(
@@ -413,16 +1134,25 @@ class DriveFreshnessHints:
     yearly_tables_missing_or_stale: bool = False
     yearly_csv_missing_or_stale: bool = False
     local_csv_stale: bool = False
+    clim_csv_local_stale: bool = False
+    yearmonth_csv_local_stale: bool = False
     yearly_geo_missing_or_stale: bool = False
     yearly_raster_enqueue_bypass: bool = False
     mirror_full_monthly_local: bool = False
     target_yearly_year: int | None = None
     local_tables_stale_drive_ok: bool = False
 
+    lst_yearly_urban_semantics_bad: bool = False
+    """True cuando ``LST_y_urban.csv`` local contradice ``LST_YearMonth_urban.csv``."""
+
+    lst_yearly_csv_clear_scope: str = "all"
+    """``all``: limpiar todo ``LST_y_*`` en Drive al re-exportar anual; ``urban_only``: solo ``LST_y_urban``."""
+
     missing_yearly_raster_years: tuple[int, ...] = ()
     missing_yearly_geo_years: tuple[int, ...] = ()
     drive_missing_yearly_geo_years: tuple[int, ...] = ()
     local_invalid_yearly_geo_years: tuple[int, ...] = ()
+    local_all_null_yearly_geo_years: tuple[int, ...] = ()
 
     sync_full_mirror_extra_keys: frozenset[str] = field(default_factory=frozenset)
     audit_messages: tuple[str, ...] = ()
@@ -475,13 +1205,23 @@ def compute_drive_freshness_hints(
     target_yearly_year: int,
     assets_cover_target_year: bool = True,
     available_years: list[int] | None = None,
+    max_ym_asset: tuple[int, int] | None = None,
+    skip_lst_yearly_semantics_audit: bool = False,
 ) -> DriveFreshnessHints:
     """
     Compute freshness hints by comparing GEE asset years vs Drive contents.
 
+    *max_ym_asset*: máximo (año, mes) en la ImageCollection año-mes del asset GEE.
+    Hasta que alcance el último mes civil cerrado UTC, no se marcan brechas **anuales**
+    (raster/CSV/GeoJSON) ni validación local de tablas anuales; los rasters mensuales
+    en Drive solo disparan espejo si el asset ya está alineado con el reloj.
+
     *available_years*: distinct years in the GEE asset collection, capped at
     ``target_yearly_year``.  Used for full yearly-gap detection.  When ``None``
     the audit falls back to checking only *target_yearly_year*.
+
+    *skip_lst_yearly_semantics_audit*: si True, no contrasta ``LST_y_urban.csv`` con
+    ``LST_YearMonth_urban.csv`` (útil para depuración o cuando el año–mes local está incompleto).
     """
     msgs: list[str] = []
 
@@ -499,7 +1239,6 @@ def compute_drive_freshness_hints(
     yearly_geo_folder_m: str
     yearly_geo_stem_prefix_b: str
     yearly_geo_stem_prefix_m: str
-    yearly_csv_mirror_key: str
 
     if product == "ndvi":
         monthly_folder = paths.DRIVE_RASTER_MONTHLY
@@ -515,7 +1254,6 @@ def compute_drive_freshness_hints(
         yearly_geo_folder_m = paths.DRIVE_GEO_YEARLY_M
         yearly_geo_stem_prefix_b = "NDVI_Yearly_ZonalStats_Barrios_"
         yearly_geo_stem_prefix_m = "NDVI_Yearly_ZonalStats_Manzanas_"
-        yearly_csv_mirror_key = "csv"
     elif product == "aod":
         monthly_folder = paths.DRIVE_AOD_RASTER_MONTHLY
         monthly_prefix = "AOD_Monthly_"
@@ -524,13 +1262,12 @@ def compute_drive_freshness_hints(
         mirror_key = "aod_raster_monthly"
         monthly_csv_folder = paths.DRIVE_AOD_CSV_MONTHLY
         yearly_csv_folder = paths.DRIVE_AOD_CSV_YEARLY
-        monthly_csv_expected_name = "AOD_m_region.csv"
-        yearly_csv_expected_name = "AOD_y_region.csv"
+        monthly_csv_expected_name = None
+        yearly_csv_expected_name = None
         yearly_geo_folder_b = paths.DRIVE_AOD_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_AOD_GEO_YEARLY_M
         yearly_geo_stem_prefix_b = "AOD_Yearly_ZonalStats_Barrios_"
         yearly_geo_stem_prefix_m = "AOD_Yearly_ZonalStats_Manzanas_"
-        yearly_csv_mirror_key = "aod_csv_yearly"
     elif product == "no2":
         monthly_folder = paths.DRIVE_NO2_RASTER_MONTHLY
         monthly_prefix = "NO2_Monthly_"
@@ -539,13 +1276,12 @@ def compute_drive_freshness_hints(
         mirror_key = "no2_raster_monthly"
         monthly_csv_folder = paths.DRIVE_NO2_CSV_MONTHLY
         yearly_csv_folder = paths.DRIVE_NO2_CSV_YEARLY
-        monthly_csv_expected_name = "NO2_m_region.csv"
-        yearly_csv_expected_name = "NO2_y_region.csv"
+        monthly_csv_expected_name = "NO2_m_zonal_barrios.csv"
+        yearly_csv_expected_name = None
         yearly_geo_folder_b = paths.DRIVE_NO2_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_NO2_GEO_YEARLY_M
         yearly_geo_stem_prefix_b = "NO2_Yearly_ZonalStats_Barrios_"
         yearly_geo_stem_prefix_m = "NO2_Yearly_ZonalStats_Manzanas_"
-        yearly_csv_mirror_key = "no2_csv_yearly"
     elif product == "so2":
         monthly_folder = paths.DRIVE_SO2_RASTER_MONTHLY
         monthly_prefix = "SO2_Monthly_"
@@ -554,13 +1290,12 @@ def compute_drive_freshness_hints(
         mirror_key = "so2_raster_monthly"
         monthly_csv_folder = paths.DRIVE_SO2_CSV_MONTHLY
         yearly_csv_folder = paths.DRIVE_SO2_CSV_YEARLY
-        monthly_csv_expected_name = "SO2_m_region.csv"
-        yearly_csv_expected_name = "SO2_y_region.csv"
+        monthly_csv_expected_name = "SO2_m_zonal_barrios.csv"
+        yearly_csv_expected_name = None
         yearly_geo_folder_b = paths.DRIVE_SO2_GEO_YEARLY_B
         yearly_geo_folder_m = paths.DRIVE_SO2_GEO_YEARLY_M
         yearly_geo_stem_prefix_b = "SO2_Yearly_ZonalStats_Barrios_"
         yearly_geo_stem_prefix_m = "SO2_Yearly_ZonalStats_Manzanas_"
-        yearly_csv_mirror_key = "so2_csv_yearly"
     elif product == "lst":
         monthly_folder = paths.DRIVE_LST_RASTER_MONTHLY
         monthly_prefix = "LST_Monthly_"
@@ -575,156 +1310,311 @@ def compute_drive_freshness_hints(
         yearly_geo_folder_m = paths.DRIVE_LST_GEO_YEARLY_M
         yearly_geo_stem_prefix_b = "LST_Yearly_ZonalStats_Barrios_"
         yearly_geo_stem_prefix_m = "LST_Yearly_ZonalStats_Manzanas_"
-        yearly_csv_mirror_key = "lst_csv_yearly"
     else:
         return DriveFreshnessHints(target_yearly_year=target_yearly_year)
 
     expected_years = available_years or [target_yearly_year]
 
-    # --- Monthly: mtime check (for mirror sync only, NOT for GEE re-export) ---
-    m_files = _list_folder_files(service, monthly_folder)
-    force_monthly = monthly_stale_from_drive_mtime(
-        m_files, monthly_prefix, (".tif", ".tiff")
+    lst_yearly_urban_semantics_bad = False
+    lst_yearly_csv_clear_scope = "all"
+
+    wall = ym_lib.last_complete_calendar_month_utc()
+    asset_reaches_wall = max_ym_asset is not None and not ym_lib.ym_strictly_before(
+        max_ym_asset, wall
     )
+    if max_ym_asset is None:
+        msgs.append(
+            "[Drive audit] Colección año-mes GEE vacía o sin máximo (year/month): "
+            "no se comparan brechas anuales ni tablas en Drive hasta tener datos en el asset."
+        )
+    elif not asset_reaches_wall:
+        max_s = f"{max_ym_asset[0]}-{max_ym_asset[1]:02d}"
+        msgs.append(
+            f"[Drive audit] Alineación mensual: el asset GEE llega hasta {max_s}; "
+            f"el último mes civil cerrado UTC es {wall[0]}-{wall[1]:02d}. "
+            "No se marcan faltantes de rasters/CSV/GeoJSON **anuales** por Drive "
+            "ni validación local de tablas anuales hasta completar el asset. "
+            "La frescura de rasters mensuales (climatología) en Drive solo aplica si el asset "
+            "está al día con ese mes."
+        )
+
+    # --- Monthly: mtime vs último mes cerrado UTC (rasters mensuales / climatología) ---
+    m_files = _list_folder_files(service, monthly_folder)
+    force_monthly_candidate = monthly_stale_from_drive_mtime(
+        m_files, monthly_prefix, (".tif", ".tiff"), wall_month=wall
+    )
+    force_monthly = force_monthly_candidate and asset_reaches_wall
     if force_monthly:
         msgs.append(
-            f"[Drive audit] Mensual «{monthly_folder}»: archivos locales desactualizados — "
-            f"se hará espejo completo desde Drive."
+            f"[Drive audit] Mensual «{monthly_folder}»: la fecha de última modificación en "
+            f"Drive es anterior a {wall[0]}-{wall[1]:02d} (último mes civil cerrado UTC) — "
+            "se hará espejo completo desde Drive."
+        )
+    elif force_monthly_candidate and not asset_reaches_wall:
+        msgs.append(
+            f"[Drive audit] Mensual «{monthly_folder}»: Drive sugiere refresco por fecha, "
+            "pero el asset año-mes aún no cubre el último mes cerrado UTC — "
+            "se pospone el espejo de rasters mensuales hasta alinear GEE."
         )
 
-    # --- Yearly rasters: full gap detection ---
-    y_files = _list_folder_files(service, yearly_folder)
-    missing_raster_years = _find_missing_yearly_files(
-        y_files, yearly_stem_prefix, (".tif", ".tiff"), expected_years,
-    )
-    yearly_missing = bool(missing_raster_years)
-    yearly_bypass = yearly_missing and assets_cover_target_year
-    if missing_raster_years:
-        yrs_str = ", ".join(str(y) for y in missing_raster_years)
-        msgs.append(
-            f"[Drive audit] Raster anual «{yearly_folder}»: faltan años [{yrs_str}]."
+    if asset_reaches_wall:
+        # --- Yearly rasters: full gap detection ---
+        y_files = _list_folder_files(service, yearly_folder)
+        missing_raster_years = _find_missing_yearly_files(
+            y_files, yearly_stem_prefix, (".tif", ".tiff"), expected_years,
         )
-    if yearly_missing and not assets_cover_target_year:
-        msgs.append(
-            f"[Drive audit] El asset aún no cubre dic. {target_yearly_year}; "
-            "no se fuerza reexport hasta completar ese año en GEE."
-        )
+        yearly_missing = bool(missing_raster_years)
+        yearly_bypass = yearly_missing and assets_cover_target_year
+        if missing_raster_years:
+            yrs_str = ", ".join(str(y) for y in missing_raster_years)
+            msgs.append(
+                f"[Drive audit] Raster anual «{yearly_folder}»: faltan años [{yrs_str}]."
+            )
+        if yearly_missing and not assets_cover_target_year:
+            msgs.append(
+                f"[Drive audit] El asset aún no cubre dic. {target_yearly_year}; "
+                "no se fuerza reexport hasta completar ese año en GEE."
+            )
 
-    # --- Yearly CSV: modifiedTime check + canonical filename presence ---
-    csv_y_files = _list_folder_files(service, yearly_csv_folder)
-    yearly_csv_missing = _yearly_csv_missing_or_stale(
-        csv_y_files, target_year=target_yearly_year,
-    )
-    if yearly_csv_expected_name and not _drive_has_exact_file(
-        csv_y_files, yearly_csv_expected_name
-    ):
-        yearly_csv_missing = True
-        msgs.append(
-            f"[Drive audit] CSV anual «{yearly_csv_folder}»: falta archivo canónico "
-            f"{yearly_csv_expected_name}."
+        # --- Yearly CSV: modifiedTime check + canonical filename presence ---
+        csv_y_files = _list_folder_files(service, yearly_csv_folder)
+        yearly_csv_missing = _yearly_csv_missing_or_stale(
+            csv_y_files, target_year=target_yearly_year,
         )
-    if monthly_csv_expected_name and monthly_csv_folder:
-        csv_m_files = _list_folder_files(service, monthly_csv_folder)
-        if not _drive_has_exact_file(csv_m_files, monthly_csv_expected_name):
+        if yearly_csv_expected_name and not _drive_has_exact_file(
+            csv_y_files, yearly_csv_expected_name
+        ):
             yearly_csv_missing = True
             msgs.append(
-                f"[Drive audit] CSV mensual «{monthly_csv_folder}»: falta archivo canónico "
-                f"{monthly_csv_expected_name}."
+                f"[Drive audit] CSV anual «{yearly_csv_folder}»: falta archivo canónico "
+                f"{yearly_csv_expected_name}."
             )
-    if yearly_csv_missing:
-        msgs.append(
-            f"[Drive audit] CSV anual «{yearly_csv_folder}»: faltante o desactualizado "
-            f"para {target_yearly_year}."
-        )
+        if monthly_csv_expected_name and monthly_csv_folder:
+            csv_m_files = _list_folder_files(service, monthly_csv_folder)
+            if not _drive_has_exact_file(csv_m_files, monthly_csv_expected_name):
+                yearly_csv_missing = True
+                msgs.append(
+                    f"[Drive audit] CSV mensual «{monthly_csv_folder}»: falta archivo canónico "
+                    f"{monthly_csv_expected_name}."
+                )
+            ym_drive_name = {"lst": "LST_YearMonth_urban.csv"}.get(product)
+            if ym_drive_name and not _drive_has_exact_file(csv_m_files, ym_drive_name):
+                msgs.append(
+                    f"[Drive audit] CSV año-mes «{monthly_csv_folder}»: falta en Drive "
+                    f"{ym_drive_name} (export GEE pendiente o distinto nombre)."
+                )
+        if product == "ndvi":
+            csv_ndvi_m = _list_folder_files(service, paths.DRIVE_CSV_MONTHLY)
+            zonal_name = "NDVI_m_zonal_barrios.csv"
+            if not _drive_has_exact_file(csv_ndvi_m, zonal_name):
+                msgs.append(
+                    f"[Drive audit] CSV mensual «{paths.DRIVE_CSV_MONTHLY}»: falta en Drive "
+                    f"{zonal_name} (P25/P75/anio_actual explorador zonal; export GEE)."
+                )
+            csv_ndvi_y = _list_folder_files(service, paths.DRIVE_CSV_YEARLY)
+            zonal_y_name = "NDVI_y_zonal_barrios.csv"
+            if not _drive_has_exact_file(csv_ndvi_y, zonal_y_name):
+                yearly_csv_missing = True
+                msgs.append(
+                    f"[Drive audit] CSV anual «{paths.DRIVE_CSV_YEARLY}»: falta en Drive "
+                    f"{zonal_y_name} (serie anual zonal P25/P50/P75; export GEE "
+                    f"``start_ndvi_y_csv_tasks``)."
+                )
+        elif product == "lst":
+            csv_lst_m = _list_folder_files(service, paths.DRIVE_LST_CSV_MONTHLY)
+            zonal_name_m = "LST_m_zonal_barrios.csv"
+            if not _drive_has_exact_file(csv_lst_m, zonal_name_m):
+                msgs.append(
+                    f"[Drive audit] CSV mensual «{paths.DRIVE_LST_CSV_MONTHLY}»: falta en Drive "
+                    f"{zonal_name_m} (P25/P75/anio_actual explorador zonal LST; export GEE)."
+                )
+            csv_lst_y = _list_folder_files(service, paths.DRIVE_LST_CSV_YEARLY)
+            zonal_y_name = "LST_y_zonal_barrios.csv"
+            if not _drive_has_exact_file(csv_lst_y, zonal_y_name):
+                yearly_csv_missing = True
+                msgs.append(
+                    f"[Drive audit] CSV anual «{paths.DRIVE_LST_CSV_YEARLY}»: falta en Drive "
+                    f"{zonal_y_name} (serie anual zonal LST; export GEE pendiente o distinto nombre)."
+                )
+        if yearly_csv_missing:
+            msgs.append(
+                f"[Drive audit] CSV anual «{yearly_csv_folder}»: faltante o desactualizado "
+                f"para {target_yearly_year}."
+            )
 
-    # --- Yearly GeoJSON: full gap detection ---
-    geo_y_files_b = _list_folder_files(service, yearly_geo_folder_b)
-    geo_y_files_m = _list_folder_files(service, yearly_geo_folder_m)
-    drive_missing_geo_years = _find_missing_yearly_geo(
-        geo_y_files_b, geo_y_files_m,
-        yearly_geo_stem_prefix_b, yearly_geo_stem_prefix_m,
-        (".geojson", ".json"),
-        expected_years,
-    )
-    yearly_geo_missing = bool(drive_missing_geo_years)
-    if drive_missing_geo_years:
-        yrs_str = ", ".join(str(y) for y in drive_missing_geo_years)
-        msgs.append(
-            f"[Drive audit] GeoJSON anual: faltan años [{yrs_str}] en Barrios/Manzanas."
+        # --- Yearly GeoJSON: full gap detection ---
+        geo_y_files_b = _list_folder_files(service, yearly_geo_folder_b)
+        geo_y_files_m = _list_folder_files(service, yearly_geo_folder_m)
+        drive_missing_geo_years = _find_missing_yearly_geo(
+            geo_y_files_b, geo_y_files_m,
+            yearly_geo_stem_prefix_b, yearly_geo_stem_prefix_m,
+            (".geojson", ".json"),
+            expected_years,
         )
+        yearly_geo_missing = bool(drive_missing_geo_years)
+        if drive_missing_geo_years:
+            yrs_str = ", ".join(str(y) for y in drive_missing_geo_years)
+            msgs.append(
+                f"[Drive audit] GeoJSON anual: faltan años [{yrs_str}] en Barrios/Manzanas."
+            )
 
-    # --- Local GeoJSON content validation (null-value detection) ---
-    local_geo_invalid_years = _validate_local_geojsons_for_years(product, expected_years)
-    if local_geo_invalid_years:
-        yrs_str = ", ".join(str(y) for y in local_geo_invalid_years)
-        msgs.append(
-            f"[Drive audit] GeoJSON local con valores nulos: años [{yrs_str}] — "
-            "se eliminarán en local para re-descargar desde Drive."
+        # --- Local GeoJSON content validation (null-value detection) ---
+        local_geo_invalid_years = _validate_local_geojsons_for_years(product, expected_years)
+        local_all_null_geo_years = _local_yearly_geo_all_null_years_for_product(
+            product, expected_years
         )
-        yearly_geo_missing = True
-        # Delete invalid local files so incremental download will replace them
-        specs = _LOCAL_YEARLY_GEO_TARGETS.get(product, {})
-        for year in local_geo_invalid_years:
-            for _zone, (directory, prefix, _vprop) in specs.items():
-                fpath = directory / f"{prefix}{year}.geojson"
-                if fpath.is_file():
-                    fpath.unlink()
+        if local_all_null_geo_years:
+            yrs_str = ", ".join(str(y) for y in local_all_null_geo_years)
+            msgs.append(
+                f"[Drive audit] GeoJSON local todo-null (barrios+manzanas): años [{yrs_str}] — "
+                "se forzará re-export desde GEE (no basta re-descargar Drive)."
+            )
+
+        if local_geo_invalid_years:
+            yrs_str = ", ".join(str(y) for y in local_geo_invalid_years)
+            msgs.append(
+                f"[Drive audit] GeoJSON local con valores nulos: años [{yrs_str}] — "
+                "se eliminarán en local para re-descargar desde Drive."
+            )
+            yearly_geo_missing = True
+            # Delete invalid local files so incremental download will replace them
+            specs = _LOCAL_YEARLY_GEO_TARGETS.get(product, {})
+            for year in local_geo_invalid_years:
+                for _zone, (directory, prefix, _vprop) in specs.items():
+                    fpath = directory / f"{prefix}{year}.geojson"
+                    if fpath.is_file():
+                        fpath.unlink()
+                        msgs.append(
+                            f"[Drive audit] Eliminado local inválido: {fpath.name}"
+                        )
+
+        yearly_tables_missing = yearly_csv_missing or yearly_geo_missing
+
+        # --- Local CSV content validation ---
+        local_csv_ok, csv_reasons, csv_completely_invalid = _validate_all_local_csvs(
+            product, expected_years
+        )
+        local_monthly_csv_ok, monthly_csv_reasons, monthly_invalid_paths = (
+            _validate_all_local_monthly_csvs(product)
+        )
+        ym_csv_ok, ym_csv_reasons, ym_csv_invalid_paths = _validate_local_yearmonth_csvs(
+            product
+        )
+        clim_local_stale = (not local_csv_ok) or (not local_monthly_csv_ok)
+        ym_local_stale = not ym_csv_ok
+        local_csv_stale = clim_local_stale or ym_local_stale
+
+        if (
+            product == "lst"
+            and not skip_lst_yearly_semantics_audit
+        ):
+            y_csv = paths.REPO_CSV_LST / "LST_y_urban.csv"
+            ym_csv = paths.REPO_CSV_LST / "LST_YearMonth_urban.csv"
+            sem_ok, sem_msgs = audit_lst_y_urban_semantics_vs_yearmonth(y_csv, ym_csv)
+            if not sem_ok:
+                lst_yearly_urban_semantics_bad = True
+                yearly_csv_missing = True
+                local_csv_stale = True
+                for m in sem_msgs:
+                    msgs.append(f"[Drive audit] {m}")
+                zb_csv = paths.REPO_CSV_LST / "LST_y_zonal_barrios.csv"
+                ok_u, _, _ = _validate_local_csv(
+                    y_csv,
+                    expected_years,
+                    "Year",
+                    ["LST_mean", "LST_p25", "LST_p75"],
+                )
+                ok_zb, _, _ = _validate_local_csv(
+                    zb_csv,
+                    expected_years,
+                    "Year",
+                    ["LST_mean", "LST_p25", "LST_p75"],
+                )
+                if ok_u and ok_zb:
+                    lst_yearly_csv_clear_scope = "urban_only"
+                if y_csv.is_file():
+                    y_csv.unlink()
                     msgs.append(
-                        f"[Drive audit] Eliminado local inválido: {fpath.name}"
+                        "[Drive audit] Eliminado local (semántica LST): LST_y_urban.csv"
                     )
 
-    yearly_tables_missing = yearly_csv_missing or yearly_geo_missing
-
-    # --- Local CSV content validation ---
-    local_csv_ok, csv_reasons, csv_completely_invalid = _validate_all_local_csvs(
-        product, expected_years
-    )
-    local_monthly_csv_ok, monthly_csv_reasons, monthly_invalid_paths = (
-        _validate_all_local_monthly_csvs(product)
-    )
-    local_csv_stale = (not local_csv_ok) or (not local_monthly_csv_ok)
-
-    if csv_completely_invalid:
-        msgs.append(
-            "[Drive audit] CSV local completamente inválido (todos los valores vacíos) — "
-            "se forzará re-export desde GEE (no solo descarga de Drive)."
-        )
-        yearly_csv_missing = True
-        local_stale_drive_ok = False
-    else:
-        local_stale_drive_ok = local_csv_stale and not yearly_csv_missing
-
-    if local_csv_stale:
-        for reason in csv_reasons:
-            msgs.append(f"[Drive audit] CSV local inválido: {reason}")
-        for reason in monthly_csv_reasons:
-            msgs.append(f"[Drive audit] CSV local inválido: {reason}")
-        for csv_path, _year_col, _val_cols in _LOCAL_YEARLY_CSV_TARGETS.get(product, []):
-            if csv_path.is_file() and any(csv_path.name in reason for reason in csv_reasons):
-                csv_path.unlink()
-                msgs.append(
-                    f"[Drive audit] Eliminado local inválido: {csv_path.name}"
-                )
-        for csv_path in monthly_invalid_paths:
-            if csv_path.is_file():
-                csv_path.unlink()
-                msgs.append(
-                    f"[Drive audit] Eliminado local inválido: {csv_path.name}"
-                )
-        if local_stale_drive_ok:
+        if csv_completely_invalid:
             msgs.append(
-                "[Drive audit] Drive parece tener CSV reciente — "
-                "se descargará sin re-exportar."
+                "[Drive audit] CSV local completamente inválido (todos los valores vacíos) — "
+                "se forzará re-export desde GEE (no solo descarga de Drive)."
+            )
+            yearly_csv_missing = True
+            local_stale_drive_ok = False
+        else:
+            # Si el mensual local falla (cabecera P25/P75, etc.), no confiar en
+            # «Drive tiene CSV reciente»: el archivo en Drive puede ser el antiguo
+            # sin percentiles; hay que re-exportar y luego descargar.
+            local_stale_drive_ok = (
+                clim_local_stale
+                and not yearly_csv_missing
+                and local_monthly_csv_ok
             )
 
-    yearly_tables_missing = yearly_tables_missing or local_csv_stale
+        if local_csv_stale:
+            for reason in csv_reasons:
+                msgs.append(f"[Drive audit] CSV local inválido: {reason}")
+            for reason in monthly_csv_reasons:
+                msgs.append(f"[Drive audit] CSV local inválido: {reason}")
+            for reason in ym_csv_reasons:
+                msgs.append(f"[Drive audit] CSV año-mes local: {reason}")
+            for csv_path, _year_col, _val_cols in _LOCAL_YEARLY_CSV_TARGETS.get(product, []):
+                if csv_path.is_file() and any(csv_path.name in reason for reason in csv_reasons):
+                    csv_path.unlink()
+                    msgs.append(
+                        f"[Drive audit] Eliminado local inválido: {csv_path.name}"
+                    )
+            for csv_path in monthly_invalid_paths:
+                if csv_path.is_file():
+                    csv_path.unlink()
+                    msgs.append(
+                        f"[Drive audit] Eliminado local inválido: {csv_path.name}"
+                    )
+            for csv_path in ym_csv_invalid_paths:
+                if csv_path.is_file():
+                    csv_path.unlink()
+                    msgs.append(
+                        f"[Drive audit] Eliminado local inválido: {csv_path.name}"
+                    )
+            if local_stale_drive_ok:
+                msgs.append(
+                    "[Drive audit] Drive parece tener CSV reciente — "
+                    "se descargará sin re-exportar."
+                )
+
+        yearly_tables_missing = yearly_tables_missing or local_csv_stale
+
+    else:
+        missing_raster_years = []
+        yearly_missing = False
+        yearly_bypass = False
+        yearly_csv_missing = False
+        yearly_geo_missing = False
+        drive_missing_geo_years = []
+        local_geo_invalid_years = []
+        local_all_null_geo_years = []
+        yearly_tables_missing = False
+        local_csv_stale = False
+        clim_local_stale = False
+        ym_local_stale = False
+        local_stale_drive_ok = False
 
     # --- Sync mirror keys ---
     extra: set[str] = set()
     if force_monthly:
         extra.add(mirror_key)
-    if (yearly_csv_missing and assets_cover_target_year) or local_csv_stale:
-        extra.add(yearly_csv_mirror_key)
+    yearly_mirror_trigger = (
+        (yearly_csv_missing and assets_cover_target_year) or clim_local_stale
+    )
+    if yearly_mirror_trigger:
+        if product == "lst" and lst_yearly_csv_clear_scope == "urban_only":
+            extra.add("lst_csv_yearly")
+        elif product in _CSV_TABLE_MIRROR_KEYS:
+            extra.update(_CSV_TABLE_MIRROR_KEYS[product])
 
     return DriveFreshnessHints(
         force_full_monthly_raster_export=force_monthly,
@@ -732,15 +1622,20 @@ def compute_drive_freshness_hints(
         yearly_tables_missing_or_stale=yearly_tables_missing,
         yearly_csv_missing_or_stale=yearly_csv_missing,
         local_csv_stale=local_csv_stale,
+        clim_csv_local_stale=clim_local_stale,
+        yearmonth_csv_local_stale=ym_local_stale,
         yearly_geo_missing_or_stale=yearly_geo_missing,
         yearly_raster_enqueue_bypass=yearly_bypass,
         mirror_full_monthly_local=force_monthly,
         target_yearly_year=target_yearly_year,
         local_tables_stale_drive_ok=local_stale_drive_ok,
+        lst_yearly_urban_semantics_bad=lst_yearly_urban_semantics_bad,
+        lst_yearly_csv_clear_scope=lst_yearly_csv_clear_scope,
         missing_yearly_raster_years=tuple(missing_raster_years),
         missing_yearly_geo_years=tuple(drive_missing_geo_years),
         drive_missing_yearly_geo_years=tuple(drive_missing_geo_years),
         local_invalid_yearly_geo_years=tuple(local_geo_invalid_years),
+        local_all_null_yearly_geo_years=tuple(local_all_null_geo_years),
         sync_full_mirror_extra_keys=frozenset(extra),
         audit_messages=tuple(msgs),
     )

@@ -8,19 +8,11 @@ from ....config.enqueue_types import EnqueueResult
 from ....drive.drive_export_gate import DriveExportGate
 from ....config import paths
 from ....lib import yearmonth as ym_lib
+from ....lib.product_enqueue import add_tasks, export_want, resolve_tables_phase_pollutant
 from . import csv_tasks
 from . import geojson_tasks
 from . import incremental as aod_inc
 from . import raster_tasks
-
-
-def _add_tasks(out: list[Any], items: list[Any] | Any | None) -> None:
-    if items is None:
-        return
-    if isinstance(items, list):
-        out.extend(t for t in items if t is not None)
-    else:
-        out.append(items)
 
 
 def enqueue_aod_exports(
@@ -40,19 +32,16 @@ def enqueue_aod_exports(
     messages: list[str] = []
     ran_derivative = False
 
-    def want(name: str) -> bool:
-        return only is None or name in only
-
     missing = aod_inc.list_missing_aod_yearmonth_months()
     plan = aod_inc.plan_derivative_exports(
         missing_asset_months=missing,
         force_full=force_full,
     )
 
-    if want("asset"):
-        _add_tasks(asset, raster_tasks.start_aod_ym_asset_tasks())
+    if export_want(only, "asset"):
+        add_tasks(asset, raster_tasks.start_aod_ym_asset_tasks())
 
-    if want("raster"):
+    if export_want(only, "raster"):
         if missing:
             messages.append(
                 "[raster AOD] Asset AOD_YearMonth incompleto: omitidos derivados raster."
@@ -71,7 +60,7 @@ def enqueue_aod_exports(
                     drive_gate=drive_gate,
                     bypass_drive_gate=True,
                 )
-                _add_tasks(drive, tr)
+                add_tasks(drive, tr)
                 if tr:
                     sync.add("aod_raster_trend")
                     ran_derivative = True
@@ -98,7 +87,7 @@ def enqueue_aod_exports(
                             file_stems=(f"AOD_Yearly_{yr}",),
                             reason=f"falta año {yr} en Drive",
                         )
-                _add_tasks(
+                add_tasks(
                     drive,
                     raster_tasks.start_aod_yearly_raster_tasks(
                         year_numbers=year_nums,
@@ -119,7 +108,7 @@ def enqueue_aod_exports(
                         stem_prefixes=("AOD_Monthly_",),
                         reason="refresco climatología mensual AOD (datos nuevos en GEE)",
                     )
-                _add_tasks(
+                add_tasks(
                     drive,
                     raster_tasks.start_aod_monthly_raster_tasks(
                         month_numbers=None if full_refresh else plan.month_subset,
@@ -136,57 +125,36 @@ def enqueue_aod_exports(
             if drive_freshness:
                 sync_full_mirror |= set(drive_freshness.sync_full_mirror_extra_keys)
 
-    # --- Granular csv / geo separation ---
-    force_yearly_csv = bool(
-        drive_freshness and drive_freshness.yearly_csv_missing_or_stale
+    tp = resolve_tables_phase_pollutant(
+        plan,
+        force_full=force_full,
+        drive_freshness=drive_freshness,
+        tables_run_override=tables_run_override,
     )
-    local_csv_needs_refresh = bool(
-        drive_freshness and drive_freshness.local_csv_stale
-    )
-    force_yearly_geo = bool(
-        drive_freshness and drive_freshness.yearly_geo_missing_or_stale
-    )
-    csv_run = (
-        (plan.run or plan.is_full_refresh or force_full or force_yearly_csv or local_csv_needs_refresh)
-        if tables_run_override is None
-        else tables_run_override
-    )
-    geo_run = (
-        (plan.run or plan.is_full_refresh or force_full or force_yearly_geo)
-        if tables_run_override is None
-        else tables_run_override
-    )
-    tables_run = csv_run or geo_run
+    csv_run = tp.csv_run
+    ym_csv_download_only = tp.ym_csv_download_only
+    geo_run = tp.geo_run
+    tables_run = tp.tables_run
+    local_stale_drive_ok = tp.local_stale_drive_ok
 
-    local_stale_drive_ok = bool(
-        drive_freshness and drive_freshness.local_tables_stale_drive_ok
-    )
-
-    if want("csv") and csv_run and local_stale_drive_ok:
-        sync.update({"aod_csv_monthly", "aod_csv_yearly"})
-        ran_derivative = True
+    if export_want(only, "csv") and ym_csv_download_only:
         messages.append(
-            "CSV AOD: Drive ya tiene versión reciente; descargando sin re-exportar."
+            "CSV AOD año–mes urbano: regenerar en repo con "
+            "scripts/repo/bundles/build_atm_urban_csv_from_barrios.py si falta."
         )
-    elif want("csv") and csv_run:
-        if drive_gate:
-            drive_gate.clear_before_reexport(
-                paths.DRIVE_AOD_CSV_MONTHLY, extensions=(".csv",),
-                stem_prefixes=("AOD_m_region",),
-                reason="re-export CSV mensual AOD",
-            )
-            drive_gate.clear_before_reexport(
-                paths.DRIVE_AOD_CSV_YEARLY, extensions=(".csv",),
-                stem_prefixes=("AOD_y_region",),
-                reason="re-export CSV anual AOD",
-            )
-        _add_tasks(drive, csv_tasks.start_aod_csv_tasks(drive_gate=drive_gate))
-        sync.update({"aod_csv_monthly", "aod_csv_yearly"})
-        ran_derivative = True
-    elif want("csv"):
-        messages.append("Omitidos CSV AOD — sin datos nuevos ni CSV inválidos.")
+    elif export_want(only, "csv") and csv_run and local_stale_drive_ok:
+        messages.append(
+            "CSV AOD urbanos: sin export a Drive; refrescar desde GeoJSON con el script local "
+            "si los datos en disco están desactualizados."
+        )
+    elif export_want(only, "csv") and csv_run:
+        messages.append(
+            "AOD: no hay export CSV a Drive; tablas urbanas solo en repo (scripts/repo/bundles/build_atm_urban_csv_from_barrios)."
+        )
+    elif export_want(only, "csv"):
+        messages.append("Omitidos CSV AOD — sin datos nuevos o CSV urbanos válidos en disco.")
 
-    if want("geojson"):
+    if export_want(only, "geojson"):
         run_monthly_geo = plan.run or plan.is_full_refresh or force_full
         if run_monthly_geo:
             month_filter = None if plan.is_full_refresh else plan.month_subset
@@ -214,7 +182,7 @@ def enqueue_aod_exports(
                     ),
                     reason="re-export GeoJSON mensual AOD",
                 )
-            _add_tasks(
+            add_tasks(
                 drive,
                 geojson_tasks.start_aod_m_geojson_tasks(
                     month_numbers=month_filter,
@@ -242,7 +210,7 @@ def enqueue_aod_exports(
                     stem_prefixes=("Trend_AOD_ZonalStats_Manzanas",),
                     reason="re-export GeoJSON tendencia AOD",
                 )
-            _add_tasks(
+            add_tasks(
                 drive,
                 geojson_tasks.start_aod_t_geojson_tasks(drive_gate=drive_gate),
             )
@@ -278,7 +246,7 @@ def enqueue_aod_exports(
                         reason=f"GeoJSON anual Manzanas {yr} inválido/faltante — re-export",
                     )
             if missing_geo_yrs:
-                _add_tasks(
+                add_tasks(
                     drive,
                     geojson_tasks.start_aod_y_geojson_tasks(
                         year_numbers=missing_geo_yrs or None,

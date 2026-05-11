@@ -182,9 +182,11 @@ def _audit_drive(target_year: int) -> int:
     print("\nCSV anuales (tablas agregadas)")
     check_csv_in_folder(paths.DRIVE_CSV_YEARLY, "NDVI_y_av.csv", "NDVI áreas verdes")
     check_csv_in_folder(paths.DRIVE_CSV_YEARLY, "NDVI_y_urban.csv", "NDVI urbano")
-    check_csv_in_folder(paths.DRIVE_AOD_CSV_YEARLY, "AOD_y_region.csv", "AOD región")
-    check_csv_in_folder(paths.DRIVE_NO2_CSV_YEARLY, "NO2_y_region.csv", "NO2 región")
-    check_csv_in_folder(paths.DRIVE_SO2_CSV_YEARLY, "SO2_y_region.csv", "SO2 región")
+    check_csv_in_folder(
+        paths.DRIVE_CSV_YEARLY,
+        "NDVI_y_zonal_barrios.csv",
+        "NDVI anual zonal barrios (P25/P50/P75)",
+    )
     check_csv_in_folder(paths.DRIVE_LST_CSV_YEARLY, "LST_y_urban.csv", "LST urbano")
     check_csv_in_folder(paths.DRIVE_HU_YEARLY, "Huella_Urbana_Anual.csv", "HU total ha")
     check_csv_in_folder(
@@ -259,9 +261,10 @@ def _audit_local(target_year: int) -> int:
     print("\nCSV anuales")
     check_csv(paths.REPO_CSV / "NDVI_y_av.csv", "NDVI_y_av")
     check_csv(paths.REPO_CSV / "NDVI_y_urban.csv", "NDVI_y_urban")
-    check_csv(paths.REPO_CSV_AOD / "AOD_y_region.csv", "AOD_y_region")
-    check_csv(paths.REPO_CSV_NO2 / "NO2_y_region.csv", "NO2_y_region")
-    check_csv(paths.REPO_CSV_SO2 / "SO2_y_region.csv", "SO2_y_region")
+    check_csv(paths.REPO_CSV / "NDVI_y_zonal_barrios.csv", "NDVI_y_zonal_barrios")
+    check_csv(paths.REPO_CSV_AOD / "AOD_y_urban.csv", "AOD_y_urban")
+    check_csv(paths.REPO_CSV_NO2 / "NO2_y_urban.csv", "NO2_y_urban")
+    check_csv(paths.REPO_CSV_SO2 / "SO2_y_urban.csv", "SO2_y_urban")
     check_csv(paths.REPO_CSV_LST / "LST_y_urban.csv", "LST_y_urban")
     check_csv(paths.REPO_CSV_HU / "Huella_Urbana_Anual.csv", "Huella_Urbana_Anual")
     check_csv(paths.REPO_CSV_HU / "Areas_Huella_Urbana_Yearly.csv", "Areas_Huella_Urbana_Yearly")

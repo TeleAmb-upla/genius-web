@@ -5,10 +5,11 @@ import { createMonthSelector, positionMonthSelector } from './month/utils_month.
 import { createmonthLegendSVG, createyearLegendSVG, addCenteredTitle } from './map_utilities_p.js';
 import { map_trend, createSTLegendSVG } from './so2_trend/trend.js';
 import { createOpacitySlider } from '../../slider_opacity.js';
-import { loadinf_critica } from '../inf_critica_leaflet.js';
 import { LayersControl } from '../../control.js';
-import { getDefaultYearPair } from '../../map_data_catalog.js';
+import { mountLayersControlForExplorer } from '../../genius_layers_control_mount.js';
+import { getDefaultYearPair, geniusTitleForProduct, removeGeniusLeafletMapTitle } from '../../map_data_catalog.js';
 import { so2UmolForDisplay } from './so2_units.js';
+import { GENIUS_LAT, GENIUS_LNG, GENIUS_ZOOM_URBAN, GENIUS_ZOOM_REGIONAL, GENIUS_LEAFLET_MAP_OPTIONS, addGeniusLeafletZoomControl } from '../../map_interaction_defaults.js';
 
 let currentMap = null;
 let leftLayer = null;
@@ -39,16 +40,12 @@ let layers = {
 
 export async function map_so2_p() {
     if (currentMap) {
+        removeGeniusLeafletMapTitle(currentMap);
         currentMap.remove();
         currentMap = null;
         leftLayer = null;
         rightLayer = null;
         sideBySideControl = null;
-
-        let mapTitleDiv = document.getElementById('map-title');
-        if (mapTitleDiv) {
-            mapTitleDiv.remove();
-        }
 
         if (legendDiv) {
             legendDiv.remove();
@@ -56,7 +53,7 @@ export async function map_so2_p() {
         }
     }
 
-    currentMap = L.map("p37").setView([-33.04752000, -71.44249000], 10.9);
+    currentMap = L.map("p37", GENIUS_LEAFLET_MAP_OPTIONS).setView([GENIUS_LAT, GENIUS_LNG], GENIUS_ZOOM_REGIONAL);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
         minZoom: 0,
@@ -65,21 +62,17 @@ export async function map_so2_p() {
     }).addTo(currentMap);
 
     L.control.scale({
-        position: 'topright',
+        position: 'bottomright',
         metric: true,
         imperial: false
     }).addTo(currentMap);
+    addGeniusLeafletZoomControl(currentMap);
 
-    addCenteredTitle(currentMap, "SO<sub>2</sub> Área Urbana (píxel)");
-
-    const infCriticaData = await loadinf_critica(currentMap);
-    let infCriticaLayer = null;
-    if (infCriticaData && typeof infCriticaData === 'object') {
-        const layersArray = Object.values(infCriticaData);
-        infCriticaLayer = L.layerGroup(layersArray);
-    } else {
-        console.error("La capa de infraestructura crítica no es válida:", infCriticaData);
-    }
+    addCenteredTitle(
+        currentMap,
+        geniusTitleForProduct("SO₂ — mapa por píxel", "so2"),
+        { temporalTitle: true },
+    );
 
     const DataYear = await loadLayersyear(currentMap);
     const LayersYear = DataYear.layers;
@@ -198,23 +191,12 @@ export async function map_so2_p() {
         layers.rightLayer = null;
     }
 
-    const controls = new LayersControl(
-        (mode) => {
-            if (mode === 'yearly') activateAnualMode();
-            else if (mode === 'monthly') activateMensualMode();
-            else if (mode === 'trend') activateTendenciaMode();
-        },
-        (enabled) => {
-            if (!infCriticaLayer) return;
-            if (enabled) infCriticaLayer.addTo(currentMap);
-            else currentMap.removeLayer(infCriticaLayer);
-        }
-    );
-    controls._container.style.position = 'absolute';
-    controls._container.style.top = '10px';
-    controls._container.style.right = '10px';
-    controls._container.style.zIndex = '1000';
-    currentMap.getContainer().appendChild(controls._container);
+    const controls = new LayersControl((mode) => {
+        if (mode === 'yearly') activateAnualMode();
+        else if (mode === 'monthly') activateMensualMode();
+        else if (mode === 'trend') activateTendenciaMode();
+    });
+    mountLayersControlForExplorer(controls, currentMap.getContainer(), { zIndex: '1000' });
 
     layers.leftLayer = leftLayer;
     layers.rightLayer = rightLayer;

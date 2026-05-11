@@ -5,7 +5,8 @@ import { createMonthSelector, positionMonthSelector } from './month/utils_month.
 import { createmonthLegendSVG, createyearLegendSVG, addCenteredTitle } from './map_utilities_p.js';
 import { map_trend, createSTLegendSVG } from './aod_trend/trend.js';
 import { createOpacitySlider } from '../slider_opacity.js';
-import { loadinf_critica } from '../inf_critica_leaflet.js';
+import { geniusTitleForProduct, removeGeniusLeafletMapTitle } from './map_data_catalog.js';
+import { addGeniusLeafletZoomControl } from './map_interaction_defaults.js';
 
 
 // Variables globales
@@ -56,17 +57,12 @@ function createTrendAdditionalText(content) {
 export async function map_aod_p() {
     // Elimina el mapa y la leyenda si ya están inicializados
     if (currentMap) {
+        removeGeniusLeafletMapTitle(currentMap);
         currentMap.remove();
         currentMap = null;
         leftLayer = null;
         rightLayer = null;
         sideBySideControl = null;
-
-        // Eliminar el título del mapa
-        let mapTitleDiv = document.getElementById('map-title');
-        if (mapTitleDiv) {
-            mapTitleDiv.remove();
-        }
 
         // Eliminar la leyenda si existe
         if (legendDiv) {
@@ -77,7 +73,7 @@ export async function map_aod_p() {
 
 
     // Crear el mapa
-    currentMap = L.map("p19").setView([-33.04752000, -71.44249000], 10.9);
+    currentMap = L.map("p19", { zoomSnap: 0.25, zoomDelta: 0.5, wheelPxPerZoomLevel: 96, zoomControl: false }).setView([-33.04752000, -71.44249000], 10.15);
 
     const CartoDB_Positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
         minZoom: 0,
@@ -86,29 +82,22 @@ export async function map_aod_p() {
     }).addTo(currentMap);
         
 
- // Agregar escala métrica en la esquina superior derecha
  L.control.scale({
-    position: 'topright', // Posición deseada
+    position: 'bottomright',
     metric: true,
     imperial: false
   }).addTo(currentMap);
-  
-   
+  addGeniusLeafletZoomControl(currentMap);
 
     // Actualizar el título del mapa
-    addCenteredTitle(currentMap, "AOD Área Regional (píxel)");
-
-    // Cargar capa de infraestructura crítica
-    const infCriticaData = await loadinf_critica(currentMap);
-
-    // Crear un `layerGroup` para agrupar todas las capas de infraestructura crítica
-    let infCriticaLayer = null;
-    if (infCriticaData && typeof infCriticaData === 'object') {
-        const layersArray = Object.values(infCriticaData); // Obtener todas las capas
-        infCriticaLayer = L.layerGroup(layersArray); // Crear el layerGroup con todas las capas
-    } else {
-        console.error("La capa de infraestructura crítica no es válida:", infCriticaData);
-    }
+    addCenteredTitle(
+        currentMap,
+        geniusTitleForProduct(
+            "AOD — mapa por píxel",
+            "aod",
+        ),
+        { temporalTitle: true },
+    );
 
         // Cargar las capas anuales y mensuales
         const DataYear = await loadLayersyear(currentMap);
@@ -152,13 +141,6 @@ export async function map_aod_p() {
     
         if (trendLayer) overlayLayers["Tendencia"] = trendLayer;
         else console.error("trendLayer no está definido correctamente.");
-
-            // Agregar la capa de infraestructura crítica al control de capas si está bien definida
-    if (infCriticaLayer) {
-        overlayLayers["Infraestructura Crítica"] = infCriticaLayer;
-       
-    }
-
 
         // Crear el control de capas solo si hay capas válidas
         if (Object.keys(overlayLayers).length > 0) {
@@ -296,14 +278,7 @@ export async function map_aod_p() {
             // Crear un nuevo div para la leyenda
             legendDiv = document.createElement('div');
             legendDiv.id = 'legend';
-            legendDiv.style.position = 'absolute';
-            legendDiv.style.top = '50%';
-            legendDiv.style.left = '10px';
-            legendDiv.style.transform = 'translateY(-50%)';
-            legendDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-            legendDiv.style.padding = '10px';
-            legendDiv.style.borderRadius = '8px';
-            legendDiv.style.zIndex = '1000';
+            legendDiv.className = 'map-legend-panel';
             currentMap.getContainer().appendChild(legendDiv);
     
             // Lógica para mostrar la leyenda y las capas según la capa seleccionada

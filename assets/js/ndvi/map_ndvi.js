@@ -5,9 +5,10 @@ import { createMonthSelector, positionMonthSelector } from './ndvi_month/funtion
 import { createyearLegendSVG, createmonthLegendSVG, addCenteredTitle } from './map_utilities_p.js';
 import { map_trend, createSTLegendSVG } from './ndvi_trend_dev/trend.js';
 import { createOpacitySlider } from '../slider_opacity.js';
-import { loadinf_critica } from '../inf_critica_leaflet.js';
 import { LayersControl } from '../control.js';
-import { getDefaultYearPair } from '../map_data_catalog.js';
+import { mountLayersControlForExplorer } from '../genius_layers_control_mount.js';
+import { getDefaultYearPair, geniusTitleForProduct, removeGeniusLeafletMapTitle } from '../map_data_catalog.js';
+import { GENIUS_LAT, GENIUS_LNG, GENIUS_ZOOM_URBAN, GENIUS_LEAFLET_MAP_OPTIONS, addGeniusLeafletZoomControl } from '../map_interaction_defaults.js';
 
 // Variables globales para almacenar el estado del mapa y las capas
 let currentMap = null;
@@ -25,7 +26,7 @@ let trendGeoraster = null; // Nuevo: georaster para la capa de tendencia
 // Variables para almacenar los años/meses actuales
 let currentLayerType = null; // 'Anual', 'Mensual', 'Tendencia' o null
 
-const [_defaultLeft, _defaultRight] = getDefaultYearPair('ndvi');
+const [_defaultLeft, _defaultRight] = getDefaultYearPair('ndvi_raster');
 let currentLeftYear = _defaultLeft || "2024";
 let currentRightYear = _defaultRight || "2025";
 
@@ -61,18 +62,12 @@ function createTrendAdditionalText(content) {
 export async function map_ndvi() {
     // Elimina el mapa y la leyenda si ya están inicializados
     if (currentMap) {
+        removeGeniusLeafletMapTitle(currentMap);
         currentMap.remove();
         currentMap = null;
         leftLayer = null;
         rightLayer = null;
         sideBySideControl = null;
-
-        // Eliminar el título del mapa
-        let mapTitleDiv = document.getElementById('map-title');
-        if (mapTitleDiv) {
-            mapTitleDiv.remove();
-            mapTitleDiv = null;
-        }
 
         // Eliminar la leyenda si existe
         if (legendDiv) {
@@ -84,7 +79,7 @@ export async function map_ndvi() {
     }
 
     // Inicializar el mapa
-    currentMap = L.map("p01").setView([-33.04752000, -71.44249000], 12.6);
+    currentMap = L.map("p01", GENIUS_LEAFLET_MAP_OPTIONS).setView([GENIUS_LAT, GENIUS_LNG], GENIUS_ZOOM_URBAN);
 
     // Capa base de CartoDB
     const CartoDB_Positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
@@ -93,27 +88,19 @@ export async function map_ndvi() {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(currentMap);
 
-    // Agregar escala métrica en la esquina superior derecha
     L.control.scale({
-        position: 'topright', // Posición deseada
+        position: 'bottomright',
         metric: true,
         imperial: false
     }).addTo(currentMap);
+    addGeniusLeafletZoomControl(currentMap);
 
     // Actualizar el título del mapa
-    addCenteredTitle(currentMap, "NDVI Área Urbana (píxel)");
-
-    // Cargar capa de infraestructura crítica
-    const infCriticaData = await loadinf_critica(currentMap);
-
-    // Crear un `layerGroup` para agrupar todas las capas de infraestructura crítica
-    let infCriticaLayer = null;
-    if (infCriticaData && typeof infCriticaData === 'object') {
-        const layersArray = Object.values(infCriticaData); // Obtener todas las capas
-        infCriticaLayer = L.layerGroup(layersArray); // Crear el layerGroup con todas las capas
-    } else {
-        console.error("La capa de infraestructura crítica no es válida:", infCriticaData);
-    }
+    addCenteredTitle(
+        currentMap,
+        geniusTitleForProduct("NDVI — mapa por píxel", "ndvi_raster"),
+        { temporalTitle: true },
+    );
 
     // Cargar las capas anuales y mensuales
     const DataYear = await loadNdviLayersyear(currentMap);
@@ -330,23 +317,12 @@ export async function map_ndvi() {
 
     syncNdviRasterNotice();
 
-    const controls = new LayersControl(
-        (mode) => {
-            if (mode === 'yearly') activateAnualMode();
-            else if (mode === 'monthly') activateMensualMode();
-            else if (mode === 'trend') activateTendenciaMode();
-        },
-        (enabled) => {
-            if (!infCriticaLayer) return;
-            if (enabled) infCriticaLayer.addTo(currentMap);
-            else currentMap.removeLayer(infCriticaLayer);
-        }
-    );
-    controls._container.style.position = 'absolute';
-    controls._container.style.top = '10px';
-    controls._container.style.right = '10px';
-    controls._container.style.zIndex = '1000';
-    currentMap.getContainer().appendChild(controls._container);
+    const controls = new LayersControl((mode) => {
+        if (mode === 'yearly') activateAnualMode();
+        else if (mode === 'monthly') activateMensualMode();
+        else if (mode === 'trend') activateTendenciaMode();
+    });
+    mountLayersControlForExplorer(controls, currentMap.getContainer(), { zIndex: '1000' });
 
     layers.leftLayer = leftLayer;
     layers.rightLayer = rightLayer;

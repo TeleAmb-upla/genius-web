@@ -1,5 +1,7 @@
+import { setGeniusExplorerTemporalMode } from "./map_data_catalog.js";
+
 export class LayersControl {
-    constructor(onModeChange, onInfraToggle, options = {}) {
+    constructor(onModeChange, options = {}) {
         LayersControl._nextId = (LayersControl._nextId || 0) + 1;
         this._controlId = `layers-control-${LayersControl._nextId}`;
         this._container = document.createElement("div");
@@ -9,9 +11,7 @@ export class LayersControl {
             "layers-control"
         );
         this._onModeChange = onModeChange;
-        this._onInfraToggle = onInfraToggle || null;
         this._activeMode = null;
-        this._infraEnabled = false;
         this._modes = options.modes || [
             { key: "yearly", label: "Anual" },
             { key: "monthly", label: "Mensual" },
@@ -25,51 +25,35 @@ export class LayersControl {
         this._pillButtons = {};
         if (!this._hideModePills && this._modes.length) {
             const pillRow = document.createElement("div");
-            pillRow.className = "layers-control__pills";
-            this._modes.forEach(({ key, label }) => {
+            pillRow.className =
+                "layers-control__pills layers-control__pills--explorer-grid";
+            this._modes.forEach((modeDef) => {
+                const { key, label } = modeDef;
+                const col = document.createElement("div");
+                col.className = "button-col layers-control__mode-col";
                 const btn = document.createElement("button");
                 btn.type = "button";
                 btn.className = "layers-control__pill";
-                btn.textContent = label;
                 btn.dataset.mode = key;
+                btn.textContent = label;
                 btn.addEventListener("click", () => this._selectMode(key));
-                pillRow.appendChild(btn);
+                col.appendChild(btn);
+                pillRow.appendChild(col);
                 this._pillButtons[key] = btn;
             });
             this._container.appendChild(pillRow);
         }
-
-        const infraRow = document.createElement("label");
-        infraRow.className = "layers-control__toggle";
-        const infraCb = document.createElement("input");
-        infraCb.type = "checkbox";
-        infraCb.id = `${this._controlId}-infra`;
-        infraCb.addEventListener("change", () => {
-            this._infraEnabled = infraCb.checked;
-            if (this._onInfraToggle) {
-                this._onInfraToggle(this._infraEnabled);
-            }
-        });
-        this._infraCheckbox = infraCb;
-        const infraLabel = document.createElement("span");
-        infraLabel.textContent = "Infraestructura";
-        infraRow.appendChild(infraCb);
-        infraRow.appendChild(infraLabel);
-
-        if (!this._hideModePills && this._modes.length) {
-            const divider = document.createElement("hr");
-            divider.className = "layers-control__divider";
-            this._container.appendChild(divider);
-        }
-        this._container.appendChild(infraRow);
     }
 
     _selectMode(key) {
         if (this._activeMode === key) return;
         this._activeMode = key;
         Object.entries(this._pillButtons).forEach(([k, btn]) => {
-            btn.classList.toggle("layers-control__pill--active", k === key);
+            const on = k === key;
+            btn.classList.toggle("layers-control__pill--active", on);
+            btn.classList.toggle("selected", on);
         });
+        setGeniusExplorerTemporalMode(key);
         this._onModeChange(key);
     }
 

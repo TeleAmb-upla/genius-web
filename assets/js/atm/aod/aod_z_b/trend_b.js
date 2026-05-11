@@ -1,43 +1,15 @@
-import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
-import { getProductYearRangeLabel } from '../../../map_data_catalog.js';
-
-const aodRangeLabel = getProductYearRangeLabel('aod');
-// Función para asignar colores a los valores según el rango definido
+import { geniusTitleForProduct } from '../../../map_data_catalog.js';
+import {
+    trendLegendSpec,
+    trendColorFromValue,
+    fillZonalTrendLegendPanel,
+} from '../../../trend_scale.js';
+import { atmBarrioPopupHtmlTrend } from '../../atm_zonal_explorer.js';
+import { geniusPrepareExclusiveGeoPopup } from '../../../maplibre_exclusive_geo_popup.js';
 function valueToSTColor(value) {
-    const domain = [-10.5, 6.5];
-    const range = [
-        "#0313ff",
-        "#4d66ff",
-        "#75aaff",
-        "#ffffff",
-        "#ff75ad",
-        "#ff3d66",
-        "#ff0000"
-    ];
-
-    // Calcular el índice con más precisión
-    const step = (domain[1] - domain[0]) / (range.length - 1);
-
-    if (value < domain[0]) {
-        return range[0]; // Menor que el mínimo
-    } 
-    if (value > domain[1]) {
-        return range[range.length - 1]; // Mayor que el máximo
-    }
-
-    // Calcular la posición exacta del índice y usar interpolación lineal si es necesario
-    const index = (value - domain[0]) / step;
-    const lowerIndex = Math.floor(index);
-    const upperIndex = Math.min(lowerIndex + 1, range.length - 1);
-    const fractionalPart = index - lowerIndex;
-
-    // Interpolar entre colores si es necesario
-    if (fractionalPart === 0) {
-        return range[lowerIndex];
-    }
-
-    // Mezclar colores si estás entre dos índices
-    return d3.interpolateRgb(range[lowerIndex], range[upperIndex])(fractionalPart);
+    const spec = trendLegendSpec('aod', 'zonalBarrio');
+    if (!spec) return 'rgba(0,0,0,0)';
+    return trendColorFromValue(value, spec) ?? 'rgba(0,0,0,0)';
 }
 
 export async function map_trend(map) {
@@ -86,13 +58,11 @@ export async function map_trend(map) {
     map.on('click', 'generic-trend-layer', (e) => {
         const properties = e.features[0].properties;
 
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`
-                <div class="popup-title">${properties.NOMBRE || 'Barrio'}</div>
-                <div class="popup-row"><span class="popup-label">Tendencia</span><span class="popup-value">${properties.slope_median != null && !Number.isNaN(Number(properties.slope_median)) ? Number(properties.slope_median).toFixed(4) : 'Sin datos'}</span></div>
-            `)
-            .addTo(map);
+            .setHTML(atmBarrioPopupHtmlTrend('aod', properties));
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     // Cambiar el cursor al pasar el ratón sobre la capa
@@ -122,47 +92,12 @@ export function createTrendLegend() {
     legendContent.className = 'map-legend-panel';
 
     const title = document.createElement('div');
-    title.textContent = 'Tendencia AOD Barrios';
+    title.textContent = geniusTitleForProduct('Tendencia AOD Barrios', 'aod');
     title.className = 'map-legend-panel__title';
-    legendContent.appendChild(title);
-
-    const subtitle = document.createElement('div');
-    subtitle.textContent = aodRangeLabel;
-    subtitle.className = 'map-legend-panel__subtitle';
-    legendContent.appendChild(subtitle);
-
-    const domain = [-10.5, 6.5];
-    const steps = 7;
-    const colors = ["#0313ff", "#4d66ff", "#75aaff", "#ffffff", "#ff75ad", "#ff3d66", "#ff0000"];
-    const stepValue = (domain[1] - domain[0]) / (steps - 1);
-    const values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
-
-    values.forEach((value, index) => {
-        const color = colors[index];
-        const legendItem = document.createElement('div');
-        legendItem.className = 'map-legend-panel__row';
-
-        const colorBox = document.createElement('span');
-        colorBox.className = 'map-legend-panel__swatch';
-        colorBox.style.background = color;
-
-        const label = document.createElement('span');
-        label.className = 'map-legend-panel__label';
-        if (index === 0) {
-            label.textContent = `<${value.toFixed(2)}`;
-        } else if (index === values.length - 1) {
-            label.textContent = `>${value.toFixed(2)}`;
-        } else {
-            const nextValue = values[index + 1];
-            label.textContent = `${value.toFixed(2)} - ${nextValue.toFixed(2)}`;
-        }
-
-        legendItem.appendChild(colorBox);
-        legendItem.appendChild(label);
-        legendContent.appendChild(legendItem);
+    fillZonalTrendLegendPanel(legendContent, title, 'aod', 'zonalBarrio', {
+        steps: 7,
+        decimals: 2,
     });
 
     return legendContent;
 }
-
-  

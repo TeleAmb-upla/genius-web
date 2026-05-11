@@ -1,7 +1,6 @@
 ﻿import { ToColorYear_z_m } from './ndvi_palette_z_m_y.js'; 
 import { ToColorMonth_z_m } from './ndvi_palette_z_m_m.js';
-
-
+import { geniusPrepareExclusiveGeoPopup } from '../../../maplibre_exclusive_geo_popup.js';
 export async function preprocessGeoJSON(url, currentMode) {
     try {
         const response = await fetch(url);
@@ -59,14 +58,15 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
         const v = properties.AOD_median;
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
             .setHTML(`
                 <div class="popup-title">${properties.TOTAL_PERS != null ? properties.TOTAL_PERS : 'Manzana'}</div>
                 <div class="popup-row"><span class="popup-label">Año</span><span class="popup-value">${properties.Year}</span></div>
                 <div class="popup-row"><span class="popup-label">AOD</span><span class="popup-value">${v != null ? v.toFixed(3) : 'Sin datos'}</span></div>
-            `)
-            .addTo(map);
+            `);
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     map.on('mouseenter', layerId, () => {
@@ -101,14 +101,15 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
         const v = properties.AOD_median;
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
             .setHTML(`
                 <div class="popup-title">${properties.TOTAL_PERS != null ? properties.TOTAL_PERS : 'Manzana'}</div>
                 <div class="popup-row"><span class="popup-label">Mes</span><span class="popup-value">${properties.Month}</span></div>
                 <div class="popup-row"><span class="popup-label">AOD</span><span class="popup-value">${v != null ? v.toFixed(3) : 'Sin datos'}</span></div>
-            `)
-            .addTo(map);
+            `);
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     map.on('mouseenter', layerId, () => {

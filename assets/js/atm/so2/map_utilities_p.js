@@ -1,8 +1,10 @@
 import { ToColorYear } from './year/palette_year.js';
 import { ToColorMonth } from './month/palette_month.js';
+import { legendDomain } from '../../legend_ranges.js';
+import { mountGeniusLeafletMapTitle } from '../../map_data_catalog.js';
 // Función para crear la leyenda SVG para anual
 export function createyearLegendSVG() {
-    const domain = [0, 500]; // Mínimo y máximo
+    const domain = legendDomain('so2', 'raster', 'yearly');
     const steps = 7; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
 
@@ -32,7 +34,7 @@ export function createyearLegendSVG() {
     return `
         <svg class="map-legend-svg" width="180" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
             <!-- Título principal --> 
-            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Dióxido de Azufre Anual</text>
+            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Dióxido de azufre — Anual</text>
             <!-- Subtítulo -->
             <text x="0" y="35" font-size="12" font-family="Arial" fill="#555">SO² (µmol/m²)</text>
             <!-- Elementos de la leyenda -->
@@ -44,7 +46,7 @@ export function createyearLegendSVG() {
 
 // Función para crear la leyenda SVG para mensual
 export function createmonthLegendSVG() {
-    const domain = [0, 500]; // Mínimo y máximo
+    const domain = legendDomain('so2', 'raster', 'monthly');
     const steps = 7; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
     
@@ -73,7 +75,7 @@ export function createmonthLegendSVG() {
     return `
         <svg class="map-legend-svg" width="180" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
             <!-- Título principal -->
-            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Dióxido de Azufre Mensual</text>
+            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Dióxido de azufre — Mensual</text>
             <!-- Subtítulo -->
             <text x="0" y="35" font-size="12" font-family="Arial" fill="#555">SO² (µmol/m²)</text>
             <!-- Elementos de la leyenda -->
@@ -83,15 +85,6 @@ export function createmonthLegendSVG() {
 }
 
 
-export function addCenteredTitle(map, titleText) {
-    let mapTitleDiv = document.getElementById('map-title');
-    if (!mapTitleDiv) {
-        mapTitleDiv = document.createElement('div');
-        mapTitleDiv.id = 'map-title';
-        mapTitleDiv.className = 'map-title';
-        map.getContainer().appendChild(mapTitleDiv);
-    }
-    if (titleText !== undefined) {
-        mapTitleDiv.innerHTML = `<strong>${titleText}</strong>`;
-    }
+export function addCenteredTitle(map, titleText, options = {}) {
+    mountGeniusLeafletMapTitle(map, titleText, options);
 }

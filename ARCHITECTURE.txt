@@ -28,7 +28,7 @@ Table of Contents
  1.  PROJECT OVERVIEW
 ================================================================================
 
-genius_upla is an urban environmental monitoring platform for Huancayo, Peru.
+genius_upla is an urban environmental monitoring platform for Quilpué, Chile.
 It has two main components:
 
   A) A STATIC WEB FRONT-END (index.html + assets/) that visualizes
@@ -83,9 +83,14 @@ genius_upla/
 │       └── vectores/             Vector data used by front-end maps
 │
 ├── scripts/
-│   ├── convert_illumination.py   Imagery conversion utility
-│   ├── convert_multicapa.py      Drone TIF → COG/WEBP for web
-│   ├── optimize_rasters.py       Raster optimization helper
+│   ├── __init__.py
+│   ├── repo/                     Utilidades locales (post-pipeline / datos en disco)
+│   │   ├── paths.py              REPO_ROOT para scripts bajo repo/
+│   │   ├── bundles/              JSON explorador zonal + CSV urbanos (AOD/NO2/SO2, NDVI, LST)
+│   │   ├── rasters/              Cuantización web, COG, iluminación, multicapa
+│   │   ├── legends/              Dominios de leyenda JS
+│   │   ├── csv/                  Reparos/auditoría CSV locales
+│   │   └── patches/              Parches puntuales
 │   └── gee/                      *** EARTH ENGINE PIPELINE (see sections 5-12) ***
 │       ├── pipeline.py           Main orchestrator (plan → enqueue → wait → sync)
 │       ├── export_all.py         Enqueue-only variant (no wait/download)
@@ -104,8 +109,8 @@ genius_upla/
 │       │   ├── yearmonth.py      Calendar/month logic, asset audits, missing-month detection
 │       │   ├── mk_sen.py         Mann-Kendall / Sen's slope trend computation
 │       │   ├── zonal_geojson.py  Zonal statistics GeoJSON export helpers
-│       │   ├── csv_export.py     CSV export helpers
-│       │   ├── raster_export.py  Raster export helpers
+│       │   ├── derivative_raster_export.py  Median monthly/yearly rasters → delegates unified_product_extraction
+│       │   ├── unified_product_extraction.py  Shared Drive extraction (raster / zonal GeoJSON / pollutant CSV)
 │       │   └── product_enqueue.py  Shared enqueue utilities
 │       │
 │       ├── earth_engine_init/
@@ -120,6 +125,7 @@ genius_upla/
 │       │   └── audit_drive_yearly_completeness.py  Drive yearly completeness audits
 │       │
 │       └── products/
+│           ├── registry.py         Product dispatch (plan/enqueue); warm_unified_extraction_layer for pipeline
 │           ├── ndvi/
 │           │   ├── incremental.py   NDVI incremental state (climatology, trend year)
 │           │   ├── enqueue.py       enqueue_ndvi_exports()
@@ -556,7 +562,8 @@ Drive files are CURRENT ENOUGH or need refreshing:
 12.  STATE FILES (JSON PERSISTENCE)
 ================================================================================
 
-All state is stored as JSON files under scripts/gee/:
+All state is stored as JSON files under scripts/gee/state/ (legacy copies in
+scripts/gee/ are auto-migrated on first access):
 
   ndvi_export_state.json:
     {
@@ -656,13 +663,14 @@ read_state() and merge_state() for all products.
 
 ─── LST (Land Surface Temperature) ───
 
-  Source:         Landsat 8 + Landsat 9
-  GEE Asset:      users/plataformagenius/Temperatura_Superficial/LST_V2/LST_Yearly
-  Start Year:     2013
-  Temporal Unit:  Yearly composites (asset is yearly, not year-month)
+  Source:         ImageCollection año–mes en GEE (Temperatura_Superficial / LST)
+  GEE Asset:      users/plataformagenius/Temperatura_Superficial/LST/LST_YearMonth
+  Start Year:     1997 (`LST_PRODUCT_MIN_YEAR`): raster, GeoJSON y CSV coherentes; ``lst_asset_min_year()`` ≥ este año; descarga incremental omite archivos ya locales.
+  Temporal Unit:  Year-month en GEE; anual = mediana intra-anual (derivado en cliente)
 
-  Uses list_missing_yearly() instead of list_missing_yearmonth_months().
-  Still produces monthly/yearly rasters, trend, CSVs, and zonal GeoJSONs.
+  list_missing_lst_yearmonth_months() + start_lst_yearmonth_asset_tasks() primero;
+  con huecos en asset, el plan bloquea derivados (igual que NDVI/AOD). Luego: mensual,
+  anual, tendencia, CSV, GeoJSON zonal, SUHI.
 
 ─── HU (Huella Urbana / Urban Footprint) ───
 
@@ -681,16 +689,16 @@ read_state() and merge_state() for all products.
 14.  UTILITY SCRIPTS
 ================================================================================
 
-  scripts/convert_multicapa.py:
+  scripts/repo/rasters/convert_multicapa.py:
     Converts drone-captured TIF files to Cloud-Optimized GeoTIFF (COG) and
     WEBP format for efficient web display. Used for the multi-layer /
     drone imagery section of the site.
 
-  scripts/convert_illumination.py:
+  scripts/repo/rasters/convert_illumination.py:
     Processes illumination/luminosity imagery for the nighttime lights
     visualization layer.
 
-  scripts/optimize_rasters.py:
+  scripts/repo/rasters/optimize_rasters.py:
     General raster optimization (compression, tiling) for faster web loading.
 
 

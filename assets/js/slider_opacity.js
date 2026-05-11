@@ -10,6 +10,9 @@
 export function attachMapOpacityPanel(hostElement, onOpacity, options = {}) {
     const wrapper = document.createElement('div');
     wrapper.className = 'map-ui-opacity-panel';
+    if (!document.getElementById('geTourMapOpacityPanel')) {
+        wrapper.id = 'geTourMapOpacityPanel';
+    }
     const label = document.createElement('span');
     label.className = 'map-ui-opacity-panel__label';
     label.textContent = 'Opacidad capa';

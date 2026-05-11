@@ -1,9 +1,11 @@
 import { ToColorYear } from './year/palette_year.js';
 import { ToColorMonth } from './month/palette_month.js';
+import { legendDomain } from '../../legend_ranges.js';
+import { mountGeniusLeafletMapTitle } from '../../map_data_catalog.js';
 
 // Función para crear la leyenda SVG para anual
 export function createyearLegendSVG() {
-    const domain = [9.844, 15.313]; // Mínimo y máximo
+    const domain = legendDomain('no2', 'raster', 'yearly');
     const steps = 8; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
     
@@ -39,7 +41,7 @@ export function createyearLegendSVG() {
     return `
         <svg class="map-legend-svg" width="300" height="${55 + steps * 30}" xmlns="http://www.w3.org/2000/svg">
             <!-- Título principal -->
-            <text x="5" y="15" font-size="14" font-family="Arial" font-weight="bold">Dióxido de Nitrógeno Anual</text>
+            <text x="5" y="15" font-size="14" font-family="Arial" font-weight="bold">Dióxido de nitrógeno — Anual</text>
             <!-- Subtítulo con subíndice -->
             <text x="5" y="35" font-size="12" font-family="Arial" fill="#555">
                 NO<tspan baseline-shift="sub">2</tspan> (µmol/m²)
@@ -54,7 +56,7 @@ export function createyearLegendSVG() {
 
 // Función para crear la leyenda SVG para mensual
 export function createmonthLegendSVG() {
-    const domain =   [9.625, 26.75]; // Mínimo y máximo
+    const domain = legendDomain('no2', 'raster', 'monthly');
     const steps = 8; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
     // Colores fijos para la leyenda
@@ -91,7 +93,7 @@ export function createmonthLegendSVG() {
     return `
         <svg class="map-legend-svg" width="202" height="${55 + steps * 30}" xmlns="http://www.w3.org/2000/svg">
             <!-- Título principal -->
-            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Dióxido de Nitrógeno Mensual</text>
+            <text x="0" y="15" font-size="14" font-family="Arial" font-weight="bold">Dióxido de nitrógeno — Mensual</text>
             <!-- Subtítulo -->
             <text x="0" y="35" font-size="12" font-family="Arial" fill="#555">NO<tspan baseline-shift="sub">2</tspan> (µmol/m²)</text>
             <!-- Elementos de la leyenda -->
@@ -102,15 +104,6 @@ export function createmonthLegendSVG() {
 
 
 
-export function addCenteredTitle(map, titleText) {
-    let mapTitleDiv = document.getElementById('map-title');
-    if (!mapTitleDiv) {
-        mapTitleDiv = document.createElement('div');
-        mapTitleDiv.id = 'map-title';
-        mapTitleDiv.className = 'map-title';
-        map.getContainer().appendChild(mapTitleDiv);
-    }
-    if (titleText !== undefined) {
-        mapTitleDiv.innerHTML = `<strong>${titleText}</strong>`;
-    }
+export function addCenteredTitle(map, titleText, options = {}) {
+    mountGeniusLeafletMapTitle(map, titleText, options);
 }

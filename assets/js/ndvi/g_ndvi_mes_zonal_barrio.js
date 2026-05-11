@@ -1,10 +1,30 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { geniusTitleForProduct } from '../map_data_catalog.js';
+import {
+    getGeniusChartLayout,
+    GENIUS_CHART_HEADING_CLASS,
+    geniusMonthlyClimAxisTitleY,
+    geniusMonthlyClimMinBottom,
+} from '../chart_layout_genius.js';
+import {
+    geniusAppendMonthlyPctlBand,
+    geniusMonthlyPctlExtentMulti,
+} from '../chart_monthly_pctl_band.js';
+import {
+    geniusAppendAnioActualLine,
+    geniusAppendMonthlyClimatologyLegend,
+    geniusExpandDomainWithPoints,
+    geniusResolveAnioActualSeries,
+    geniusWallNdviAnioActualFromCsv,
+    GENIUS_ANIO_ACTUAL_CSV_KEY,
+} from '../chart_monthly_estado_actual.js';
+import { geniusMonthlyAnioColor } from '../chart_variable_accent.js';
+import { geniusBindNearestPointHover } from '../chart_tooltip_genius.js';
 
 export async function g_ndvi_m_z_b() {
      const container = document.getElementById("p06");
-       const width = container.offsetWidth || 550;
-       const height = container.offsetHeight || 400;
-       const margin = { top: 80, right: 10, bottom: 60, left: 100 };
+       const { width, height, margin: m0 } = getGeniusChartLayout(container);
+       const margin = { ...m0, bottom: Math.max(m0.bottom, geniusMonthlyClimMinBottom()) };
        const innerWidth = width - margin.left - margin.right;
        const innerHeight = height - margin.top - margin.bottom;
    
@@ -28,38 +48,58 @@ export async function g_ndvi_m_z_b() {
            .attr("text-anchor", "middle")
            .style("font-size", "14px")
            .style("font-weight", "bold")
-           .style("font-family", "Arial") 
-           .text("NDVI Intranual Área Urbana");
+           .style("font-family", "Arial")
+           .attr("class", GENIUS_CHART_HEADING_CLASS)
+           .text(geniusTitleForProduct("NDVI por mes", "ndvi"));
    
       // titulos ejes 
       svg.append("text")
-      .attr("text-anchor", "end")
-      .attr("x", innerWidth / 2 + margin.left - 60)
-      .attr("y", innerHeight + margin.top - 40)
+      .attr("text-anchor", "middle")
+      .attr("x", innerWidth / 2)
+      .attr("y", geniusMonthlyClimAxisTitleY(innerHeight))
       .style("font-family", "Arial")
       .style("font-size", "12px")
       .text("Meses");
    
       svg.append("text")
-      .attr("text-anchor", "end")
+      .attr("text-anchor", "middle")
       .attr("transform", "rotate(-90)")
-      .attr("y", -margin.left + 60)
-      .attr("x", -margin.top - 30)
+      .attr("y", -Math.max(42, Math.round(margin.left * 0.78)))
+      .attr("x", -innerHeight / 2)
       .style("font-family", "Arial")
       .style("font-size", "12px") 
       .text("NDVI");
       
-       // Parse the Data
+       const wall = geniusWallNdviAnioActualFromCsv();
        const data = await d3.csv(resolveAssetUrl("assets/data/csv/NDVI_m_urban.csv"));
    
        // Format the data
-       data.forEach(d => {
-           d.Month = +d.Month;           // Convert Month to number
-           d.NDVI_median = +d.NDVI;    // Convert NDVI_median to number
+       data.forEach((d) => {
+           d.Month = +d.Month;
+           d.NDVI_median = +d.NDVI;
+           if (d.NDVI_p25 != null && String(d.NDVI_p25).trim() !== "")
+               d.NDVI_p25 = +d.NDVI_p25;
+           else d.NDVI_p25 = null;
+           if (d.NDVI_p75 != null && String(d.NDVI_p75).trim() !== "")
+               d.NDVI_p75 = +d.NDVI_p75;
+           else d.NDVI_p75 = null;
        });
-       // Find the minimum and maximum NDVI_median values
-       const minNDVI = d3.min(data, d => d.NDVI_median);
-       const maxNDVI = d3.max(data, d => d.NDVI_median);
+       const [minNDVI0, maxNDVI0] = geniusMonthlyPctlExtentMulti(data, [
+           { mid: "NDVI_median", p25: "NDVI_p25", p75: "NDVI_p75" },
+       ]);
+       const anioActual = geniusResolveAnioActualSeries({
+           monthlyData: data,
+           anioKey: GENIUS_ANIO_ACTUAL_CSV_KEY,
+           ymRows: undefined,
+           ymKeys: { yearKey: "Year", monthKey: "Month", valueKey: "NDVI" },
+           wall,
+       });
+       const anioColor = geniusMonthlyAnioColor("ndvi");
+       const [minNDVI, maxNDVI] = geniusExpandDomainWithPoints(
+           minNDVI0,
+           maxNDVI0,
+           anioActual.points.map((p) => p.v),
+       );
        // Add X axis
        var x = d3.scaleLinear()
            .domain([1, 12]) // Ajustar el dominio al rango de meses
@@ -74,7 +114,27 @@ export async function g_ndvi_m_z_b() {
            .range([innerHeight, 0]);
        svg.append("g")
            .call(d3.axisLeft(y));
-       // Create a tooltip
+
+       geniusAppendMonthlyClimatologyLegend(svg, {
+           innerWidth,
+           innerHeight,
+           placement: "belowAxis",
+           climColor: "steelblue",
+           bandFillColor: "steelblue",
+           anioColor: anioActual.points.length ? anioColor : null,
+           anioYear: anioActual.points.length ? anioActual.year : null,
+       });
+
+       geniusAppendMonthlyPctlBand(svg, {
+           data,
+           x: (d) => x(d.Month),
+           y,
+           p25Key: "NDVI_p25",
+           p75Key: "NDVI_p75",
+           fill: "steelblue",
+           fillOpacity: 0.22,
+       });
+
        const tooltip = d3.select("#p06")
            .append("div")
            .style("opacity", 0)
@@ -84,34 +144,9 @@ export async function g_ndvi_m_z_b() {
            .style("border-width", "2px")
            .style("border-radius", "5px")
            .style("padding", "5px")
-           .style("position", "absolute");
-    
-    
-     // Mouseover, mousemove, and mouseleave functions
-     var mouseover = function (event, d) {
-       tooltip
-           .style("opacity", 1);
-       d3.select(this)
-           .style("stroke", "black")
-           .style("opacity", 1);
-   }
-   
-   var mousemove = function (event, d) {
-       tooltip
-           .html("NDVI: " + d.NDVI_median.toFixed(2) + "<br>Mes: " + d.Month)
-           .style("left", (event.pageX + 15) + "px")
-           .style("top", (event.pageY - 15) + "px");
-   }
-   
-   var mouseleave = function (event, d) {
-       tooltip
-           .style("opacity", 0);
-       d3.select(this)
-           .style("stroke", "none");
-           
-   }
-    
-    
+           .style("position", "absolute")
+           .style("pointer-events", "none");
+
            // Add the line with smoothing and animation
            var line = d3.line()
            .x(d => x(d.Month)) // Ensure the line passes through the center of the band
@@ -134,9 +169,14 @@ export async function g_ndvi_m_z_b() {
            .duration(5000)
            .ease(d3.easeLinear)
            .attr("stroke-dashoffset", 0);
-       
-       
-       // Add points
+
+       geniusAppendAnioActualLine(svg, {
+           xPos: (d) => x(d.Month),
+           y,
+           points: anioActual.points,
+           color: anioColor,
+       });
+
        svg.append("g")
            .selectAll("circle")
            .data(data)
@@ -144,12 +184,57 @@ export async function g_ndvi_m_z_b() {
            .append("circle")
            .attr("cx", d => x(d.Month))
            .attr("cy", d => y(d.NDVI_median))
-           .attr("r", 4) // Larger radius for easier interaction
+           .attr("r", 4)
            .attr("fill", "steelblue")
-           .attr("pointer-events", "all") // Ensure these circles capture mouse events
-           .on("mouseover", mouseover)
-           .on("mousemove", mousemove)
-           .on("mouseleave", mouseleave);
+           .attr("pointer-events", "none");
+
+       const hoverClim = data.map((d) => ({
+           cx: x(d.Month),
+           cy: y(d.NDVI_median),
+           row: d,
+           kind: "clim",
+       }));
+       const hoverAnio = anioActual.points.map((d) => ({
+           cx: x(d.Month),
+           cy: y(d.v),
+           row: d,
+           kind: "anio",
+       }));
+       geniusBindNearestPointHover(svg, {
+           panelId: "p06",
+           innerWidth,
+           innerHeight,
+           tooltip,
+           points: [...hoverClim, ...hoverAnio],
+           html: (p) => {
+               if (p.kind === "anio") {
+                   return (
+                       `Año actual (${anioActual.year}): ` +
+                       p.row.v.toFixed(3) +
+                       "<br>Mes: " +
+                       p.row.Month
+                   );
+               }
+               let h =
+                   "NDVI (P50): " +
+                   p.row.NDVI_median.toFixed(2) +
+                   "<br>Mes: " +
+                   p.row.Month;
+               if (
+                   p.row.NDVI_p25 != null &&
+                   p.row.NDVI_p75 != null &&
+                   !Number.isNaN(p.row.NDVI_p25) &&
+                   !Number.isNaN(p.row.NDVI_p75)
+               ) {
+                   h +=
+                       "<br>P25: " +
+                       (+p.row.NDVI_p25).toFixed(2) +
+                       " &nbsp; P75: " +
+                       (+p.row.NDVI_p75).toFixed(2);
+               }
+               return h;
+           },
+       });
    }
    
    

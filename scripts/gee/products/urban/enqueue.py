@@ -8,32 +8,25 @@ from ...config.enqueue_types import EnqueueResult
 from ...config import paths
 from ...drive.drive_export_gate import DriveExportGate
 from ...lib import incremental_plan as incplan
+from ...lib.product_enqueue import add_tasks, export_want
 from . import csv_tasks
 from . import incremental as hu_inc
 from . import raster_tasks
 
-
-def _add_tasks(out: list[Any], items: list[Any] | Any | None) -> None:
-    if items is None:
-        return
-    if isinstance(items, list):
-        out.extend(t for t in items if t is not None)
-    else:
-        out.append(items)
-
-
 def _hu_csv_stale(target_year: int) -> bool:
-    """True if either HU CSV is missing or lacks a row for ``target_year``."""
+    """True if either HU CSV is missing or lacks rows for first / last target years."""
     import re
 
-    pat = re.compile(rf"^\s*{target_year}(?:\.0)?\s*[,;]", re.MULTILINE)
+    first_year = hu_inc.START_YEAR
     for name in ("Huella_Urbana_Anual.csv", "Areas_Huella_Urbana_Yearly.csv"):
         p = paths.REPO_CSV_HU / name
         if not p.is_file():
             return True
         text = p.read_text(encoding="utf-8", errors="replace")
-        if not pat.search(text):
-            return True
+        for y in (first_year, target_year):
+            pat = re.compile(rf"^\s*{y}(?:\.0)?\s*[,;]", re.MULTILINE)
+            if not pat.search(text):
+                return True
     return False
 
 
@@ -53,11 +46,13 @@ def enqueue_hu_exports(
     sync_full_mirror: set[str] = set()
     messages: list[str] = []
     ran_derivative = False
-
-    def want(name: str) -> bool:
-        return only is None or name in only
+    raster_export_years: list[int] = []
 
     missing_years = hu_inc.list_missing_hu_years()
+    ty = hu_inc._target_last_year()
+    all_years = list(range(hu_inc.START_YEAR, ty + 1))
+    # Re-export every target year on force_full; otherwise only gaps vs local mirror.
+    raster_years = list(all_years) if force_full else list(missing_years)
 
     if missing_years:
         reason = f"{len(missing_years)} año(s) sin clasificar: {missing_years}"
@@ -76,37 +71,39 @@ def enqueue_hu_exports(
         new_pairs=(),
     )
 
-    if want("raster") and missing_years:
-        _add_tasks(
+    if export_want(only, "raster") and raster_years:
+        add_tasks(
             drive,
             raster_tasks.start_hu_yearly_raster_tasks(
-                missing_years, drive_gate=drive_gate
+                raster_years, drive_gate=drive_gate
             ),
         )
+        raster_export_years = list(raster_years)
         sync.add("hu_raster_yearly")
         ran_derivative = True
-
-    all_years = list(range(hu_inc.START_YEAR, hu_inc._target_last_year() + 1))
     tables_run = (
         run or force_full
         if tables_run_override is None
         else tables_run_override
     )
     csv_stale = _hu_csv_stale(hu_inc._target_last_year())
-    if want("csv") and (tables_run or csv_stale):
+    if export_want(only, "csv") and (tables_run or csv_stale):
         if csv_stale and not tables_run:
             messages.append(
                 f"[CSV HU] CSV local sin datos para {hu_inc._target_last_year()}; re-exportando."
             )
-        _add_tasks(
+        add_tasks(
             drive,
             csv_tasks.start_hu_csv_tasks(all_years, drive_gate=drive_gate),
         )
         sync.update({"hu_csv_total", "hu_csv_prc"})
         ran_derivative = True
 
-    if persist_state and ran_derivative and missing_years:
-        hu_inc.save_last_year(max(missing_years))
+    if persist_state and ran_derivative:
+        if raster_export_years:
+            hu_inc.save_last_year(max(raster_export_years))
+        elif missing_years:
+            hu_inc.save_last_year(max(missing_years))
 
     return EnqueueResult(
         plan=plan,

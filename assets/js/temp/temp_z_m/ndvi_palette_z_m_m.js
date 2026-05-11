@@ -1,9 +1,10 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { legendDomain } from '../../legend_ranges.js';
 
 export function ToColorMonth_z_m(value) {
 
         // Definir los colores de la paleta
-        const domain = [11.5,43.5]; // mínimo y máximo 9.75	42.25
+        const domain = legendDomain('lst', 'zonalManzana', 'monthly');
 
     // Definir los colores de la paleta
     const range = ["#00008B", "#00BFFF", "#32CD32", "#FFFF00", "#FFA500", "#FF4500"];

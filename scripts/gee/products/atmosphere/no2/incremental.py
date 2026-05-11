@@ -1,4 +1,4 @@
-"""Estado incremental NO2 (``no2_export_state.json``)."""
+"""Estado incremental NO2 (``no2_export_state.json`` en ``scripts/gee/state/``)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,7 +17,6 @@ _manager = inc_base.IncrementalStateManager(
     state_filename="no2_export_state.json",
     root_asset_path=paths.ASSET_NO2_YEARMONTH,
     start_year=2019,
-    state_root_path=Path(__file__).resolve().parents[3],  # scripts/gee/
 )
 
 

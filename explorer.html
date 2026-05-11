@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-M7TVZ6TP');</script>
+  <!-- End Google Tag Manager -->
+   
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-R761KM0FZJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-R761KM0FZJ');
+</script>
+
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+
+  <script>
+  (function () {
+    function resolveAssetUrl(path) {
+      var s = String(path || '').replace(/^\//, '');
+      try { return new URL(s, document.baseURI).href; }
+      catch (e) { return '/' + s; }
+    }
+    window.resolveAssetUrl = resolveAssetUrl;
+  })();
+  </script>
+
+  <title>GENIUS · Explorador urbano-ambiental para la comuna de Quilpué</title>
+  <meta name="description" content="GENIUS — explorador urbano-ambiental para la comuna de Quilpué: vegetación, temperatura, calidad del aire y más desde datos satelitales.">
+  <meta content="" name="keywords">
+
+  <!-- Favicons -->
+  <link href="assets/img/favicon.png" rel="icon">
+  <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Source+Sans+Pro:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&display=swap" rel="stylesheet">
+
+  <!-- Vendor CSS Files -->
+  <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+
+  <link href="assets/css/variables.css" rel="stylesheet">
+
+  <!-- Template Main CSS File -->
+  <link href="assets/css/main.css" rel="stylesheet">
+
+  <!-- <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script> -->
+  <!-- MapLibre -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@2.1.6/dist/maplibre-gl.css" />
+  <!-- MapLibre Compare -->
+  <link href="./assets/js/lib/maplibre-gl-compare.css" rel="stylesheet">
+ <!-- Leaflet -->
+ <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <link href="assets/css/index2-explorer.css" rel="stylesheet">
+
+</head>
+
+<body class="genius-explorer">
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M7TVZ6TP"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+<button type="button" class="ge-chart-dock-pill ge-onboarding-target" id="geChartDockPill" aria-expanded="true" aria-controls="main" title="Ocultar o mostrar paneles de gráficos">
+  <span class="ge-chart-dock-pill__text ge-chart-dock-pill__text--hide">Ocultar gráficos</span>
+  <span class="ge-chart-dock-pill__text ge-chart-dock-pill__text--show">Mostrar gráficos</span>
+</button>
+<script>
+(function () {
+  var KEY = 'ge-charts-collapsed';
+  var body = document.body;
+  var btn = document.getElementById('geChartDockPill');
+  if (!btn) return;
+  function apply(collapsed) {
+    body.classList.toggle('genius-explorer--charts-collapsed', collapsed);
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    try {
+      localStorage.setItem(KEY, collapsed ? '1' : '0');
+    } catch (e) {}
+  }
+  btn.addEventListener('click', function () {
+    if (body.classList.contains('genius-explorer--chart-dock-disabled')) return;
+    apply(!body.classList.contains('genius-explorer--charts-collapsed'));
+  });
+  try {
+    if (localStorage.getItem(KEY) === '1') apply(true);
+  } catch (e) {}
+  window.setGeExplorerChartDockEnabled = function (enabled) {
+    body.classList.toggle('genius-explorer--chart-dock-disabled', !enabled);
+    if (!enabled) {
+      btn.setAttribute('aria-hidden', 'true');
+      btn.setAttribute('tabindex', '-1');
+    } else {
+      btn.removeAttribute('aria-hidden');
+      btn.removeAttribute('tabindex');
+      btn.setAttribute('aria-expanded', body.classList.contains('genius-explorer--charts-collapsed') ? 'false' : 'true');
+    }
+  };
+})();
+</script>
+<div class="ge-shell">
+<aside class="ge-sidebar" aria-label="Capas e Indicadores" id="ge-tour-sidebar">
+<header class="ge-sidebar-brand ge-onboarding-target" role="banner" id="ge-tour-header">
+  <div class="ge-sidebar-brand-inner">
+    <div class="ge-sidebar-brand__logo-wrap">
+      <img
+        src="assets/img/Iconos_Genius/genius-explorer-mark.png"
+        alt="GENIUS — explorador urbano-ambiental para la comuna de Quilpué"
+        class="ge-sidebar-brand__logo"
+        width="512"
+        height="512"
+      >
+    </div>
+    <div class="ge-sidebar-brand__copy">
+      <h1 class="ge-sidebar-brand__title-block">
+        <span class="ge-sidebar-brand__wordmark">GENIUS</span>
+        <span class="ge-sidebar-brand__subtitle">Explorador urbano-ambiental para la comuna de Quilpué</span>
+      </h1>
+    </div>
+  </div>
+</header>
+<div class="ge-sidebar-tour">
+  <button type="button" class="ge-tour-trigger" id="geTourTrigger">Recorrido guiado</button>
+</div>
+<div class="ge-sidebar-intro ge-sbar-section-head">
+  <h2 class="ge-sbar-section-heading">Catálogo de capas</h2>
+</div>
+      <section id="features" class="features ge-layers">
+        <div class="Centre" >
+          <div class="section-header">
+            <h2>Visualizadores</h2>
+            <!-- Botones principales -->
+            <div class="button-container ge-plank ge-onboarding-target" id="ge-tour-plank">
+              <div class="ge-plank-item">
+                <img src="./assets/img/Iconos_Genius/GENIUS-NG-VEG.png" onclick="toggleNDVIButtons()" alt="Áreas verdes">
+                <span class="ge-plank-label" aria-hidden="true">Áreas verdes</span>
+              </div>
+              <div class="ge-plank-item">
+                <img src="./assets/img/Iconos_Genius/GENIUS-NG-TEMP.png" onclick="toggleTButton()" alt="Temperatura e islas de calor">
+                <span class="ge-plank-label" aria-hidden="true">Temp. e islas de calor</span>
+              </div>
+              <div class="ge-plank-item">
+                <img src="./assets/img/Iconos_Genius/GENIUS-NG-12.png" onclick="toggleAireButton()" alt="Calidad del aire">
+                <span class="ge-plank-label" aria-hidden="true">Calidad del aire</span>
+              </div>
+              <div class="ge-plank-item">
+                <img src="./assets/img/Iconos_Genius/GENIUS-NG-13.png" onclick="toggleLumus()" alt="Luminosidad">
+                <span class="ge-plank-label" aria-hidden="true">Luminosidad</span>
+              </div>
+              <div class="ge-plank-item">
+                <img src="./assets/img/Iconos_Genius/GENIUS-NG-16.png" onclick="togglehu()" alt="Huella urbana">
+                <span class="ge-plank-label" aria-hidden="true">Huella urbana</span>
+              </div>
+            </div> 
+
+            <!-- Botones NDVI -->
+<div id="ge-tour-scale" class="ge-onboarding-target ge-scale-band">
+  <div class="ge-sbar-section-head">
+    <h3 class="ge-sbar-section-heading">Escala espacial</h3>
+  </div>
+<div class="button-container2" style="display: none;">
+  <div class="button-col">
+    <button type="button" id="ndviButtonB" onclick="toggleTable('ndviTableB', 'ndvi_b');" class="button-green-border">Barrios</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="ndviButtonM" onclick="toggleTable('ndviTableM', 'ndvi_m');" class="button-green-border">Manzanas</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="ndviButton" onclick="toggleTable('ndviTable', 'ndvi');" class="button-green-border">Píxel</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="ndviButtonstdev" onclick="toggleTable('ndviTablestdev', 'ndvi_stdev');" class="button-green-areas">Áreas verdes</button>
+  </div>
+</div>
+
+<div class="button-container3" style="display: none;">
+  <div class="button-col">
+    <button type="button" id="tButtonBarrios" onclick="toggleTable('tTableB', 't_b');" class="button-orange-border">Barrios</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="tButtonManzanas" onclick="toggleTable('tTableM', 't_m');" class="button-orange-border">Manzanas</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="tButtonPixel" onclick="toggleTable('tTable', 't');" class="button-orange-border">Píxel</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="tButtonIslas" onclick="toggleTable('tTableIslas', 't_islas');" class="button-orange-border">Isla de calor</button>
+  </div>
+</div>
+
+<div class="ge-air-stack">
+<div class="button-container4" style="display: none;">
+  <div class="button-col">
+    <button type="button" id="AireButtonAOD" onclick="toggleSubAireButtons('AODSubButtons');" class="button-air-quality">AOD</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="AireButtonNO2" onclick="toggleSubAireButtons('NO2SubButtons');" class="button-air-quality">NO₂</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="AireButtonSO2" onclick="toggleSubAireButtons('SO2SubButtons');" class="button-air-quality">SO₂</button>
+  </div>
+</div>
+
+<div id="AODSubButtons" class="sub-button-container" style="display:none; justify-content: center; align-items: flex-start; width: 100%;">
+  <div class="button-col">
+    <button type="button" id="AODButton_B" class="sub-button-aod" onclick="toggleTable('AODTable_B', 'AOD_B');">Barrios</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="AODButton_M" class="sub-button-aod" onclick="toggleTable('AODTable_M', 'AOD_M');">Manzanas</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="AODButton" class="sub-button-aod" onclick="toggleTable('AODTable', 'AOD_P');">Píxel</button>
+  </div>
+</div>
+<div id="NO2SubButtons" class="sub-button-container" style="display:none; justify-content: center; align-items: flex-start; width: 100%;">
+  <div class="button-col">
+    <button type="button" id="NO2Button_B" class="sub-button-no2" onclick="toggleTable('NO2Table_B', 'NO2_B');">Barrios</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="NO2Button_M" class="sub-button-no2" onclick="toggleTable('NO2Table_M', 'NO2_M');">Manzanas</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="NO2Button" class="sub-button-no2" onclick="toggleTable('NO2Table', 'NO2_P');">Píxel</button>
+  </div>
+</div>
+
+<div id="SO2SubButtons" class="sub-button-container" style="display:none; justify-content: center; align-items: flex-start; width: 100%;">
+  <div class="button-col">
+    <button type="button" id="SO2Button_B" class="sub-button-so2" onclick="toggleTable('SO2Table_B', 'SO2_B');">Barrios</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="SO2Button_M" class="sub-button-so2" onclick="toggleTable('SO2Table_M', 'SO2_M');">Manzanas</button>
+  </div>
+  <div class="button-col">
+    <button type="button" id="SO2Button" class="sub-button-so2" onclick="toggleTable('SO2Table', 'SO2_P');">Píxel</button>
+  </div>
+</div>
+</div>
+</div>
+<div class="ge-temporal-scale-band ge-onboarding-target" id="ge-tour-temporal-scale" aria-label="Escala temporal">
+  <div class="ge-sbar-section-head">
+    <h3 class="ge-sbar-section-heading">Escala temporal</h3>
+  </div>
+  <div id="geTemporalLayersMount" class="ge-temporal-scale-band__mount"></div>
+</div>
+</div>
+        </div>
+      </section>
+</aside>
+<script>
+(function () {
+  function syncGeTopbarHeight() {
+    var sidebar = document.querySelector('.ge-sidebar');
+    if (!sidebar) return;
+    var rect = sidebar.getBoundingClientRect();
+    /* Sin cabecera central: respiro superior alineado al panel lateral (safe-area) */
+    var clearance = Math.round(rect.top) + 10;
+    document.documentElement.style.setProperty('--ge-topbar-overlay-h', clearance + 'px');
+    var midY = Math.round(rect.top + 28);
+    document.documentElement.style.setProperty('--ge-topbar-center-y', midY + 'px');
+  }
+  function init() {
+    syncGeTopbarHeight();
+    var sidebar = document.querySelector('.ge-sidebar');
+    if (sidebar && typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(syncGeTopbarHeight).observe(sidebar);
+    }
+    window.addEventListener('resize', syncGeTopbarHeight);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(syncGeTopbarHeight);
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  requestAnimationFrame(syncGeTopbarHeight);
+})();
+</script>
+<main class="ge-workspace ge-onboarding-target" id="main" role="main">
+                                        <!-- Sección de las tablas NDVI ------------------------------------->
+              <!-- Tabla NDVI pixel -->
+              <table id="ndviTable">
+                <tr>
+                  <td rowspan="2">
+                    <div id="p01" class="map-container" ></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p02" class="chart-container" ></div>
+                      <div id="p03" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p50" class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+            <!-- Tabla NDVI Barrios -->
+              <table id="ndviTableB">
+                <tr>
+                  <td rowspan="2">
+                    <div id="p04" class="map-container" ></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p05" class="chart-container" ></div>
+                      <div id="p06" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p51" class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+              <!-- Tabla NDVI Manzanas -->
+              <table id="ndviTableM" >
+                <tr>
+                  <td rowspan="2">
+                    <div id="p07_m" class="map-container"></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p08" class="chart-container" ></div>
+                      <div id="p09" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2">
+                    <div id="p52" class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Tabla NDVI Manzanas -->
+              <table id="ndviTablestdev" >
+                <tr>
+                  <td rowspan="2">
+                    <div id="p67" class="map-container" ></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p68" class="chart-container" ></div>
+                      <div id="p69" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2">
+                    <div id="p70" class="element-container"></div>
+                  </td>
+                </tr>
+              </table>
+                                                    <!-- Seccion de las tablas islas de calor -------------------------------->
+            <!-- Tabla Isla de calor pixel -->
+              <table id="tTable" >
+                <tr>
+                  <td rowspan="2">
+                    <div id="p10" class="map-container" ></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p11" class="chart-container"></div>
+                      <div id="p12" class="chart-container"></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p53" class="element-container"></div> 
+                  </td>
+                </tr>
+              </table> 
+              <!-- Tabla isla de calor Barrios -->
+              <table id="tTableB">
+                <tr>
+                  <td rowspan="2">
+                    <div id="p13" class="map-container" ></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p14" class="chart-container" ></div>
+                      <div id="p15" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> <!-- Usar colspan="2" para ocupar el ancho completo de la tabla -->
+                    <div id="p54" class="element-container"></div> <!-- Nuevo contenedor para el contenido dinámico -->
+                  </td>
+                </tr>
+              </table>
+              <!-- Tabla isla de calor  Manzanas -->
+              <table id="tTableM">
+                <tr>
+                  <td rowspan="2">
+                    <div id="p16" class="map-container" ></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p17" class="chart-container" ></div>
+                      <div id="p18" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p55"  class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+                     <!-- Tabla isla de calor  -->
+                <table id="tTableIslas">
+                  <tr>
+                    <td rowspan="2">
+                      <div id="p71" class="map-container"></div>
+                    </td>
+                    <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p72" class="chart-container" ></div>
+                      <div id="p73" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                  <tr>
+                    <td colspan="2">
+                      <div id="p74"  class="element-container"></div>
+                    </td> 
+                  </tr>
+                </table>
+
+
+
+                                 <!-- Seccion de las tablas Calidad de aire -------------------------------->
+                <!-- seccion de tabla para AOD -->
+              <table id="AODTable" >
+                <tr>
+                  <td rowspan="2">
+                    <div id="p19" class="map-container"></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p20" class="chart-container" ></div>
+                      <div id="p21" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p56"  class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Tabla AOD Barrios -->
+              <table id="AODTable_B">
+                <tr>
+                  <td rowspan="2">
+                    <div id="p22" class="map-container"></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p23" class="chart-container" ></div>
+                      <div id="p24" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p57"  class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Tabla AOD Manzanas -->
+              <table id="AODTable_M">
+                <tr>
+                  <td rowspan="2">
+                    <div id="p25" class="map-container"></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p26" class="chart-container" ></div>
+                      <div id="p27" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p58"  class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Tabla NO2 Pixel -->
+              <table id="NO2Table" >
+                <tr>
+                  <td rowspan="2">
+                    <div id="p28" class="map-container"></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p29" class="chart-container" ></div>
+                      <div id="p30" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p59"  class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Tabla NO2 Barrios -->
+              <table id="NO2Table_B">
+                <tr>
+                  <td rowspan="2">
+                    <div id="p31" class="map-container"></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p32" class="chart-container" ></div>
+                      <div id="p33" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p60"  class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Tabla NO2 Manzanas -->
+              <table id="NO2Table_M">
+                <tr>
+                  <td rowspan="2">
+                    <div id="p34" class="map-container"></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p35" class="chart-container" ></div>
+                      <div id="p36" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p61"  class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Tabla SO2 Pixel -->
+              <table id="SO2Table" >
+                <tr>
+                  <td rowspan="2">
+                    <div id="p37" class="map-container"></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p38" class="chart-container" ></div>
+                      <div id="p39" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p62"  class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Tabla SO2 Barrios -->
+              <table id="SO2Table_B">
+                <tr>
+                  <td rowspan="2">
+                    <div id="p40" class="map-container"></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p41" class="chart-container" ></div>
+                      <div id="p42" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p63"  class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Tabla SO2 Manzanas -->
+              <table id="SO2Table_M">
+                <tr>
+                  <td rowspan="2">
+                    <div id="p43" class="map-container"></div>
+                  </td>
+                  <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p44" class="chart-container" ></div>
+                      <div id="p45" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                <tr>
+                  <td colspan="2"> 
+                    <div id="p64"  class="element-container"></div> 
+                  </td>
+                </tr>
+              </table>
+                                            <!-- Seccion de las tablas Luminosidad -------------------------------->
+                  <!-- Tabla Luminosidad -->
+                <table id="IluTable" >
+                    <tr>
+                      <td colspan="2">
+                        <div id="p46" class="map-container2" ></div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colspan="2"> 
+                        <div id="p65"  class="element-container"></div> 
+                      </td>
+                    </tr>
+              </table> 
+                                            <!-- Seccion de las tablas Huella urbana -------------------------------->
+                  <!-- Tabla Huella Urbana -->
+                  <table id="huellatable">
+                    <tr>
+                        <td rowspan="2">
+                            <div id="p47" class="map-container"></div>
+                        </td>
+                        <td rowspan="2" class="ge-chart-rail-cell">
+                    <div class="ge-chart-stack">
+                      <div id="p49" class="chart-container" ></div>
+                      <div id="p48" class="chart-container" ></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr></tr>
+                    <tr>
+                        <td colspan="2"> 
+                            <div id="p66"  class="element-container"></div> 
+                        </td>
+                    </tr>
+                </table>
+ </main>
+</div>
+
+<!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="./assets/js/genius_map_layout_hook.js"></script>
+  <!-- MapLibre GL -->
+  <script src="https://unpkg.com/maplibre-gl@2.1.6/dist/maplibre-gl.js"></script>
+  <script src="./assets/js/lib/maplibre-gl-compare.js"></script>
+  <!-- GeoTIFF -->
+  <script src="https://unpkg.com/geotiff@2.0.7/dist/geotiff.min.js"></script>
+  <!-- Georaster + Georaster Layer for Leaflet -->
+  <script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@1.0.2/dist/georaster-layer-for-leaflet.min.js"></script>
+  <!-- GeoBlaze -->
+  <script src="https://unpkg.com/geoblaze@0.7.2/dist/geoblaze.min.js"></script>
+  <!-- Leaflet GeoTIFF -->
+  <script src="https://unpkg.com/leaflet-geotiff@2.4.0/Leaflet.Geotiff.js"></script>
+  <!-- Leaflet Side-by-Side -->
+  <script src="./assets/js/lib/leaflet-side-by-side.min.js"></script>
+  <script src="./assets/js/lib/leaflet-side-by-side-noselect-patch.js"></script>
+  <!-- ZIP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+
+
+
+
+         <!-- Mapas primero (sin text.js); textos en módulo aparte para no bloquear el arranque -->
+      <script type="module" src="assets/js/index2-explorer-maps.js"></script>
+      <script type="module" src="assets/js/index2-explorer-text.js"></script>
+      <script type="module" src="assets/js/genius_explorer_tour.js"></script>
+
+   <!-- ======= script para ocultar los botones en general ======= -->
+   <script>
+function selectButton(button) {
+    var buttons = document.querySelectorAll('.button-container img');
+    buttons.forEach(function(btn) {
+        btn.classList.remove('selected-button');
+    });
+    if (button) {
+        button.classList.add('selected-button');
+    }
+}
+
+function hideAllButtonContainers() {
+    var allButtonContainers = document.querySelectorAll('.button-container2, .button-container3, .button-container4');
+    allButtonContainers.forEach(function(container) {
+        container.style.display = 'none';
+        container.classList.remove('active');
+    });
+
+    var allSubButtons = document.querySelectorAll('.sub-button-container');
+    allSubButtons.forEach(function(subButtonContainer) {
+        subButtonContainer.style.display = 'none';
+        subButtonContainer.classList.remove('active');
+    });
+}
+
+function toggleNDVIButtons() {
+    if (window.setGeExplorerChartDockEnabled) window.setGeExplorerChartDockEnabled(true);
+    destroyActiveMap();
+    hideAllTables();
+    selectButton(document.querySelector('img[onclick="toggleNDVIButtons()"]'));
+    hideAllButtonContainers();
+
+    var ndviButtonsContainer = document.querySelector('.button-container2');
+    ndviButtonsContainer.style.display = 'grid';
+    ndviButtonsContainer.classList.add('active');
+
+    resetButtonStates('.button-green-border');
+    toggleTable('ndviTableB', 'ndvi_b');
+    var ndviFirst = document.getElementById('ndviButtonB');
+    if (ndviFirst) ndviFirst.classList.add('selected');
+}
+
+function toggleTButton() {
+    if (window.setGeExplorerChartDockEnabled) window.setGeExplorerChartDockEnabled(true);
+    destroyActiveMap();
+    hideAllTables();
+    selectButton(document.querySelector('img[onclick="toggleTButton()"]'));
+    hideAllButtonContainers();
+
+    var tButtonsContainer = document.querySelector('.button-container3');
+    tButtonsContainer.style.display = 'grid';
+    tButtonsContainer.classList.add('active');
+
+    resetButtonStates('.button-orange-border');
+    toggleTable('tTableB', 't_b');
+    var tFirst = document.getElementById('tButtonBarrios');
+    if (tFirst) tFirst.classList.add('selected');
+}
+
+function toggleAireButton() {
+    if (window.setGeExplorerChartDockEnabled) window.setGeExplorerChartDockEnabled(true);
+    destroyActiveMap();
+    hideAllTables();
+    selectButton(document.querySelector('img[onclick="toggleAireButton()"]'));
+    hideAllButtonContainers();
+
+    var aireButtonsContainer = document.querySelector('.button-container4');
+    aireButtonsContainer.style.display = 'grid';
+    aireButtonsContainer.classList.add('active');
+
+    resetButtonStates('.button-air-quality');
+    var aodMainBtn = document.getElementById('AireButtonAOD');
+    if (aodMainBtn) aodMainBtn.classList.add('selected');
+    toggleSubAireButtons('AODSubButtons');
+    setTimeout(function() {
+        resetButtonStates('.sub-button-aod');
+        var aodBarriosBtn = document.getElementById('AODButton_B');
+        if (aodBarriosBtn) aodBarriosBtn.classList.add('selected');
+        toggleTable('AODTable_B', 'AOD_B');
+    }, 80);
+}
+
+function toggleSubAireButtons(containerId) {
+    destroyActiveMap();
+    hideAllTables();
+
+    var containers = ['AODSubButtons', 'NO2SubButtons', 'SO2SubButtons'];
+    containers.forEach(function(id) {
+        var container = document.getElementById(id);
+        if (container) {
+            container.style.display = 'none';
+            container.classList.remove('active');
+        }
+    });
+
+    resetButtonStates('.sub-button-aod');
+    resetButtonStates('.sub-button-no2');
+    resetButtonStates('.sub-button-so2');
+
+    setTimeout(() => {
+        var container = document.getElementById(containerId);
+        if (container) {
+            container.style.display = 'grid';
+            container.classList.add('active');
+            var buttons = container.getElementsByTagName('button');
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].style.display = 'block';
+            }
+        }
+
+        if (containerId === 'AODSubButtons') {
+            var first = document.getElementById('AODButton_B');
+            if (first) first.classList.add('selected');
+            toggleTable('AODTable_B', 'AOD_B');
+        } else if (containerId === 'NO2SubButtons') {
+            var first = document.getElementById('NO2Button_B');
+            if (first) first.classList.add('selected');
+            toggleTable('NO2Table_B', 'NO2_B');
+        } else if (containerId === 'SO2SubButtons') {
+            var first = document.getElementById('SO2Button_B');
+            if (first) first.classList.add('selected');
+            toggleTable('SO2Table_B', 'SO2_B');
+        }
+    }, 80);
+}
+
+function resetButtonStates(buttonSelector) {
+    var buttons = document.querySelectorAll(buttonSelector);
+    buttons.forEach(function(btn) {
+        btn.classList.remove('selected');
+    });
+}
+
+// Añadir evento click para los botones de calidad de aire
+document.querySelectorAll('.button-air-quality').forEach(button => {
+    button.addEventListener('click', function() {
+        resetButtonStates('.button-air-quality');
+        button.classList.add('selected');
+    });
+});
+
+// Añadir evento click para los botones NDVI
+document.querySelectorAll('.button-green-border, .button-green-areas').forEach(button => {
+    button.addEventListener('click', function() {
+        resetButtonStates('.button-green-border');
+        resetButtonStates('.button-green-areas');
+        button.classList.add('selected');
+    });
+});
+
+// Añadir evento click para los botones Islas de Calor
+document.querySelectorAll('.button-orange-border').forEach(button => {
+    button.addEventListener('click', function() {
+        resetButtonStates('.button-orange-border');
+        button.classList.add('selected');
+    });
+});
+
+// Añadir eventos click para sub-botones
+document.querySelectorAll('.sub-button-aod, .sub-button-no2, .sub-button-so2').forEach(button => {
+    button.addEventListener('click', function() {
+        resetButtonStates('.sub-button-aod, .sub-button-no2, .sub-button-so2');
+        button.classList.add('selected');
+    });
+});
+
+function toggleLumus() {
+    if (window.setGeExplorerChartDockEnabled) window.setGeExplorerChartDockEnabled(false);
+    destroyActiveMap();
+    selectButton(document.querySelector('img[onclick="toggleLumus()"]'));
+    hideAllButtonContainers();
+    hideAllTables();
+
+    var iluTable = document.getElementById('IluTable');
+    if (iluTable) {
+        iluTable.style.display = 'none';
+        setTimeout(() => {
+            iluTable.style.display = 'table';
+            window.mapInstance = map_lum('IluTable');
+            scheduleMapLayoutRefresh('luminosidad');
+        }, 50);
+    }
+}
+
+function togglehu() {
+    if (window.setGeExplorerChartDockEnabled) window.setGeExplorerChartDockEnabled(true);
+    destroyActiveMap();
+    selectButton(document.querySelector('img[onclick="togglehu()"]'));
+    hideAllButtonContainers();
+    hideAllTables();
+
+    var huellaTable = document.getElementById('huellatable');
+    if (huellaTable) {
+        huellaTable.style.display = 'none';
+        setTimeout(() => {
+            huellaTable.style.display = 'table';
+            window.mapInstance = map_hu('huellatable');
+            window.g_a_hu('huellatable');
+            window.g_m_hu('huellatable');
+            window.text_hu('p66');
+            scheduleMapLayoutRefresh('huella_urbana');
+        }, 50);
+    }
+}
+
+function hideAllTables() {
+    var allTables = document.querySelectorAll('table');
+    allTables.forEach(function(table) {
+        table.style.display = 'none';
+    });
+}
+
+function destroyActiveMap() {
+    try {
+        if (window.compareInstance && typeof window.compareInstance.remove === 'function') {
+            window.compareInstance.remove();
+            window.compareInstance = null;
+        }
+    } catch (err) { /* noop */ }
+    try {
+        window.__GENIUS_LAST_LEAFLET_MAP = null;
+        window.__geniusNdviBarriosTour = null;
+    } catch (e2) { /* noop */ }
+    try {
+        var m = window.mapInstance;
+        if (m && typeof m.then !== 'function' && typeof m.remove === 'function') {
+            m.remove();
+        }
+    } catch (err) { /* noop */ }
+    window.mapInstance = null;
+}
+
+function scheduleMapLayoutRefresh(type) {
+    if (typeof window.geniusRunMapLayoutRefresh === 'function') {
+        window.geniusRunMapLayoutRefresh(type);
+        return;
+    }
+    function run() {
+        try {
+            var m = window.mapInstance;
+            if (!m) return;
+            if (typeof m.invalidateSize === 'function') {
+                m.invalidateSize({ animate: false });
+            }
+            if (typeof m.resize === 'function') {
+                m.resize();
+            }
+        } catch (err) { /* noop */ }
+    }
+    setTimeout(run, 200);
+    setTimeout(run, 700);
+}
+</script>
+<!-- ...existing code... -->
+<script>
+    // Vuelve a cargar los gráficos y mapas según el tipo
+    function toggleTable(tableId, type) {
+        if (window.setGeExplorerChartDockEnabled) {
+            window.setGeExplorerChartDockEnabled(type !== 'luminosidad');
+        }
+        destroyActiveMap();
+        // Oculta todas las tablas relacionadas (NDVI, Islas de Calor, AOD, NO2, SO2, etc.)
+        hideAllTables();
+    
+        // Muestra la tabla seleccionada
+        var table = document.getElementById(tableId);
+        if (table) {
+            table.style.display = 'table';
+    
+            // Limpia y reinicializa los contenedores dentro de la tabla seleccionada
+            var containers = table.querySelectorAll('div[id^="p"]');
+            containers.forEach(function(container) {
+                container.innerHTML = ''; // Limpia todos los contenedores dentro de la tabla seleccionada
+            });
+    
+            // Vuelve a cargar los gráficos y mapas según el tipo
+            if (type.startsWith('ndvi')) {
+                if (type === 'ndvi') { 
+                    document.getElementById('p01').innerHTML = '';
+                    document.getElementById('p02').innerHTML = '';
+                    document.getElementById('p03').innerHTML = '';
+                    document.getElementById('p50').innerHTML = '';
+                    window.mapInstance = map_ndvi('p01');
+                    window.g_a_ndvi('p02');
+                    window.g_m_ndvi('p03');
+                    window.text_ndvi('p50');
+    
+                } else if (type === 'ndvi_b') {
+                    document.getElementById('p04').innerHTML = '';
+                    document.getElementById('p05').innerHTML = '';
+                    document.getElementById('p06').innerHTML = '';
+                    document.getElementById('p51').innerHTML = '';
+                    window.mapInstance = map_ndvi_zonal_b('p04');
+                    window.g_ndvi_a_z_b('p05');
+                    window.g_ndvi_m_z_b('p06');
+                    window.text_ndvi('p51');
+    
+                } else if (type === 'ndvi_m') {
+                    document.getElementById('p07_m').innerHTML = '';
+                    document.getElementById('p08').innerHTML = '';
+                    document.getElementById('p09').innerHTML = '';
+                    document.getElementById('p52').innerHTML = '';
+                    window.mapInstance = map_ndvi_zonal_m('p07_m');
+                    window.g_ndvi_a_z_m('p08');
+                    window.g_ndvi_m_z_m('p09');
+                    window.text_ndvi('p52');
+                } else if (type === 'ndvi_stdev') {
+                    document.getElementById('p67').innerHTML = '';
+                    document.getElementById('p68').innerHTML = '';
+                    document.getElementById('p69').innerHTML = '';
+                    document.getElementById('p70').innerHTML = '';
+                    window.mapInstance = map_ndvi_stdev('p67');
+                    window.g_a_ndvi_stdev('p68');
+                    window.g_m_ndvi_stdev('p69');
+                    window.text_ndvi('p70');
+                }
+                } else if (type.startsWith('t')) {
+                if (type === 't') {
+                    document.getElementById('p10').innerHTML = '';
+                    document.getElementById('p11').innerHTML = '';
+                    document.getElementById('p12').innerHTML = '';
+                    document.getElementById('p53').innerHTML = '';
+                    window.mapInstance = map_t('p10');
+                    window.g_a_t('p11');
+                    window.g_m_t('p12');
+                    window.text_lst('p53');
+                } else if (type === 't_b') {
+                    document.getElementById('p13').innerHTML = '';
+                    document.getElementById('p14').innerHTML = '';
+                    document.getElementById('p15').innerHTML = '';
+                    document.getElementById('p54').innerHTML = '';
+                    window.mapInstance = map_t_zonal_b('p13');
+                    window.g_t_a_z_b('p14');
+                    window.g_t_m_z_b('p15');
+                    window.text_lst('p54');
+                } else if (type === 't_m') {
+                    document.getElementById('p16').innerHTML = '';
+                    document.getElementById('p17').innerHTML = '';
+                    document.getElementById('p18').innerHTML = '';
+                    document.getElementById('p55').innerHTML = '';
+                    window.mapInstance = map_t_zonal_m('p16');
+                    window.g_t_a_z_m('p17');
+                    window.g_t_m_z_m('p18');
+                    window.text_lst('p55');
+                } else if (type === 't_islas') {
+                    document.getElementById('p71').innerHTML = '';
+                    document.getElementById('p72').innerHTML = '';
+                    document.getElementById('p73').innerHTML = '';
+                    document.getElementById('p74').innerHTML = '';
+                    window.mapInstance = map_t_islas('p71');
+                    window.g_a_t_islas('p72');
+                    window.g_m_t_islas('p73');
+                    window.text_isla('p74');
+                }
+            } else if (type.startsWith('AOD')) {
+                if (type === 'AOD_P') {
+                    document.getElementById('p19').innerHTML = '';
+                    document.getElementById('p20').innerHTML = '';
+                    document.getElementById('p21').innerHTML = '';
+                    document.getElementById('p56').innerHTML = '';
+                    window.mapInstance = map_aod_p('p19');
+                    window.g_a_aod('p20');
+                    window.g_m_aod('p21');
+                    window.text_aod('p56');
+                } else if (type === 'AOD_B') {
+                    document.getElementById('p22').innerHTML = '';
+                    document.getElementById('p23').innerHTML = '';
+                    document.getElementById('p24').innerHTML = '';
+                    document.getElementById('p57').innerHTML = '';
+                    window.mapInstance = map_aod_b('p22');
+                    window.g_a_aod_b('p23');
+                    window.g_m_aod_b('p24');
+                    window.text_aod('p57');
+                } else if (type === 'AOD_M') {
+                    document.getElementById('p25').innerHTML = '';
+                    document.getElementById('p26').innerHTML = '';
+                    document.getElementById('p27').innerHTML = '';
+                    document.getElementById('p58').innerHTML = '';
+                    window.mapInstance = map_aod_m('p25');
+                    window.g_a_aod_m('p26');
+                    window.g_m_aod_m('p27');
+                    window.text_aod('p58');
+                }
+            } else if (type.startsWith('NO2')) {
+                if (type === 'NO2_P') {
+                    document.getElementById('p28').innerHTML = '';  
+                    document.getElementById('p29').innerHTML = '';  
+                    document.getElementById('p30').innerHTML = '';  
+                    document.getElementById('p59').innerHTML = '';
+                    window.mapInstance = map_no2_p('p28');
+                    window.g_a_no2('p29');
+                    window.g_m_no2('p30');
+                    window.text_no2('p59');
+                } else if (type === 'NO2_B') {
+                    document.getElementById('p31').innerHTML = '';  
+                    document.getElementById('p32').innerHTML = '';  
+                    document.getElementById('p33').innerHTML = '';  
+                    document.getElementById('p60').innerHTML = '';
+                    window.mapInstance = map_no2_b('p31');
+                    window.g_a_no2_b('p32');
+                    window.g_m_no2_b('p33');
+                    window.text_no2('p60');
+                } else if (type === 'NO2_M') {
+                    document.getElementById('p34').innerHTML = '';  
+                    document.getElementById('p35').innerHTML = '';  
+                    document.getElementById('p36').innerHTML = '';  
+                    document.getElementById('p61').innerHTML = '';
+                    window.mapInstance = map_no2_m('p34');
+                    window.g_a_no2_m('p35');
+                    window.g_m_no2_m('p36');
+                    window.text_no2('p61');
+                }
+            } else if (type.startsWith('SO2')) {
+                if (type === 'SO2_P') {
+                    document.getElementById('p37').innerHTML = '';  
+                    document.getElementById('p38').innerHTML = '';  
+                    document.getElementById('p39').innerHTML = ''; 
+                    document.getElementById('p62').innerHTML = '';
+                    window.mapInstance = map_so2_p('p37');
+                    window.g_a_so2('p38');
+                    window.g_m_so2('p39');
+                    window.text_so2('p62');
+                } else if (type === 'SO2_B') {
+                    document.getElementById('p40').innerHTML = '';  
+                    document.getElementById('p41').innerHTML = '';  
+                    document.getElementById('p42').innerHTML = ''; 
+                    document.getElementById('p63').innerHTML = ''; 
+                    window.mapInstance = map_so2_b('p40');
+                    window.g_a_so2_b('p41');
+                    window.g_m_so2_b('p42');
+                    window.text_so2('p63');
+                } else if (type === 'SO2_M') {
+                    document.getElementById('p43').innerHTML = '';  
+                    document.getElementById('p44').innerHTML = '';  
+                    document.getElementById('p45').innerHTML = '';  
+                    document.getElementById('p64').innerHTML = '';
+                    window.mapInstance = map_so2_m('p43');
+                    window.g_a_so2_m('p44');
+                    window.g_m_so2_m('p45');
+                    window.text_so2('p64');
+                }
+            } else if (type === 'luminosidad') {  
+                document.getElementById('p46').innerHTML = ''; 
+                document.getElementById('p65').innerHTML = '';
+                window.mapInstance = map_lum('p46');
+                window.text_lum('p65');
+            } else if (type === 'huella_urbana') { 
+                document.getElementById('p47').innerHTML = '';  
+                document.getElementById('p48').innerHTML = '';  
+                document.getElementById('p49').innerHTML = '';
+                document.getElementById('p66').innerHTML = '';
+                window.mapInstance = map_hu('p47');
+                window.g_a_hu('p48');
+                window.g_m_hu('p49');
+                window.text_hu('p66');
+            }
+            scheduleMapLayoutRefresh(type);
+        }
+    }
+    
+    window.onload = function() {
+  // FUNCIONES para p65 p66 no cargaban correctamente.
+  // text_lum(); // Para p65
+  // text_hu();  // Para p66
+  // text_isla(); // Para p74
+};
+    
+
+
+    // Hacemos las funciones accesibles globalmente
+    window.toggleTable = toggleTable;
+    window.toggleNDVIButtons = toggleNDVIButtons;
+    window.toggleTButton = toggleTButton;
+    window.toggleAireButton = toggleAireButton;
+    window.toggleLumus = toggleLumus;
+    window.togglehu = togglehu;
+    window.toggleSubAireButtons = toggleSubAireButtons;
+    </script>
+
+  <script>
+    (function bootExplorer() {
+      var bootDone = false;
+      function tryStart() {
+        try {
+          if (typeof window.map_ndvi === 'function' && typeof window.toggleNDVIButtons === 'function') {
+            if (bootDone) return true;
+            bootDone = true;
+            window.toggleNDVIButtons();
+            return true;
+          }
+        } catch (e) {
+          console.error('[GENIUS bootExplorer] toggleNDVIButtons failed:', e);
+        }
+        return false;
+      }
+      function scheduleFallbackPoll() {
+        var n = 0;
+        var t = setInterval(function () {
+          n += 1;
+          if (tryStart() || n > 200) {
+            clearInterval(t);
+            if (n > 200 && typeof window.map_ndvi !== 'function') {
+              console.error(
+                '[GENIUS bootExplorer] No se registró map_ndvi. Revisa consola/red (D3 en cdn.jsdelivr.net, 404 de .js).'
+              );
+            }
+          }
+        }, 50);
+      }
+      window.addEventListener('genius-explorer-maps-ready', function () {
+        tryStart();
+      });
+      window.addEventListener('load', function () {
+        if (tryStart()) return;
+        scheduleFallbackPoll();
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      function repositionVisibleChartTooltips(ev) {
+        if (!document.body.classList.contains('genius-explorer')) return;
+        if (document.body.classList.contains('genius-explorer--charts-collapsed')) return;
+        var stack = document.querySelector('.ge-workspace .ge-chart-stack');
+        if (!stack) return;
+        if (window.getComputedStyle(stack).visibility === 'hidden') return;
+        var tips = stack.querySelectorAll('.chart-container .tooltip');
+        for (var i = 0; i < tips.length; i++) {
+          var tip = tips[i];
+          var op = parseFloat(window.getComputedStyle(tip).opacity);
+          if (!op) continue;
+          var host = tip.parentElement;
+          if (!host || !host.classList.contains('chart-container')) continue;
+          var r = host.getBoundingClientRect();
+          tip.style.position = 'absolute';
+          tip.style.left = (ev.clientX - r.left + 15) + 'px';
+          tip.style.top = (ev.clientY - r.top - 15) + 'px';
+        }
+      }
+      document.addEventListener('mousemove', repositionVisibleChartTooltips);
+    })();
+  </script>
+
+  <div id="geOnboardingOverlay" class="ge-onboarding-overlay" aria-hidden="true">
+    <div class="ge-onboarding-shade" aria-hidden="true">
+      <svg id="geOnboardingShadeSvg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="none">
+        <defs>
+          <mask id="geOnboardingCutoutMask">
+            <rect id="geOnboardingMaskBg" width="100%" height="100%" fill="white"/>
+            <rect id="geOnboardingMaskHole" x="0" y="0" width="0" height="0" fill="black"/>
+            <rect id="geOnboardingMaskHole2" x="0" y="0" width="0" height="0" fill="black"/>
+            <rect id="geOnboardingMaskHoleCard" x="0" y="0" width="0" height="0" fill="black"/>
+          </mask>
+        </defs>
+        <rect id="geOnboardingShadeRect" width="100%" height="100%" fill="rgba(2, 31, 46, 0.58)" mask="url(#geOnboardingCutoutMask)"/>
+      </svg>
+    </div>
+  </div>
+  <div class="ge-onboarding-card-wrap" aria-live="polite">
+    <div class="ge-onboarding-card" id="geOnboardingCard" role="dialog" aria-modal="true" aria-labelledby="geOnboardingTitle">
+      <div class="ge-onboarding-progress" id="geOnboardingProgress"></div>
+      <div class="ge-onboarding-brand" id="geOnboardingBrand" aria-hidden="true">
+        <img src="assets/img/Iconos_Genius/genius-explorer-mark.png" width="42" height="42" alt="">
+        <div class="ge-onboarding-brand-text">GENIUS · Explorador urbano-ambiental para la comuna de Quilpué</div>
+      </div>
+      <h4 class="ge-onboarding-card__title" id="geOnboardingTitle"></h4>
+      <p class="ge-onboarding-card__text" id="geOnboardingText"></p>
+      <div class="ge-onboarding-actions">
+        <button type="button" class="ge-onboarding-skip" id="geOnboardingSkip">Omitir</button>
+        <button type="button" class="ge-onboarding-next" id="geOnboardingNext">Siguiente</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+  (function () {
+    function onTourTriggerClick() {
+      queueMicrotask(function () {
+        if (typeof window.__geniusStartExplorerTour === "function") return;
+        var isFile = window.location && window.location.protocol === "file:";
+        var msg = isFile
+          ? "El recorrido guiado no puede cargarse al abrir la página como archivo (file://).\n\nSirve la carpeta del proyecto con un servidor local, por ejemplo:\n\n  python3 -m http.server\n\ny entra a http://localhost:8000/index2.html (ajusta el puerto si hace falta)."
+          : "No se cargó el script del recorrido guiado. Abre la consola del navegador (F12 → Consola) y revisa errores en rojo (red, sintaxis, etc.).";
+        console.warn("[GENIUS] Recorrido guiado:", msg);
+        window.alert(msg);
+      });
+    }
+    function bind() {
+      var btn = document.getElementById("geTourTrigger");
+      if (!btn || btn.dataset.geTourFallbackBound === "1") return;
+      btn.dataset.geTourFallbackBound = "1";
+      btn.addEventListener("click", onTourTriggerClick);
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", bind, { once: true });
+    } else {
+      bind();
+    }
+  })();
+  </script>
+
+</body>
+</html>

@@ -33,6 +33,6 @@ Por defecto `python -m scripts.gee.pipeline` hace eso en dos fases por producto.
 
 Las claves están en `SYNC_REGISTRY` en `download_drive_to_repo.py`. El `--only` del **pipeline** usa categorías (`asset`, `raster`, …); las claves concretas de Drive se derivan de las tareas encoladas o del fallback por categoría.
 
-## Estado incremental (JSON en `scripts/gee/`)
+## Estado incremental (JSON en `scripts/gee/state/`)
 
-- `ndvi_export_state.json`, `aod_export_state.json`, `no2_export_state.json`, `so2_export_state.json`, `lst_export_state.json` — último año-mes derivado y metadatos de tendencia/climatología según producto.
+- `ndvi_export_state.json`, `aod_export_state.json`, `no2_export_state.json`, `so2_export_state.json`, `lst_export_state.json`, `hu_export_state.json` — último año-mes derivado y metadatos de tendencia/climatología según producto. Si aún tienes copias en la raíz de `scripts/gee/`, la primera ejecución del pipeline las mueve a `state/` automáticamente.

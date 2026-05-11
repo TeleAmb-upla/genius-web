@@ -7,9 +7,10 @@ import { createMonthSelector, positionMonthSelector } from './month/utils_month.
 import { createmonthLegendSVG, createyearLegendSVG, addCenteredTitle } from './map_utilities_p.js';
 import { map_trend, createSTLegendSVG } from './lst_trend/trend.js';
 import { createOpacitySlider } from '../slider_opacity.js';
-import { loadinf_critica } from '../inf_critica_leaflet.js';
 import { LayersControl } from '../control.js';
-import { getDefaultYearPair } from '../map_data_catalog.js';
+import { mountLayersControlForExplorer } from '../genius_layers_control_mount.js';
+import { getDefaultYearPair, geniusTitleForProduct, removeGeniusLeafletMapTitle } from '../map_data_catalog.js';
+import { GENIUS_LAT, GENIUS_LNG, GENIUS_ZOOM_URBAN, GENIUS_LEAFLET_MAP_OPTIONS, addGeniusLeafletZoomControl } from '../map_interaction_defaults.js';
 
 let currentMap = null;
 let leftLayer = null;
@@ -58,6 +59,7 @@ function createTrendAdditionalText(content) {
 
 export async function map_t() {
     if (currentMap) {
+        removeGeniusLeafletMapTitle(currentMap);
         currentMap.remove();
         currentMap = null;
         leftLayer = null;
@@ -65,18 +67,13 @@ export async function map_t() {
         trendLayer = null;
         sideBySideControl = null;
 
-        let mapTitleDiv = document.getElementById('map-title');
-        if (mapTitleDiv) {
-            mapTitleDiv.remove();
-        }
-
         if (legendDiv) {
             legendDiv.remove();
             legendDiv = null;
         }
     }
 
-    currentMap = L.map("p10").setView([-33.04752000, -71.44249000], 12.6);
+    currentMap = L.map("p10", GENIUS_LEAFLET_MAP_OPTIONS).setView([GENIUS_LAT, GENIUS_LNG], GENIUS_ZOOM_URBAN);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
         minZoom: 0,
@@ -85,21 +82,17 @@ export async function map_t() {
     }).addTo(currentMap);
 
     L.control.scale({
-        position: 'topright',
+        position: 'bottomright',
         metric: true,
         imperial: false
     }).addTo(currentMap);
+    addGeniusLeafletZoomControl(currentMap);
 
-    addCenteredTitle(currentMap, "LST Área Urbana (píxel)");
-
-    const infCriticaData = await loadinf_critica(currentMap);
-    let infCriticaLayer = null;
-    if (infCriticaData && typeof infCriticaData === 'object') {
-        const layersArray = Object.values(infCriticaData);
-        infCriticaLayer = L.layerGroup(layersArray);
-    } else {
-        console.error("La capa de infraestructura crítica no es válida:", infCriticaData);
-    }
+    addCenteredTitle(
+        currentMap,
+        geniusTitleForProduct("Temperatura — mapa por píxel", "lst"),
+        { temporalTitle: true },
+    );
 
     const lstDataYear = await loadLayersyear(currentMap);
     const lstLayersYear = lstDataYear.layers;
@@ -228,23 +221,12 @@ export async function map_t() {
         currentMap.getContainer().appendChild(trendAdditionalTextDiv);
     }
 
-    const controls = new LayersControl(
-        (mode) => {
-            if (mode === 'yearly') activateAnualMode();
-            else if (mode === 'monthly') activateMensualMode();
-            else if (mode === 'trend') activateTendenciaMode();
-        },
-        (enabled) => {
-            if (!infCriticaLayer) return;
-            if (enabled) infCriticaLayer.addTo(currentMap);
-            else currentMap.removeLayer(infCriticaLayer);
-        }
-    );
-    controls._container.style.position = 'absolute';
-    controls._container.style.top = '10px';
-    controls._container.style.right = '10px';
-    controls._container.style.zIndex = '1000';
-    currentMap.getContainer().appendChild(controls._container);
+    const controls = new LayersControl((mode) => {
+        if (mode === 'yearly') activateAnualMode();
+        else if (mode === 'monthly') activateMensualMode();
+        else if (mode === 'trend') activateTendenciaMode();
+    });
+    mountLayersControlForExplorer(controls, currentMap.getContainer(), { zIndex: '1000' });
 
     layers.leftLayer = leftLayer;
     layers.rightLayer = rightLayer;

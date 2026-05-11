@@ -1,7 +1,8 @@
+import { legendDomain } from '../../../legend_ranges.js';
 export function ToColorYear_z_b(value) {
     // Definir los colores de la paleta 26.625	40.188
 
-    const domain = [73,181];
+    const domain = legendDomain('aod', 'zonalBarrio', 'yearly');
     const range = ["#00008B", "#4B0082", "#8A2BE2", "#DA70D6", "#FF69B4", "#FFC0CB"].reverse();
     
     // Calcular el paso entre cada color en función del dominio

@@ -1,7 +1,10 @@
-﻿
-const startYear = 2017;
-/** Último año civil cerrado UTC (alineado con pipeline GEE). */
-const endYear = new Date().getUTCFullYear() - 1;
+﻿import { catalogYearBounds, downloadZipFromManifest } from './build_genius_zip.js';
+
+const _endFb = new Date().getUTCFullYear() - 1;
+const { startYear, endYear } = catalogYearBounds('ndvi_raster', { startYear: 2017, endYear: _endFb });
+const { startYear: zStart, endYear: zEnd } = catalogYearBounds('ndvi_zonal', { startYear: 2017, endYear: _endFb });
+const _ny = Math.max(0, endYear - startYear + 1);
+const _nz = Math.max(0, zEnd - zStart + 1);
 
 const _nowUtc = new Date();
 const _lastCompleteMonthEndMs = Date.UTC(
@@ -19,17 +22,15 @@ const _stdYLo = new Date(_stdStartMs).getUTCFullYear();
 const ndviStdDevY0 = Math.min(_stdYLo, _stdYHi);
 const ndviStdDevY1 = Math.max(_stdYLo, _stdYHi);
 
-// Definir las rutas de archivos TIF específicos de NDVI
 const ndviMonthlyFiles_tif = Array.from({ length: 12 }, (_, i) => {
-    const month = String(i + 1).padStart(2, '0'); // Genera '01', '02', ..., '12'
+    const month = String(i + 1).padStart(2, '0');
     return {
         url: resolveAssetUrl(`assets/data/raster/NDVI/NDVI_Monthly/NDVI_Monthly_${month}.tif`),
         name: `NDVI_Monthly_${month}.tif`
     };
 });
 
-
-const ndviYearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
+const ndviYearlyFiles_tif = Array.from({ length: _ny }, (_, i) => {
     const year = startYear + i;
     return {
         url: resolveAssetUrl(`assets/data/raster/NDVI/NDVI_Yearly/NDVI_Yearly_${year}.tif`),
@@ -37,43 +38,39 @@ const ndviYearlyFiles_tif = Array.from({ length: endYear - startYear + 1 }, (_, 
     };
 });
 
-
 const ndviTrendFiles_tif = [
     { url: resolveAssetUrl('assets/data/raster/NDVI/NDVI_Trend/NDVI_Yearly_Trend.tif'), name: 'NDVI_Trend.tif' },
     { url: resolveAssetUrl(`assets/data/raster/NDVI/NDVI_SD/NDVI_Monthly_StdDev_${ndviStdDevY0}_${ndviStdDevY1}.tif`), name: `NDVI_StdDev_${ndviStdDevY0}_${ndviStdDevY1}.tif` },
     { url: resolveAssetUrl('assets/data/csv/NDVI_m_urban.csv'), name: 'NDVI_Monthly.csv' },
     { url: resolveAssetUrl('assets/data/csv/NDVI_y_urban.csv'), name: 'NDVI_Anual.csv' },
-     { url: resolveAssetUrl('assets/data/csv/NDVI_m_av.csv'), name: 'NDVI_Monthly_AV.csv' },
+    { url: resolveAssetUrl('assets/data/csv/NDVI_m_av.csv'), name: 'NDVI_Monthly_AV.csv' },
     { url: resolveAssetUrl('assets/data/csv/NDVI_y_av.csv'), name: 'NDVI_Anual_AV.csv' }
- ];
+];
 
-//////////////////////// BARRIO
 const ndviMonthlyFiles_json_Barrio = Array.from({ length: 12 }, (_, i) => {
-    const month = String(i + 1).padStart(2, '0'); // Asegura que el mes tenga dos dígitos
+    const month = String(i + 1).padStart(2, '0');
     return {
         url: resolveAssetUrl(`assets/data/geojson/NDVI/NDVI_Monthly_ZonalStats/NDVI_Monthly_ZonalStats_Barrios/NDVI_Monthly_ZonalStats_Barrios_${month}.geojson`),
         name: `NDVI_Monthly_${month}.geojson`
     };
 });
 
-
-const ndviYearlyFiles_json_Barrio = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
-    const year = startYear + i;
+const ndviYearlyFiles_json_Barrio = Array.from({ length: _nz }, (_, i) => {
+    const year = zStart + i;
     return {
         url: resolveAssetUrl(`assets/data/geojson/NDVI/NDVI_Yearly_ZonalStats/NDVI_Yearly_ZonalStats_Barrios/NDVI_Yearly_ZonalStats_Barrios_${year}.geojson`),
         name: `NDVI_Yearly_${year}.geojson`
     };
 });
 
-
 const ndviTrendFiles_json_Barrio = [
     { url: resolveAssetUrl('assets/data/geojson/NDVI/NDVI_Yearly_ZonalStats/NDVI_Yearly_ZonalStats_Barrios/Trend_NDVI_ZonalStats_Barrios.geojson'), name: 'NDVI_Trend.geojson' },
     { url: resolveAssetUrl('assets/data/csv/NDVI_m_urban.csv'), name: 'NDVI_Monthly.csv' },
     { url: resolveAssetUrl('assets/data/csv/NDVI_y_urban.csv'), name: 'NDVI_Anual.csv' },
-     { url: resolveAssetUrl('assets/data/csv/NDVI_m_av.csv'), name: 'NDVI_Monthly_AV.csv' },
+    { url: resolveAssetUrl('assets/data/csv/NDVI_m_av.csv'), name: 'NDVI_Monthly_AV.csv' },
     { url: resolveAssetUrl('assets/data/csv/NDVI_y_av.csv'), name: 'NDVI_Anual_AV.csv' }
 ];
-///
+
 const ndviMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
     const month = String(i + 1).padStart(2, '0');
     return {
@@ -82,9 +79,8 @@ const ndviMonthlyFiles_json_Manzanas = Array.from({ length: 12 }, (_, i) => {
     };
 });
 
-
-const ndviYearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
-    const year = startYear + i;
+const ndviYearlyFiles_json_Manzanas = Array.from({ length: _nz }, (_, i) => {
+    const year = zStart + i;
     return {
         url: resolveAssetUrl(`assets/data/geojson/NDVI/NDVI_Yearly_ZonalStats/NDVI_Yearly_ZonalStats_Manzanas/NDVI_Yearly_ZonalStats_Manzanas_${year}.geojson`),
         name: `NDVI_Yearly_${year}.geojson`
@@ -93,113 +89,28 @@ const ndviYearlyFiles_json_Manzanas = Array.from({ length: endYear - startYear +
 
 const ndviTrendFiles_json_Manzanas = [
     { url: resolveAssetUrl('assets/data/geojson/NDVI/NDVI_Yearly_ZonalStats/NDVI_Yearly_ZonalStats_Manzanas/Trend_NDVI_ZonalStats_Manzanas.geojson'), name: 'NDVI_Trend.geojson' },
- { url: resolveAssetUrl('assets/data/csv/NDVI_m_urban.csv'), name: 'NDVI_Monthly.csv' },
+    { url: resolveAssetUrl('assets/data/csv/NDVI_m_urban.csv'), name: 'NDVI_Monthly.csv' },
     { url: resolveAssetUrl('assets/data/csv/NDVI_y_urban.csv'), name: 'NDVI_Anual.csv' },
-     { url: resolveAssetUrl('assets/data/csv/NDVI_m_av.csv'), name: 'NDVI_Monthly_AV.csv' },
+    { url: resolveAssetUrl('assets/data/csv/NDVI_m_av.csv'), name: 'NDVI_Monthly_AV.csv' },
     { url: resolveAssetUrl('assets/data/csv/NDVI_y_av.csv'), name: 'NDVI_Anual_AV.csv' }
 ];
-
 
 const textFiles = [
     { url: resolveAssetUrl('assets/js/indicaciones.txt'), name: 'indicaciones.txt' },
 ];
 
-
-
-
-// Combina todos los archivos de NDVI en un solo array PARA TIFF
 const allNdviFiles_tif = [...ndviMonthlyFiles_tif, ...ndviYearlyFiles_tif, ...ndviTrendFiles_tif, ...textFiles];
-// Combina todos los archivos de NDVI en un solo array PARA TIFF
-const allNdviFiles_json_Barrio = [...ndviMonthlyFiles_json_Barrio, ...ndviYearlyFiles_json_Barrio, ...ndviTrendFiles_json_Barrio, ...textFiles ];
-// Combina todos los archivos de NDVI en un solo array PARA TIFF
+const allNdviFiles_json_Barrio = [...ndviMonthlyFiles_json_Barrio, ...ndviYearlyFiles_json_Barrio, ...ndviTrendFiles_json_Barrio, ...textFiles];
 const allNdviFiles_json_Manzanas = [...ndviMonthlyFiles_json_Manzanas, ...ndviYearlyFiles_json_Manzanas, ...ndviTrendFiles_json_Manzanas, ...textFiles];
 
-
-
-
-// Función para crear y descargar un archivo ZIP con todos los archivos TIF de NDVI
 export async function createAndDownloadNDVIZip_tif() {
-    const zip = new JSZip();
-
-    // Agregar cada archivo TIF al ZIP
-    for (const file of allNdviFiles_tif) {
-        try {
-            const response = await fetch(file.url);
-            if (!response.ok) throw new Error(`Error al cargar ${file.url}`);
-            
-            const data = await response.blob();
-            zip.file(file.name, data);
-        } catch (error) {
-            console.error(`Error al agregar el archivo ${file.url}:`, error);
-        }
-    }
-
-    // Generar el archivo ZIP y crear un enlace de descarga
-    zip.generateAsync({ type: 'blob' }).then(content => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = 'NDVI_Tif.zip';
-        link.click();
-
-        URL.revokeObjectURL(link.href);
-    }).catch(error => console.error('Error al generar el ZIP:', error));
+    await downloadZipFromManifest(allNdviFiles_tif, 'NDVI_Tif.zip');
 }
 
-
-// Función para crear y descargar un archivo ZIP con todos los archivos TIF de NDVI
 export async function createAndDownloadNDVIZip_json_Barrio() {
-    const zip = new JSZip();
-
-    // Agregar cada archivo TIF al ZIP
-    for (const file of allNdviFiles_json_Barrio) {
-        try {
-            const response = await fetch(file.url);
-            if (!response.ok) throw new Error(`Error al cargar ${file.url}`);
-            
-            const data = await response.blob();
-            zip.file(file.name, data);
-        } catch (error) {
-            console.error(`Error al agregar el archivo ${file.url}:`, error);
-        }
-    }
-
-    // Generar el archivo ZIP y crear un enlace de descarga
-    zip.generateAsync({ type: 'blob' }).then(content => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = 'NDVI_Json_Barrio.zip';
-        link.click();
-
-        URL.revokeObjectURL(link.href);
-    }).catch(error => console.error('Error al generar el ZIP:', error));
+    await downloadZipFromManifest(allNdviFiles_json_Barrio, 'NDVI_Json_Barrio.zip');
 }
 
-
-
-// Función para crear y descargar un archivo ZIP con todos los archivos TIF de NDVI
 export async function createAndDownloadNDVIZip_json_Manzanas() {
-    const zip = new JSZip();
-
-    // Agregar cada archivo TIF al ZIP
-    for (const file of allNdviFiles_json_Manzanas) {
-        try {
-            const response = await fetch(file.url);
-            if (!response.ok) throw new Error(`Error al cargar ${file.url}`);
-            
-            const data = await response.blob();
-            zip.file(file.name, data);
-        } catch (error) {
-            console.error(`Error al agregar el archivo ${file.url}:`, error);
-        }
-    }
-
-    // Generar el archivo ZIP y crear un enlace de descarga
-    zip.generateAsync({ type: 'blob' }).then(content => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = 'NDVI_Json_Manzanas.zip';
-        link.click();
-
-        URL.revokeObjectURL(link.href);
-    }).catch(error => console.error('Error al generar el ZIP:', error));
+    await downloadZipFromManifest(allNdviFiles_json_Manzanas, 'NDVI_Json_Manzanas.zip');
 }

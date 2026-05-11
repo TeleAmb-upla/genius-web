@@ -5,12 +5,15 @@ import {createAndDownloadno2Zip,createAndDownloadno2Zip_json_Barrio,createAndDow
 import {createAndDownloadso2Zip, createAndDownloadso2Zip_json_Barrio, createAndDownloadso2Zip_json_Manzanas} from './download/download_so2.js';
 import{createAndDownloadiluZip} from './download/download_ilu.js';
 import { createAndDownloadhuZip} from './download/download_hu.js';  
-import {createAndDownloadmultiZip} from './download/download_multi.js';
 import { createAndDownloadislaZip} from './download/download_isla.js';
 
 // Función para crear y agregar contenido al contenedor especificado
 // Función para crear y agregar contenido al contenedor especificado
 function addContentToContainer(containerIds, titleMetodologia, textMetodologia, titleDescripcion, textDescripcion, imageUrl, downloadLinks = []) {
+    const useExplorerPills = typeof document !== 'undefined'
+        && document.body
+        && document.body.classList.contains('genius-explorer');
+
     containerIds.forEach(containerId => {
         const container = document.getElementById(containerId);
 
@@ -21,6 +24,11 @@ function addContentToContainer(containerIds, titleMetodologia, textMetodologia, 
 
         // Limpiar cualquier contenido existente
         container.innerHTML = '';
+
+        /* Explorador (index2): pills descripción/metodología desactivados temporalmente */
+        if (useExplorerPills) {
+            return;
+        }
 
         // Crear un contenedor flex principal
         const mainFlexContainer = document.createElement('div');
@@ -168,8 +176,8 @@ export async function text_aod() {
 
     const downloadLinks = [
         { label: 'Descargar AOD TIF ZIP', action: createAndDownloadAODZip },
-        { label: 'Descargar AOD GeoJson Manzanas ZIP', action: createAndDownloadAODZip_json_Barrio },
-        { label: 'Descargar AOD GeoJson Barrios ZIP', action:     createAndDownloadAODZip_json_Manzanas }
+        { label: 'Descargar AOD GeoJson Manzanas ZIP', action: createAndDownloadAODZip_json_Manzanas },
+        { label: 'Descargar AOD GeoJson Barrios ZIP', action: createAndDownloadAODZip_json_Barrio }
     ];
 
     addContentToContainer(aodContainers, 
@@ -188,8 +196,8 @@ export async function text_no2() {
     
         const downloadLinks = [
         { label: 'Descargar NO² TIF ZIP', action: createAndDownloadno2Zip },
-        { label: 'Descargar NO² GeoJson Manzanas ZIP', action: createAndDownloadno2Zip_json_Barrio },
-        { label: 'Descargar NO² GeoJson Barrios ZIP', action:     createAndDownloadno2Zip_json_Manzanas }
+        { label: 'Descargar NO² GeoJson Manzanas ZIP', action: createAndDownloadno2Zip_json_Manzanas },
+        { label: 'Descargar NO² GeoJson Barrios ZIP', action: createAndDownloadno2Zip_json_Barrio }
     ];
     addContentToContainer(no2Containers, 
         'Descripción  de NO2', 
@@ -206,8 +214,8 @@ export async function text_so2() {
     const so2Containers = ['p62', 'p63', 'p64']; // Contenedores que mostrarán la misma información
     const downloadLinks = [
         { label: 'Descargar SO² TIF ZIP', action: createAndDownloadso2Zip },
-        { label: 'Descargar SO² GeoJson Manzanas ZIP', action: createAndDownloadso2Zip_json_Barrio },
-        { label: 'Descargar SO² GeoJson Barrios ZIP', action:     createAndDownloadso2Zip_json_Manzanas }
+        { label: 'Descargar SO² GeoJson Manzanas ZIP', action: createAndDownloadso2Zip_json_Manzanas },
+        { label: 'Descargar SO² GeoJson Barrios ZIP', action: createAndDownloadso2Zip_json_Barrio }
     ];
     addContentToContainer(so2Containers, 
         'Descripción  de SO2', 
@@ -248,27 +256,11 @@ export async function text_hu() {
         'Descripción  de Huella Urbana', 
         'El Indicador de Huella Urbana mide la extensión espacial del área urbanizada, abarcando construcciones, superficies impermeables y ejes estructurantes dentro de una zona determinada. Este indicador es fundamental para analizar y comprender cómo evolucionan las áreas urbanas a lo largo del tiempo. Su aplicación permite a los planificadores y gestores territoriales tomar decisiones informadas sobre el crecimiento y la expansión de las ciudades, facilitando la gestión eficiente del territorio y la adaptación a las dinámicas urbanas emergentes.', 
         'Metodología de Huella Urbana', 
-        'Se emplearon imágenes multiespectrales de Sentinel-2 y de radar SAR de Sentinel-1 para detectar la huella urbana utilizando imágenes de verano desde 2018 hasta 2023, utilizando el algoritmo de aprendizaje automático Random Forest y entrenado con datos de 2018. Las imágenes Sentinel-2, que incluyen 13 bandas a 10 metros de resolución, se procesaron como medianas mensuales con un filtro de nubosidad. Las imágenes SAR de Sentinel-1 proporcionaron indicadores de retrodispersión y coherencia, que complementaron la detección óptica proporcionada por Sentine-2. La clasificación final integró 24 indicadores satelitales combinados, y se evaluó con una matriz de confusión, obteniendo coeficientes kappa entre 0.73 y 0.95, destacando algunas limitaciones en invierno debido a la nubosidad. El producto final entrega una imagen binaria que identifica los píxeles con áreas construidas y no construidas.', 
+        'Se emplearon imágenes multiespectrales de Sentinel-2 y de radar SAR de Sentinel-1 para detectar la huella urbana utilizando imágenes de verano desde 2018 hasta 2023, utilizando el algoritmo de aprendizaje automático Random Forest y entrenado con datos de 2018. Las imágenes Sentinel-2, que incluyen 13 bandas a 10 metros de resolución, se procesaron como medianas mensuales con un filtro de nubosidad. Las imágenes SAR de Sentinel-1 proporcionaron indicadores de retrodispersión y coherencia, que complementaron la detección óptica proporcionada por Sentine-2. La clasificación final integró 24 indicadores satelitales combinados, y se evaluó con una matriz de confusión, obteniendo coeficientes kappa entre 0.73 y 0.95, destacando algunas limitaciones en invierno debido a la nubosidad. El producto final entrega una imagen binaria que identifica los píxeles con áreas construidas y no construidas. Advertencia — datos preliminares: los resultados pueden mostrar inconsistencias año a año por el propio modelo y por la calidad o disponibilidad de las observaciones (nubosidad, estación, umbrales). En particular, una menor extensión clasificada como urbanizada en un año posterior no debe interpretarse automáticamente como que la ciudad «se achicó»; puede deberse a variación en la clasificación más que a un retroceso real del tejido construido.', 
         './assets/img/Iconos_Genius/GENIUS-NG-16.png',
         downloadLinks
     );
 }
-
-export async function text_multi() {
-    const multiContainers = ['p76']; 
-    const downloadLinks = [
-        { label: 'Descargar MultiCapa ZIP', action: createAndDownloadmultiZip },
-    ];
-    addContentToContainer(multiContainers,
-        'Descripción de MultiCapa (Versión Beta)', 
-        'MultiCapa es una herramienta que integra múltiples capas de información en una sola visualización, diseñada para ofrecer una comprensión integral de un área de estudio. Esta herramienta combina datos clave, tales como: Imágenes de alta resolución en RGB: Imagen de color real capturadas por drones que permiten observar detalles como la materialidad e infraestructura con gran claridad. Iluminación nocturna: Información procesada y clasificada sobre los niveles de iluminación, obtenida también mediante drones, ideal para evaluar la calidad del alumbrado público. Temperatura superficial: Datos precisos capturados con drones y sensores térmicos para analizar patrones térmicos en la superficie en una resolución espacial de centímetros. Gracias a esta integración, los planificadores y gestores urbanos pueden analizar cómo interactúan diferentes aspectos del espacio físico, lo que facilita la toma de decisiones informadas para la planificación y gestión territorial.',
-        'Descargar MultiCapa ZIP', 
-        '', 
-        './assets/img/Iconos_Genius/GENIUS-multicapa.png',
-        downloadLinks
-    );
-}
-
 
 export async function text_isla(){
     const multiContainers = ['p74'];

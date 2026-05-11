@@ -1,5 +1,10 @@
+import { legendDomain } from '../../legend_ranges.js';
+import { physicalNdvi } from '../../raster_quantized_decode.js';
+
 export function ndviToColor(ndvi) {
-    const domain = [-0.3359, 0.7422]; // mínimo y máximo
+    const ndviV = physicalNdvi(ndvi);
+    if (Number.isNaN(ndviV)) return null;
+    const domain = legendDomain('ndvi', 'raster', 'yearly');
     // Paleta de colores invertida que representa los diferentes valores de NDVI
     const range = [    '#ff0000', // Rojo intenso
         '#DF923D', // Naranja
@@ -12,14 +17,14 @@ export function ndviToColor(ndvi) {
     const step = (domain[1] - domain[0]) / (range.length - 1);
 
     // Asignar los colores basado en el valor
-    if (ndvi < domain[0]) {
+    if (ndviV < domain[0]) {
         return range[0]; // Si es menor que el mínimo, devolver el primer color
     } 
-    if (ndvi > domain[1]) {
+    if (ndviV > domain[1]) {
         return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
     }
 
     // Encontrar el color adecuado dentro del rango
-    const index = Math.floor((ndvi - domain[0]) / step);
+    const index = Math.floor((ndviV - domain[0]) / step);
     return range[index];
 }

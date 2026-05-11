@@ -11,8 +11,11 @@
 // Importar funciones desde otros módulos
 import { loadGeoJSONAndSetupLayers, createAvSelector, positionAvSelector } from './capas/utilis_select_av.js';
 import { map_stdev, createDevLegendSVG } from './ndvi_trend_dev/stddev.js'; // Ajusta la ruta según tu estructura de carpetas
-import { loadinf_critica } from '../inf_critica_leaflet.js';
+import { addCenteredTitle } from './map_utilities_p.js';
+import { geniusTitleForProduct, removeGeniusLeafletMapTitle } from '../map_data_catalog.js';
 import { attachMapOpacityPanel } from '../slider_opacity.js';
+import { GENIUS_LAT, GENIUS_LNG, GENIUS_ZOOM_URBAN, GENIUS_LEAFLET_MAP_OPTIONS, addGeniusLeafletZoomControl } from '../map_interaction_defaults.js';
+import { physicalNdviStdDev } from '../raster_quantized_decode.js';
 
 // Variables globales para almacenar el estado del mapa y las capas
 let currentMap = null;
@@ -25,29 +28,24 @@ let categoryLayers = {}; // Variable para almacenar capas GeoJSON
 export async function map_ndvi_stdev() {
     // Si el mapa ya existe, remuévelo y limpia las variables
     if (currentMap) {
-        currentMap.remove();
-        currentMap = null;
-        legendDiv = null;
-        stdevGeoraster = null;
-        rasterLayer = null;
-        avSelector = null;
-        categoryLayers = {};
-
-        // Eliminar el título del mapa si existe
-        let mapTitleDiv = document.getElementById('map-title');
-        if (mapTitleDiv) {
-            mapTitleDiv.remove();
-        }
-
-        // Eliminar la leyenda si existe
+        removeGeniusLeafletMapTitle(currentMap);
         if (legendDiv) {
             legendDiv.remove();
             legendDiv = null;
         }
+        currentMap.remove();
+        currentMap = null;
+        stdevGeoraster = null;
+        rasterLayer = null;
+        avSelector = null;
+        categoryLayers = {};
     }
 
-    // Inicializar el mapa
-    currentMap = L.map("p67").setView([-33.04752000, -71.44249000], 12.6);
+    // Un solo control +/- (Leaflet añade uno por defecto si no se desactiva)
+    currentMap = L.map("p67", {
+        ...GENIUS_LEAFLET_MAP_OPTIONS,
+        zoomControl: false,
+    }).setView([GENIUS_LAT, GENIUS_LNG], GENIUS_ZOOM_URBAN);
 
     // Capa base de CartoDB
     const CartoDB_Positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
@@ -58,22 +56,19 @@ export async function map_ndvi_stdev() {
 
     // Agregar escala métrica en la esquina inferior izquierda
     L.control.scale({
-        position: 'bottomleft', // Posición deseada
+        position: 'bottomright',
         metric: true,
         imperial: false
     }).addTo(currentMap);
+    addGeniusLeafletZoomControl(currentMap);
 
-    // Cargar capa de infraestructura crítica
-    const infCriticaData = await loadinf_critica(currentMap);
-
-    // Crear un `layerGroup` para agrupar todas las capas de infraestructura crítica
-    let infCriticaLayer = null;
-    if (infCriticaData && typeof infCriticaData === 'object') {
-        const layersArray = Object.values(infCriticaData); // Obtener todas las capas
-        infCriticaLayer = L.layerGroup(layersArray); // Crear el layerGroup con todas las capas
-    } else {
-        console.error("La capa de infraestructura crítica no es válida:", infCriticaData);
-    }
+    addCenteredTitle(
+        currentMap,
+        geniusTitleForProduct(
+            'Variación del NDVI — mapa por píxel',
+            'ndvi',
+        ),
+    );
 
     // Cargar y configurar las capas GeoJSON
     categoryLayers = await loadGeoJSONAndSetupLayers(currentMap);
@@ -81,8 +76,8 @@ export async function map_ndvi_stdev() {
     // Crear el selector de capas de áreas verdes
     avSelector = createAvSelector('av-selector', categoryLayers, currentMap);
 
-    // Posicionar el selector en la parte superior derecha con desplazamiento
-    positionAvSelector(avSelector, 'top-center');
+    // Esquina superior derecha: no compite con el título (arriba-centro del layout)
+    positionAvSelector(avSelector, 'top-right', 0, -42);
 
     // **Ajustar el z-index del avSelector para que esté por encima del slider**
     const avSelectorContainer = document.getElementById('av-selector');
@@ -95,33 +90,33 @@ export async function map_ndvi_stdev() {
 
     // Cargar y agregar la capa raster de desviación estándar
     const rasterData = await map_stdev(currentMap);
-    stdevGeoraster = rasterData.georaster; // Guardar el georaster
-    rasterLayer = rasterData.layer;
-    rasterLayer.addTo(currentMap);
-
-    // Raster siempre visible; solo infraestructura crítica como overlay opcional (vectores)
-    const overlayMaps = {};
-    if (infCriticaLayer) {
-        overlayMaps["Infraestructura crítica (vectores)"] = infCriticaLayer;
-    }
-    if (Object.keys(overlayMaps).length > 0) {
-        L.control.layers(null, overlayMaps, { position: 'topright' }).addTo(currentMap);
+    if (rasterData?.georaster && rasterData?.layer) {
+        stdevGeoraster = rasterData.georaster;
+        rasterLayer = rasterData.layer;
+        rasterLayer.addTo(currentMap);
+    } else {
+        stdevGeoraster = null;
+        rasterLayer = null;
+        console.warn(
+            "[NDVI DE] Sin capa raster; revise NDVI_SD y la consola de red.",
+        );
     }
 
     // Crear y agregar la leyenda del raster en centro-izquierda (siempre visible)
     addCustomLegend(currentMap, createDevLegendSVG());
 
-    // Añadir evento de clic para mostrar el valor del raster
+    // Añadir evento de clic para mostrar el valor del raster (valor físico DE)
     currentMap.on('click', function(event) {
+        if (!stdevGeoraster) return;
         const latlng = event.latlng;
-        let valueArray = geoblaze.identify(stdevGeoraster, [latlng.lng, latlng.lat]);
-        let value = (valueArray && valueArray.length > 0) ? valueArray[0] : null;
-
-        value = (value !== null && !isNaN(value)) ? value.toFixed(2) : 'No disponible';
+        const valueArray = geoblaze.identify(stdevGeoraster, [latlng.lng, latlng.lat]);
+        const raw = valueArray && valueArray.length > 0 ? valueArray[0] : null;
+        const phys = physicalNdviStdDev(raw);
+        const value = Number.isFinite(phys) ? phys.toFixed(3) : 'No disponible';
 
         const content = `
-            <div style="text-align:center; padding:2px; background-color:#fff; font-size:10px; max-width:120px;">
-                Desviación Estándar: ${value}
+            <div style="text-align:center; padding:2px; background-color:#fff; font-size:10px; max-width:140px;">
+                DE NDVI: ${value}
             </div>
         `;
 
@@ -134,7 +129,9 @@ export async function map_ndvi_stdev() {
     attachMapOpacityPanel(
         currentMap.getContainer(),
         (opacity) => {
-            if (rasterLayer) rasterLayer.setOpacity(opacity);
+            if (rasterLayer && typeof rasterLayer.setOpacity === "function") {
+                rasterLayer.setOpacity(opacity);
+            }
             if (categoryLayersArray && categoryLayersArray.length > 0) {
                 categoryLayersArray.forEach((layer) => {
                     layer.setStyle({ opacity, fillOpacity: opacity });
@@ -144,8 +141,7 @@ export async function map_ndvi_stdev() {
         { leafletMap: currentMap },
     );
 
-    // Llamar a la función para agregar el SVG en la parte inferior centrada del mapa
-    addBottomCenteredSVG(currentMap);
+    addStdevMapFootnote(currentMap);
 }
 
 // Función para crear y posicionar una leyenda personalizada en centro-izquierda
@@ -156,40 +152,30 @@ function addCustomLegend(map, legendHTML) {
     map.getContainer().appendChild(legendDiv);
 }
 
-// Función para agregar un SVG/cuadro de texto en la parte inferior centrada del mapa
-function addBottomCenteredSVG(map) {
-    // Crear un div para contener el SVG/cuadro de texto
-    const svgContainer = L.DomUtil.create('div', 'bottom-centered-svg');
-
-    // Contenido del SVG o cuadro de texto
-    svgContainer.innerHTML = `
-        <svg width="350" height="60" xmlns="http://www.w3.org/2000/svg">
-            <rect width="350" height="60" style="fill:rgba(255, 255, 255, 0.5);stroke:black;stroke-width:2;"/>
-            <text x="50%" y="25" dominant-baseline="middle" text-anchor="middle" font-size="11" fill="black" style="word-spacing: 1px;">
-                Para áreas vegetadas, los valores más altos de "DE" indican mayor
+/** Nota bajo el mapa: alineada al panel de leyenda (izquierda), lejos del slider de opacidad (centro-abajo). */
+function addStdevMapFootnote(map) {
+    const el = L.DomUtil.create("div", "map-stdev-footnote");
+    el.innerHTML = `
+        <svg width="280" height="52" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="280" height="52" rx="6" style="fill:rgba(255,255,255,0.94);stroke:#64748b;stroke-width:1;"/>
+            <text x="12" y="17" text-anchor="start" font-size="10.5" fill="#0f172a" font-family="system-ui,Arial,sans-serif">
+                Mayor DE → mayor variación del verdor (p. ej. hierbas estacionales o caducifolia).
             </text>
-            <text x="50%" y="35" dominant-baseline="middle" text-anchor="middle" font-size="11" fill="black" style="word-spacing: 1px;">
-                variabilidad en el verdor, lo que puede estar asociado a la
-            </text>
-            <text x="50%" y="45" dominant-baseline="middle" text-anchor="middle" font-size="11" fill="black" style="word-spacing: 1px;">
-                presencia de hierbas estacionales o vegetación caducifolia
+            <text x="12" y="33" text-anchor="start" font-size="10" fill="#475569" font-family="system-ui,Arial,sans-serif">
+                Active categorías (panel superior derecho) solo si necesita delimitar tipos.
             </text>
         </svg>
     `;
-
-    // Agregar el div al contenedor del mapa
-    map.getContainer().appendChild(svgContainer);
-
-    // Estilos CSS para posicionar el div en la parte inferior centrada
-    Object.assign(svgContainer.style, {
-        position: 'absolute',
-        bottom: '10px', // Espacio desde el borde inferior
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: '1000', // Asegura que esté visible por encima de otros elementos
-        background: 'rgba(255, 255, 255, 0.8)',
-        padding: '5px',
-        borderRadius: '8px',
-        boxShadow: '0 0 10px rgba(0, 0, 0, 0.3)'
+    map.getContainer().appendChild(el);
+    Object.assign(el.style, {
+        position: "absolute",
+        left: "12px",
+        bottom: "12px",
+        right: "auto",
+        transform: "none",
+        zIndex: "950",
+        pointerEvents: "none",
+        maxWidth: "min(288px, 48vw)",
+        boxSizing: "border-box",
     });
 }

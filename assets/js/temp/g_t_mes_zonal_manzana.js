@@ -1,11 +1,36 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { geniusTitleForProduct } from '../map_data_catalog.js';
+import {
+    getGeniusChartLayout,
+    GENIUS_CHART_HEADING_CLASS,
+    geniusMonthlyClimAxisTitleY,
+    geniusMonthlyClimMinBottom,
+} from '../chart_layout_genius.js';
+import {
+    geniusAppendMonthlyPctlBand,
+    geniusMonthlyPctlExtentMulti,
+} from '../chart_monthly_pctl_band.js';
+import {
+    geniusAppendAnioActualLine,
+    geniusAppendMonthlyClimatologyLegend,
+    geniusExpandDomainWithPoints,
+    geniusFetchYearMonthCsvOptional,
+    geniusResolveAnioActualSeries,
+    geniusWallCalendarYearMonth,
+    GENIUS_ANIO_ACTUAL_CSV_KEY,
+    GENIUS_YEARMONTH_CSV,
+} from '../chart_monthly_estado_actual.js';
+import { geniusMonthlyAnioColor } from '../chart_variable_accent.js';
+
+const LST_URBAN_CLIM = 'steelblue';
+import { geniusBindNearestPointHover } from '../chart_tooltip_genius.js';
+import { geniusLstSeriesYearExcluded } from '../chart_lst_series_policy.js';
 
 export async function g_t_m_z_m(containerId = "p18") {
     // Define width and height based on container or fallback
     const container = document.getElementById(containerId);
-    const width = container.offsetWidth || 550;
-    const height = container.offsetHeight || 400;
-    const margin = { top: 40, right: 20, bottom: 40, left: 60 };
+    const { width, height, margin: m0 } = getGeniusChartLayout(container);
+    const margin = { ...m0, bottom: Math.max(m0.bottom, geniusMonthlyClimMinBottom()) };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -15,8 +40,8 @@ export async function g_t_m_z_m(containerId = "p18") {
     // Append the svg object to the div with id "p18"
     var svg = d3.select("#p18")
         .append("svg")
-        .attr("width", width)
-        .attr("height", height)
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -27,14 +52,15 @@ export async function g_t_m_z_m(containerId = "p18") {
         .attr("text-anchor", "middle")
         .style("font-size", "14px")
         .style("font-weight", "bold")
-        .style("font-family", "Arial") 
-        .text("LST Intraanual Área Urbana");
+        .style("font-family", "Arial")
+        .attr("class", GENIUS_CHART_HEADING_CLASS)
+        .text(geniusTitleForProduct("Temperatura por mes", "lst"));
 
     // titulos ejes 
     svg.append("text")
         .attr("text-anchor", "middle")
         .attr("x", innerWidth / 2)
-        .attr("y", innerHeight + 40)
+        .attr("y", geniusMonthlyClimAxisTitleY(innerHeight))
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Meses");
@@ -42,24 +68,50 @@ export async function g_t_m_z_m(containerId = "p18") {
     svg.append("text")
         .attr("text-anchor", "middle")
         .attr("transform", "rotate(-90)")
-        .attr("y", -margin.left + 15)
+        .attr("y", -Math.max(42, Math.round(margin.left * 0.78)))
         .attr("x", -innerHeight / 2)
         .style("font-family", "Arial")
         .style("font-size", "12px") 
         .text("LST (C°)");
 
-    // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/LST_m_urban.csv"));
+    const wall = geniusWallCalendarYearMonth();
+    const [data, ymRows] = await Promise.all([
+        d3.csv(resolveAssetUrl("assets/data/csv/LST_m_urban.csv")),
+        geniusFetchYearMonthCsvOptional(GENIUS_YEARMONTH_CSV.lstUrban),
+    ]);
 
     // Format the data
-    data.forEach(d => {
+    data.forEach((d) => {
         d.Month = +d.Month;
         d.LST_mean = +d.LST_mean;
+        if (d.LST_p25 != null && String(d.LST_p25).trim() !== "")
+            d.LST_p25 = +d.LST_p25;
+        else d.LST_p25 = null;
+        if (d.LST_p75 != null && String(d.LST_p75).trim() !== "")
+            d.LST_p75 = +d.LST_p75;
+        else d.LST_p75 = null;
     });
 
-    // Find the minimum and maximum LST_mean values
-    const min = d3.min(data, d => d.LST_mean);
-    const max = d3.max(data, d => d.LST_mean);
+    const [min0, max0] = geniusMonthlyPctlExtentMulti(data, [
+        { mid: "LST_mean", p25: "LST_p25", p75: "LST_p75" },
+    ]);
+    const anioActual = geniusResolveAnioActualSeries({
+        monthlyData: data,
+        anioKey: GENIUS_ANIO_ACTUAL_CSV_KEY,
+        ymRows,
+        ymKeys: { yearKey: "Year", monthKey: "Month", valueKey: "LST_mean" },
+        wall,
+        lstExcludedYearSlotsPredicate: geniusLstSeriesYearExcluded,
+    });
+    const anioHasValues = anioActual.points.some(
+        (p) => p.v != null && Number.isFinite(p.v),
+    );
+    const anioColor = geniusMonthlyAnioColor("lst");
+    const [min, max] = geniusExpandDomainWithPoints(
+        min0,
+        max0,
+        anioActual.points.map((p) => p.v),
+    );
 
     // Add X axis
     var x = d3.scaleLinear()
@@ -76,7 +128,26 @@ export async function g_t_m_z_m(containerId = "p18") {
     svg.append("g")
         .call(d3.axisLeft(y));
 
-    // Create a tooltip
+    geniusAppendMonthlyClimatologyLegend(svg, {
+        innerWidth,
+        innerHeight,
+        placement: "belowAxis",
+        climColor: LST_URBAN_CLIM,
+        bandFillColor: LST_URBAN_CLIM,
+        anioColor: anioHasValues ? anioColor : null,
+        anioYear: anioHasValues ? anioActual.year : null,
+    });
+
+    geniusAppendMonthlyPctlBand(svg, {
+        data,
+        x: (d) => x(d.Month),
+        y,
+        p25Key: "LST_p25",
+        p75Key: "LST_p75",
+        fill: LST_URBAN_CLIM,
+        fillOpacity: 0.22,
+    });
+
     const tooltip = d3.select("#p18")
         .append("div")
         .style("opacity", 0)
@@ -86,30 +157,8 @@ export async function g_t_m_z_m(containerId = "p18") {
         .style("border-width", "2px")
         .style("border-radius", "5px")
         .style("padding", "5px")
-        .style("position", "absolute");
-
-    // Mouseover, mousemove, and mouseleave functions
-    var mouseover = function (event, d) {
-        tooltip
-            .style("opacity", 1);
-        d3.select(this)
-            .style("stroke", "black")
-            .style("opacity", 1);
-    }
-
-    var mousemove = function (event, d) {
-        tooltip
-            .html("LST: " + d.LST_mean.toFixed(2) + "<br>Mes: " + d.Month)
-            .style("left", (event.pageX + 15) + "px")
-            .style("top", (event.pageY - 15) + "px");
-    }
-
-    var mouseleave = function (event, d) {
-        tooltip
-            .style("opacity", 0);
-        d3.select(this)
-            .style("stroke", "none");
-    }
+        .style("position", "absolute")
+        .style("pointer-events", "none");
 
     // Add the line with smoothing and animation
     var line = d3.line()
@@ -120,7 +169,7 @@ export async function g_t_m_z_m(containerId = "p18") {
     var animation = svg.append("path")
         .datum(data)
         .attr("fill", "none")
-        .attr("stroke", "steelblue")
+        .attr("stroke", LST_URBAN_CLIM)
         .attr("stroke-width", 1.5)
         .attr("d", line);
 
@@ -134,7 +183,13 @@ export async function g_t_m_z_m(containerId = "p18") {
         .ease(d3.easeLinear)
         .attr("stroke-dashoffset", 0);
 
-    // Add points
+    geniusAppendAnioActualLine(svg, {
+        xPos: (d) => x(d.Month),
+        y,
+        points: anioActual.points,
+        color: anioColor,
+    });
+
     svg.append("g")
         .selectAll("circle")
         .data(data)
@@ -143,9 +198,57 @@ export async function g_t_m_z_m(containerId = "p18") {
         .attr("cx", d => x(d.Month))
         .attr("cy", d => y(d.LST_mean))
         .attr("r", 4)
-        .attr("fill", "steelblue")
-        .attr("pointer-events", "all")
-        .on("mouseover", mouseover)
-        .on("mousemove", mousemove)
-        .on("mouseleave", mouseleave);
+        .attr("fill", LST_URBAN_CLIM)
+        .attr("pointer-events", "none");
+
+    const hoverClim = data.map((d) => ({
+        cx: x(d.Month),
+        cy: y(d.LST_mean),
+        row: d,
+        kind: "clim",
+    }));
+    const hoverAnio = anioActual.points
+        .filter((d) => d.v != null && Number.isFinite(d.v))
+        .map((d) => ({
+        cx: x(d.Month),
+        cy: y(d.v),
+        row: d,
+        kind: "anio",
+    }));
+    geniusBindNearestPointHover(svg, {
+        panelId: "p18",
+        innerWidth,
+        innerHeight,
+        tooltip,
+        points: [...hoverClim, ...hoverAnio],
+        html: (p) => {
+            if (p.kind === "anio") {
+                const rv = p.row.v;
+                return (
+                    `Año actual (${anioActual.year}): ` +
+                    (rv != null && Number.isFinite(rv) ? rv.toFixed(2) : "—") +
+                    " °C<br>Mes: " +
+                    p.row.Month
+                );
+            }
+            let h =
+                "LST (P50): " +
+                p.row.LST_mean.toFixed(2) +
+                "<br>Mes: " +
+                p.row.Month;
+            if (
+                p.row.LST_p25 != null &&
+                p.row.LST_p75 != null &&
+                !Number.isNaN(p.row.LST_p25) &&
+                !Number.isNaN(p.row.LST_p75)
+            ) {
+                h +=
+                    "<br>P25: " +
+                    (+p.row.LST_p25).toFixed(2) +
+                    " &nbsp; P75: " +
+                    (+p.row.LST_p75).toFixed(2);
+            }
+            return h;
+        },
+    });
 }

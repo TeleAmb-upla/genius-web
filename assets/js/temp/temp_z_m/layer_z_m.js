@@ -1,7 +1,7 @@
-﻿import { ToColorYear_z_m } from './ndvi_palette_z_m_y.js'; 
+﻿import { ToColorYear_z_m } from './ndvi_palette_z_m_y.js';
 import { ToColorMonth_z_m } from './ndvi_palette_z_m_m.js';
-
-
+import { lstManzanaPopupHtmlMonthly } from '../lst_zonal_explorer.js';
+import { geniusPrepareExclusiveGeoPopup } from '../../maplibre_exclusive_geo_popup.js';
 export async function preprocessGeoJSON(url, currentMode) {
     try {
         const response = await fetch(url);
@@ -59,14 +59,15 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
         const value = properties.LST_mean;
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
             .setHTML(`
                 <div class="popup-title">${properties.NOMBRE || 'Manzana'}</div>
                 <div class="popup-row"><span class="popup-label">Año</span><span class="popup-value">${properties.Year}</span></div>
                 <div class="popup-row"><span class="popup-label">LST (°C)</span><span class="popup-value">${value != null && !isNaN(value) ? Number(value).toFixed(1) : 'Sin datos'}</span></div>
-            `)
-            .addTo(map);
+            `);
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     map.on('mouseenter', layerId, () => {
@@ -100,15 +101,11 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const value = properties.LST_mean;
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`
-                <div class="popup-title">${properties.NOMBRE || 'Manzana'}</div>
-                <div class="popup-row"><span class="popup-label">Mes</span><span class="popup-value">${properties.Month}</span></div>
-                <div class="popup-row"><span class="popup-label">LST (°C)</span><span class="popup-value">${value != null && !isNaN(value) ? Number(value).toFixed(1) : 'Sin datos'}</span></div>
-            `)
-            .addTo(map);
+            .setHTML(lstManzanaPopupHtmlMonthly(properties));
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     map.on('mouseenter', layerId, () => {

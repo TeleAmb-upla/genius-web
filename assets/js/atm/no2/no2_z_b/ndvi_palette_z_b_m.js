@@ -1,7 +1,8 @@
+import { legendDomain } from '../../../legend_ranges.js';
 export function ToColorMonth_z_b(value) {
         // Definir los colores de la paleta 26.625,40.188
 
-        const domain = [11.25,23.63]; // mínimo y máximo 17,129
+        const domain = legendDomain('no2', 'zonalBarrio', 'monthly');
 
         const range =  [ '#333333', // black
             '#0000FF', // blue

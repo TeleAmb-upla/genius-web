@@ -1,3 +1,5 @@
+import { geniusPrepareExclusiveGeoPopup } from '../../maplibre_exclusive_geo_popup.js';
+
 // Función para asignar colores según la propiedad Clase
 function getColorForClase(clase) {
     switch (clase) {
@@ -91,14 +93,15 @@ export async function updateMapLayerYear_isla(map, sourceId, layerId, year) {
             const clase = properties.Clase;
             const claseLabel = claseLabels[clase] || 'Desconocida';
 
-            new maplibregl.Popup({ className: 'geo-popup' })
+            const popup = new maplibregl.Popup({ className: 'geo-popup' })
                 .setLngLat(e.lngLat)
                 .setHTML(`
                     <div class="popup-title">${properties.NOMBRE || 'Isla de calor'}</div>
                     <div class="popup-row"><span class="popup-label">Año</span><span class="popup-value">${properties.Year}</span></div>
                     <div class="popup-row"><span class="popup-label">LST (°C)</span><span class="popup-value">${claseLabel}</span></div>
-                `)
-                .addTo(map);
+                `);
+            geniusPrepareExclusiveGeoPopup(popup);
+            popup.addTo(map);
         });
 
         // Cambiar el cursor al pasar el mouse sobre la característica

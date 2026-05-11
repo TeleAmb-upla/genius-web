@@ -1,11 +1,12 @@
 import { createYearSelector, positionYearSelector } from './isla_de_calor/ultis_isla_y.js';
 import { LayersControl } from '../control.js';
+import { mountLayersControlForExplorer } from '../genius_layers_control_mount.js';
 import { updateMapLayerYear_isla } from './isla_de_calor/layer_isla.js';
 import { legend_isla} from './isla_de_calor/legend_isla.js';
 import { attachMapOpacityPanel } from '../slider_opacity.js';
 import { applyOpacityToVectorTrendLayers } from '../maplibre_opacity_util.js';
-import { loadInfCriticaMapLibre } from '../inf_critica_map_libre.js';
-import { getDefaultYearPair, getProductYears } from '../map_data_catalog.js';
+import { getDefaultYearPair, getProductYears, geniusTitleForProduct, mountGeniusMapTitleElement } from '../map_data_catalog.js';
+import { GENIUS_ZOOM_URBAN, applyGeniusMapLibreInteraction } from '../map_interaction_defaults.js';
 
 async function suhiGeoJsonExists(year) {
     try {
@@ -37,14 +38,17 @@ async function pickClosestAvailableSuhiYear(preferredYear, fallbackYears) {
 }
 
 export async function map_t_islas() {
+    const mapTitleText = geniusTitleForProduct(
+        'Islas de calor — comparar años',
+        'lst',
+    );
     const container = document.getElementById('p71');
     container.innerHTML = `
         <div id="before_isla" style="width: 100%; height: 100%; font-family: Arial, sans-serif; color: black;"></div>
         <div id="after_isla" style="width: 100%; height: 100%; font-family: Arial, sans-serif; color: black;"></div>
-        <div id="title" class="map-title">
-            Isla de Calor
-        </div>
+        <div id="title" class="map-title"></div>
     `;
+    mountGeniusMapTitleElement(container.querySelector('#title'), mapTitleText, { temporalTitle: true });
 
     // Inicializar mapas
     const beforeMap = new maplibregl.Map({
@@ -72,7 +76,7 @@ export async function map_t_islas() {
             ]
         },
         center: [-71.44249000, -33.04752000],
-        zoom: 12.6
+        zoom: GENIUS_ZOOM_URBAN
     });
 
     const afterMap = new maplibregl.Map({
@@ -100,21 +104,24 @@ export async function map_t_islas() {
             ]
         },
         center: [-71.44249000, -33.04752000],
-        zoom: 12.6
+        zoom: GENIUS_ZOOM_URBAN
     });
 
+
+    applyGeniusMapLibreInteraction(beforeMap);
+
+
+    applyGeniusMapLibreInteraction(afterMap);
+
     // Agregar controles de navegación y escala
-    const beforeNavControl = new maplibregl.NavigationControl({ showCompass: true, showZoom: true });
+    const beforeNavControl = new maplibregl.NavigationControl({ showCompass: false, showZoom: true });
     beforeMap.addControl(beforeNavControl, 'top-left');
 
-    const afterNavControl = new maplibregl.NavigationControl({ showCompass: true, showZoom: true });
-    afterMap.addControl(afterNavControl, 'top-left');
-
-    const scaleControlBefore = new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' });
-    beforeMap.addControl(scaleControlBefore, 'top-right');
+const scaleControlBefore = new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' });
+    beforeMap.addControl(scaleControlBefore, 'bottom-right');
 
     const scaleControlAfter = new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' });
-    afterMap.addControl(scaleControlAfter, 'top-right');
+    afterMap.addControl(scaleControlAfter, 'bottom-right');
 
     const [defaultBefore, defaultAfter] = getDefaultYearPair('lst');
     const lstYearsDesc = [...getProductYears('lst')].sort((a, b) => b - a);
@@ -150,32 +157,16 @@ export async function map_t_islas() {
         }
     });
 
-    async function toggleInfra(enabled) {
-        for (const map of [beforeMap, afterMap]) {
-            if (enabled) {
-                await loadInfCriticaMapLibre(map);
-            } else {
-                if (map.getLayer('infra-layer')) map.removeLayer('infra-layer');
-                if (map.getSource('infra-source')) map.removeSource('infra-source');
-            }
-        }
-    }
-
     const controls = new LayersControl(
         (mode) => {
             yearSelectors.style.display = mode === 'yearly' ? 'block' : 'none';
         },
-        (enabled) => toggleInfra(enabled),
         {
             hideModePills: true,
             modes: [{ key: 'yearly', label: 'Anual' }],
         }
     );
-    controls._container.style.position = 'absolute';
-    controls._container.style.top = '10px';
-    controls._container.style.right = '10px';
-    controls._container.style.zIndex = '10';
-    container.appendChild(controls._container);
+    mountLayersControlForExplorer(controls, container, { zIndex: '10' });
 
     controls.setMode('yearly');
 

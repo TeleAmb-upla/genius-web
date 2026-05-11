@@ -1,10 +1,38 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { geniusTitleForProduct } from '../../map_data_catalog.js';
+import {
+    getGeniusChartLayout,
+    GENIUS_CHART_HEADING_CLASS,
+    geniusMonthlyClimAxisTitleY,
+    geniusMonthlyClimMinBottom,
+} from '../../chart_layout_genius.js';
+import {
+    geniusAppendMonthlyPctlBand,
+    geniusMonthlyPctlExtentMulti,
+    geniusParseMonthlyMetric,
+} from '../../chart_monthly_pctl_band.js';
+import {
+    geniusAppendAnioActualLine,
+    geniusAppendMonthlyClimatologyLegend,
+    geniusExpandDomainWithPoints,
+    geniusFetchYearMonthCsvOptional,
+    geniusResolveAnioActualSeries,
+    geniusWallCalendarYearMonth,
+    GENIUS_ANIO_ACTUAL_CSV_KEY,
+    GENIUS_YEARMONTH_CSV,
+} from '../../chart_monthly_estado_actual.js';
+import { geniusFilterAodYearMonthValue } from '../../chart_annual_pctl_band.js';
+import { geniusMonthlyAnioColor } from '../../chart_variable_accent.js';
+import { geniusBindNearestPointHover } from '../../chart_tooltip_genius.js';
 
 export async function g_m_aod_b () {
-    // Set the dimensions and margins of the graph
-    var margin = { top: 80, right: 10, bottom: 60, left: 100 },
-        width = 550 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
+    const container = document.getElementById("p24");
+    const { width: outerW, height: outerH, margin: m0 } = getGeniusChartLayout(container);
+    const margin = { ...m0, bottom: m0.bottom + 36 };
+    const innerWidth = outerW - margin.left - margin.right;
+    const innerHeight = outerH - margin.top - margin.bottom;
+    const width = innerWidth;
+    const height = innerHeight;
 
     // Clear any existing SVG
     d3.select("#p24").selectAll("*").remove();
@@ -12,8 +40,8 @@ export async function g_m_aod_b () {
     // Append the svg object to the div with id "p24"
     var svg = d3.select("#p24")
         .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
+        .attr("viewBox", `0 0 ${outerW} ${outerH}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -24,38 +52,66 @@ export async function g_m_aod_b () {
         .attr("text-anchor", "middle")
         .style("font-size", "14px")
         .style("font-weight", "bold")
-        .style("font-family", "Arial") 
-        .text("AOD IntraAnual Urbano de Quilpué");
+        .style("font-family", "Arial")
+        .attr("class", GENIUS_CHART_HEADING_CLASS)
+        .text(geniusTitleForProduct("AOD por mes", "aod"));
 
    // titulos ejes 
    svg.append("text")
-   .attr("text-anchor", "end")
-   .attr("x", width / 2 + margin.left + -60)
-   .attr("y", height + margin.top + -40)
+   .attr("text-anchor", "middle")
+   .attr("x", width / 2)
+   .attr("y", geniusMonthlyClimAxisTitleY(height))
    .style("font-family", "Arial")
    .style("font-size", "12px")
    .text("Meses");
 
    svg.append("text")
-   .attr("text-anchor", "end")
+   .attr("text-anchor", "middle")
    .attr("transform", "rotate(-90)")
-   .attr("y", -margin.left + 60)
-   .attr("x", -margin.top - 30)
+   .attr("y", -Math.max(42, Math.round(margin.left * 0.78)))
+   .attr("x", -innerHeight / 2)
    .style("font-family", "Arial")
    .style("font-size", "12px") 
    .text("AOD");
    
-    // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/AOD_m_region.csv"));
+    const wall = geniusWallCalendarYearMonth();
+    const [data, ymRows] = await Promise.all([
+        d3.csv(resolveAssetUrl("assets/data/csv/AOD_m_urban.csv")),
+        geniusFetchYearMonthCsvOptional(GENIUS_YEARMONTH_CSV.aodUrban),
+    ]);
 
-    // Format the data
-    data.forEach(d => {
-        d.Month = +d.Month;           // Convert month to number
-        d.AOD_median = +d.AOD_median;    // Convert AOD_median to number
+    data.forEach((d) => {
+        d.Month = +d.Month;
+        d.AOD_median = geniusFilterAodYearMonthValue(geniusParseMonthlyMetric(d.AOD_median));
+        d.AOD_p25 = geniusFilterAodYearMonthValue(geniusParseMonthlyMetric(d.AOD_p25));
+        d.AOD_p75 = geniusFilterAodYearMonthValue(geniusParseMonthlyMetric(d.AOD_p75));
+        const av = geniusParseMonthlyMetric(String(d.anio_actual ?? ""));
+        const af = av != null ? geniusFilterAodYearMonthValue(av) : null;
+        d.anio_actual = af != null ? String(af) : "";
     });
-    // Find the minimum and maximum AOD_median values
-    const min = d3.min(data, d => d.AOD_median);
-    const max = d3.max(data, d => d.AOD_median);
+    const [min0, max0] = geniusMonthlyPctlExtentMulti(data, [
+        { mid: "AOD_median", p25: "AOD_p25", p75: "AOD_p75" },
+    ]);
+    const ymRowsAnio = (ymRows || []).map((r) => {
+        const v = geniusFilterAodYearMonthValue(geniusParseMonthlyMetric(r.AOD_median));
+        return {
+            ...r,
+            AOD_median: v != null ? String(v) : "",
+        };
+    });
+    const anioActual = geniusResolveAnioActualSeries({
+        monthlyData: data,
+        anioKey: GENIUS_ANIO_ACTUAL_CSV_KEY,
+        ymRows: ymRowsAnio,
+        ymKeys: { yearKey: "Year", monthKey: "Month", valueKey: "AOD_median" },
+        wall,
+    });
+    const anioColor = geniusMonthlyAnioColor("aod");
+    const [min, max] = geniusExpandDomainWithPoints(
+        min0,
+        max0,
+        anioActual.points.map((p) => p.v),
+    );
     // Add X axis
     var x = d3.scaleLinear()
         .domain([1, 12]) // Ajustar el dominio al rango de meses
@@ -70,7 +126,27 @@ export async function g_m_aod_b () {
         .range([height, 0]);
     svg.append("g")
         .call(d3.axisLeft(y));
-    // Create a tooltip
+
+    geniusAppendMonthlyClimatologyLegend(svg, {
+        innerWidth: width,
+        innerHeight: height,
+        placement: "belowAxis",
+        climColor: "steelblue",
+        bandFillColor: "steelblue",
+        anioColor: anioActual.points.length ? anioColor : null,
+        anioYear: anioActual.points.length ? anioActual.year : null,
+    });
+
+    geniusAppendMonthlyPctlBand(svg, {
+        data,
+        x: (d) => x(d.Month),
+        y,
+        p25Key: "AOD_p25",
+        p75Key: "AOD_p75",
+        fill: "steelblue",
+        fillOpacity: 0.22,
+    });
+
     const tooltip = d3.select("#p24")
         .append("div")
         .style("opacity", 0)
@@ -80,39 +156,15 @@ export async function g_m_aod_b () {
         .style("border-width", "2px")
         .style("border-radius", "5px")
         .style("padding", "5px")
-        .style("position", "absolute");
- 
- 
-  // Mouseover, mousemove, and mouseleave functions
-  var mouseover = function (event, d) {
-    tooltip
-        .style("opacity", 1);
-    d3.select(this)
-        .style("stroke", "black")
-        .style("opacity", 1);
-}
+        .style("position", "absolute")
+        .style("pointer-events", "none");
 
-var mousemove = function (event, d) {
-    tooltip
-        .html("AOD: " + d.AOD_median.toFixed(2) + "<br>Mes: " + d.Month)
-        .style("left", (event.pageX + 15) + "px")
-        .style("top", (event.pageY - 15) + "px");
-}
-
-var mouseleave = function (event, d) {
-    tooltip
-        .style("opacity", 0);
-    d3.select(this)
-        .style("stroke", "none");
-        
-}
- 
- 
         // Add the line with smoothing and animation
         var line = d3.line()
-        .x(d => x(d.Month)) // Ensure the line passes through the center of the band
+        .defined((d) => d.AOD_median != null)
+        .x(d => x(d.Month))
         .y(d => y(d.AOD_median))
-        .curve(d3.curveCatmullRom.alpha(0.5)); // Use curveCatmullRom for smoothing
+        .curve(d3.curveMonotoneX);
     
         var animation = svg.append("path")
         .datum(data)
@@ -130,24 +182,72 @@ var mouseleave = function (event, d) {
         .duration(5000)
         .ease(d3.easeLinear)
         .attr("stroke-dashoffset", 0);
-    
-    
-    // Add points
+
+    geniusAppendAnioActualLine(svg, {
+        xPos: (d) => x(d.Month),
+        y,
+        points: anioActual.points,
+        color: anioColor,
+    });
+
     svg.append("g")
         .selectAll("circle")
-        .data(data)
+        .data(data.filter((d) => d.AOD_median != null))
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Month))
         .attr("cy", d => y(d.AOD_median))
-        .attr("r", 4) // Larger radius for easier interaction
+        .attr("r", 4)
         .attr("fill", "steelblue")
-        .attr("pointer-events", "all") // Ensure these circles capture mouse events
-        .on("mouseover", mouseover)
-        .on("mousemove", mousemove)
-        .on("mouseleave", mouseleave);
+        .attr("pointer-events", "none");
 
-
-
+    const hoverClim = data
+        .filter((d) => d.AOD_median != null)
+        .map((d) => ({
+            cx: x(d.Month),
+            cy: y(d.AOD_median),
+            row: d,
+            kind: "clim",
+        }));
+    const hoverAnio = anioActual.points.map((d) => ({
+        cx: x(d.Month),
+        cy: y(d.v),
+        row: d,
+        kind: "anio",
+    }));
+    geniusBindNearestPointHover(svg, {
+        panelId: "p24",
+        innerWidth,
+        innerHeight,
+        tooltip,
+        points: [...hoverClim, ...hoverAnio],
+        html: (p) => {
+            if (p.kind === "anio") {
+                const rv = p.row.v;
+                return (
+                    `Año actual (${anioActual.year}): ` +
+                    (rv != null && Number.isFinite(+rv) ? (+rv).toFixed(2) : "—") +
+                    "<br>Mes: " +
+                    p.row.Month
+                );
+            }
+            const p50 =
+                p.row.AOD_median != null ? p.row.AOD_median.toFixed(2) : "—";
+            let h = "AOD (P50): " + p50 + "<br>Mes: " + p.row.Month;
+            if (
+                p.row.AOD_p25 != null &&
+                p.row.AOD_p75 != null &&
+                !Number.isNaN(p.row.AOD_p25) &&
+                !Number.isNaN(p.row.AOD_p75)
+            ) {
+                h +=
+                    "<br>P25: " +
+                    (+p.row.AOD_p25).toFixed(2) +
+                    " &nbsp; P75: " +
+                    (+p.row.AOD_p75).toFixed(2);
+            }
+            return h;
+        },
+    });
 
 }

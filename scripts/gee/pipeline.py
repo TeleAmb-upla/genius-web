@@ -1,29 +1,16 @@
 """
-Flujo unificado por producto: (1) plan incremental GEE (huecos asset); (2) auditoría
-asset año-mes vs último mes civil cerrado UTC; (3) auditoría Drive por ``modifiedTime``
-y anual según año civil cerrado reloj; (4) encolar derivados; (5) esperar; (6) comparar
-Drive vs repo; (7) espejo local (``full_replace_keys``).
+Pipeline GEE → Drive → repo por producto (NDVI, AOD, NO₂, SO₂, LST, huella).
 
-Por defecto en **dos fases**: asset+rasters (espera, incl. exports a Asset) y sync de
-rasters; luego CSV+GeoJSON (espera y sync). Usa `--single-pass` para el flujo antiguo
-(una sola tanda). Las tareas a **Asset** se esperan junto a la fase 1.
+Flujo típico: plan incremental y auditorías (asset año–mes, Drive, frescura anual) →
+encolar derivados → esperar tareas → ``run_drive_sync``. Por defecto **dos fases**
+(asset/raster y luego CSV/GeoJSON); ``--single-pass`` une todo en una tanda.
 
-Rasters en Drive: ``NDVI_Yearly`` solo ``NDVI_Yearly_*.tif``; ``NDVI_Trend`` solo
-``NDVI_Yearly_Trend.tif``. Con ``--include-yearly``, la tendencia se recalcula si hay
-meses nuevos en el delta o un año civil completo nuevo (estado ``last_trend_raster_full_year``).
+Detalles útiles: la cola NDVI/LST revisa CSV locales (p. ej. ``anio_actual``) incluso
+con ``--skip-drive-preflight``. LST coherencia ``LST_y_urban`` vs ``LST_YearMonth_urban``:
+ver ``--skip-lst-yearly-semantics-audit``. Exportaciones unificadas vía
+``warm_unified_extraction_layer()``; huella urbana no usa esa capa.
 
-Uso (desde la raíz del repositorio):
-
-    python -m scripts.gee.pipeline
-    python -m scripts.gee.pipeline --single-pass
-    python -m scripts.gee.pipeline --include-yearly
-    python -m scripts.gee.pipeline --enqueue-only
-    python -m scripts.gee.pipeline --download-only --sync-only all
-    python -m scripts.gee.pipeline --dry-run-download
-    python -m scripts.gee.pipeline --force-gee-export
-    python -m scripts.gee.pipeline --skip-drive-preflight
-
-    python scripts/gee/pipeline.py
+Uso (raíz del repo): ``python -m scripts.gee.pipeline`` [flags; ver ``--help``].
 """
 from __future__ import annotations
 
@@ -51,171 +38,20 @@ from .drive.download_drive_to_repo import (
     SYNC_KEYS_RASTER_PHASE,
     SYNC_KEYS_TABLE_PHASE,
     get_drive_service,
+    parse_restrict_filenames,
     parse_sync_keys,
     run_drive_sync,
-    sync_keys_for_export_categories,
 )
 from .drive.drive_audit import compute_drive_freshness_hints
 from .drive.drive_export_gate import DriveExportGate, report_drive_vs_local
 from .lib import yearmonth as ym_lib
-from .products.lst.constants import LST_START_YEAR
-
-
-PRODUCT_ORDER = ("ndvi", "aod", "no2", "so2", "lst", "hu")
-
-
-def _parse_products(raw: str | None) -> list[str]:
-    if not raw or not raw.strip():
-        return list(PRODUCT_ORDER)  # Default: ejecuta todos
-    s = raw.strip().lower()
-    if s == "all":
-        return list(PRODUCT_ORDER)
-    allowed = set(PRODUCT_ORDER)
-    if s not in allowed:
-        print(
-            f"--product no válido: {raw!r}. Use: {', '.join(PRODUCT_ORDER)} o all.",
-            file=sys.stderr,
-        )
-        sys.exit(2)
-    return [s]
-
-
-def _plan_for_product(product: str, force_full: bool):
-    if product == "ndvi":
-        from .products.ndvi import incremental as inc
-
-        missing = inc.list_missing_ndvi_yearmonth_months()
-        plan = inc.plan_derivative_exports(
-            missing_asset_months=missing,
-            force_full=force_full,
-        )
-        return missing, plan
-    if product == "aod":
-        from .products.atmosphere.aod import incremental as inc
-
-        missing = inc.list_missing_aod_yearmonth_months()
-        plan = inc.plan_derivative_exports(
-            missing_asset_months=missing,
-            force_full=force_full,
-        )
-        return missing, plan
-    if product == "lst":
-        from .products.lst import incremental as inc
-
-        missing_years = inc.list_missing_lst_yearly()
-        plan = inc.plan_derivative_exports(
-            missing_asset_years=missing_years,
-            force_full=force_full,
-        )
-        return missing_years, plan
-    if product == "no2":
-        from .products.atmosphere.no2 import incremental as inc
-
-        missing = inc.list_missing_no2_yearmonth_months()
-        plan = inc.plan_derivative_exports(
-            missing_asset_months=missing,
-            force_full=force_full,
-        )
-        return missing, plan
-    if product == "so2":
-        from .products.atmosphere.so2 import incremental as inc
-
-        missing = inc.list_missing_so2_yearmonth_months()
-        plan = inc.plan_derivative_exports(
-            missing_asset_months=missing,
-            force_full=force_full,
-        )
-        return missing, plan
-    if product == "hu":
-        from .products.urban import incremental as inc
-        from .lib import incremental_plan as incplan
-
-        missing_years = inc.list_missing_hu_years()
-        run = bool(missing_years) or force_full
-        plan = incplan.DerivativePlan(
-            run=run,
-            reason=(
-                f"{len(missing_years)} año(s) sin clasificar"
-                if missing_years
-                else "Huella Urbana al día."
-            ),
-            max_ym=None,
-            month_subset=None,
-            years_touched=frozenset(missing_years),
-            is_full_refresh=force_full,
-            new_pairs=(),
-        )
-        return missing_years, plan
-    raise ValueError(product)
-
-
-def _yearmonth_ic_for_product(product: str):
-    """ImageCollection año-mes en GEE (asset) para auditoría y cobertura anual."""
-    import ee
-
-    from .earth_engine_init import vectors
-    from .products.atmosphere.spec import no2_spec, so2_spec
-
-    if product == "ndvi":
-        return vectors.ndvi_yearmonth_collection()
-    if product == "aod":
-        return vectors.aod_yearmonth_collection()
-    if product == "lst":
-        return vectors.lst_yearly_collection()
-    if product == "no2":
-        return ee.ImageCollection(no2_spec().asset_ym)
-    if product == "so2":
-        return ee.ImageCollection(so2_spec().asset_ym)
-    if product == "hu":
-        return None
-    raise ValueError(product)
-
-
-def _enqueue_for_product(
-    product: str,
-    *,
-    only: set[str] | None,
-    skip_yearly: bool,
-    force_full: bool,
-    drive_gate,
-    persist_state: bool,
-    tables_run_override: bool | None = None,
-    drive_freshness=None,
-):
-    kw: dict = dict(
-        only=only,
-        skip_yearly=skip_yearly,
-        force_full=force_full,
-        drive_gate=drive_gate,
-        persist_state=persist_state,
-        tables_run_override=tables_run_override,
-        drive_freshness=drive_freshness,
-    )
-    if product == "ndvi":
-        from .products.ndvi.enqueue import enqueue_ndvi_exports
-
-        return enqueue_ndvi_exports(**kw)
-    if product == "aod":
-        from .products.atmosphere.aod.enqueue import enqueue_aod_exports
-
-        return enqueue_aod_exports(**kw)
-    if product == "lst":
-        from .products.lst.enqueue import enqueue_lst_exports
-
-        return enqueue_lst_exports(**kw)
-    if product == "no2":
-        from .products.atmosphere.no2.enqueue import enqueue_no2_exports
-
-        return enqueue_no2_exports(**kw)
-    if product == "so2":
-        from .products.atmosphere.so2.enqueue import enqueue_so2_exports
-
-        return enqueue_so2_exports(**kw)
-    if product == "hu":
-        from .products.urban.enqueue import enqueue_hu_exports
-
-        return enqueue_hu_exports(**kw)
-    raise ValueError(product)
+from .products.registry import (
+    _enqueue_for_product,
+    _parse_products,
+    _plan_for_product,
+    _yearmonth_ic_for_product,
+    warm_unified_extraction_layer,
+)
 
 
 def _parse_export_only(raw: str | None) -> set[str] | None:
@@ -292,6 +128,16 @@ def main(argv: list[str] | None = None) -> None:
         ),
     )
     parser.add_argument(
+        "--sync-only-files",
+        default="",
+        metavar="NAMES",
+        help=(
+            "Opcional: limita la descarga a estos nombres de archivo (coma). "
+            "En el pipeline multi-producto solo aplica al producto «lst». "
+            "Con --download-only aplica a todas las claves indicadas en --sync-only."
+        ),
+    )
+    parser.add_argument(
         "--wait-timeout",
         type=float,
         default=0.0,
@@ -320,6 +166,14 @@ def main(argv: list[str] | None = None) -> None:
         help="Solo bajar archivos que falten en local (nunca borrar locales).",
     )
     parser.add_argument(
+        "--skip-clim-asset-month-filter",
+        action="store_true",
+        help=(
+            "Al descargar rasters de climatología mensual, no filtrar por huecos del asset "
+            "año–mes en GEE (descargar todos los candidatos de Drive como antes)."
+        ),
+    )
+    parser.add_argument(
         "--force-gee-export",
         action="store_true",
         help="Encolar siempre las exportaciones EE aunque el archivo ya exista en Drive.",
@@ -335,6 +189,14 @@ def main(argv: list[str] | None = None) -> None:
         help=(
             "Encolar todo junto y una sola espera/descarga (comportamiento antiguo). "
             "Por defecto: fase 1 asset+rasters → espera y sync; fase 2 CSV+GeoJSON."
+        ),
+    )
+    parser.add_argument(
+        "--skip-lst-yearly-semantics-audit",
+        action="store_true",
+        help=(
+            "No contrastar LST_y_urban.csv con LST_YearMonth_urban.csv antes de encolar "
+            "(evita re-export selectivo por incoherencia intra-anual)."
         ),
     )
     args = parser.parse_args(argv)
@@ -363,7 +225,13 @@ def main(argv: list[str] | None = None) -> None:
             dr_dl = False
         else:
             dr_dl = None
-        run_drive_sync(keys, dry_run=args.dry_run_download, full_replace=dr_dl)
+        run_drive_sync(
+            keys,
+            dry_run=args.dry_run_download,
+            full_replace=dr_dl,
+            restrict_filenames=parse_restrict_filenames(args.sync_only_files),
+            skip_clim_asset_month_filter=args.skip_clim_asset_month_filter,
+        )
         return
 
     only = _parse_export_only(args.only)
@@ -371,6 +239,7 @@ def main(argv: list[str] | None = None) -> None:
     products = _parse_products(args.product)
 
     initialize_ee()
+    warm_unified_extraction_layer()
 
     use_gate = not args.force_gee_export and not args.skip_drive_preflight
     drive_service = None
@@ -405,11 +274,12 @@ def main(argv: list[str] | None = None) -> None:
     else:
         dr_dl2 = None
 
+    sync_restrict_files = parse_restrict_filenames(args.sync_only_files)
+
     def _wait_and_sync(
         result,
         *,
         sync_keys_hint: set[str],
-        only_for_fallback: set[str] | None,
         phase_label: str,
         product_tag: str,
     ) -> None:
@@ -446,6 +316,11 @@ def main(argv: list[str] | None = None) -> None:
                     timeout_seconds=timeout,
                     audit_prefix=f"[{pt}]",
                 )
+                # Tras varios minutos de espera el cliente HTTP subyacente suele quedar
+                # inválido → BrokenPipeError en la siguiente llamada a Drive.
+                drive_service = get_drive_service()
+                if drive_gate is not None:
+                    drive_gate.service = drive_service
         else:
             print(f"ℹ️  [{pt}] No hay tareas nuevas para esta fase.")
         
@@ -480,6 +355,13 @@ def main(argv: list[str] | None = None) -> None:
             full_replace=dr_dl2,
             full_replace_keys=mirror_keys,
             audit_product=product_tag,
+            refresh_frontend_catalog=False,
+            restrict_filenames=(
+                sync_restrict_files
+                if sync_restrict_files and product_tag.lower() == "lst"
+                else None
+            ),
+            skip_clim_asset_month_filter=args.skip_clim_asset_month_filter,
         )
         print(f"✓ [{pt}] Descarga completada.\n")
 
@@ -498,7 +380,7 @@ def main(argv: list[str] | None = None) -> None:
         if product == "hu":
             print(f"  [GEE audit HU] Clasificación local; sin asset central.")
         elif product == "lst":
-            for line in ym_lib.audit_asset_yearly_vs_wall_clock_messages(
+            for line in ym_lib.audit_asset_yearmonth_vs_wall_clock_messages(
                 ic_audit, product=product
             ):
                 print(f"  {line}")
@@ -510,24 +392,20 @@ def main(argv: list[str] | None = None) -> None:
 
         drive_freshness = None
         if use_gate and drive_service is not None and ic_audit is not None:
-            if product == "lst":
-                max_y = ym_lib.get_collection_max_year(ic_audit)
-                max_ym = (max_y, 12) if max_y else None
-            else:
-                max_ym = ym_lib.get_collection_max_ym(ic_audit)
+            max_ym = ym_lib.get_collection_max_ym(ic_audit)
             ty_wall = ym_lib.last_completed_wall_clock_calendar_year()
             cover = ym_lib.assets_cover_full_calendar_year(max_ym, ty_wall)
             avail_years = ym_lib.get_collection_distinct_years(
                 ic_audit, max_year=ty_wall,
             )
-            if product == "lst":
-                avail_years = [y for y in avail_years if y >= LST_START_YEAR]
             drive_freshness = compute_drive_freshness_hints(
                 product,
                 drive_service,
                 target_yearly_year=ty_wall,
                 assets_cover_target_year=cover,
                 available_years=avail_years,
+                max_ym_asset=max_ym,
+                skip_lst_yearly_semantics_audit=args.skip_lst_yearly_semantics_audit,
             )
             for line in drive_freshness.audit_messages:
                 print(f"  {line}")
@@ -550,7 +428,6 @@ def main(argv: list[str] | None = None) -> None:
             _wait_and_sync(
                 r1,
                 sync_keys_hint=SYNC_KEYS_RASTER_PHASE,
-                only_for_fallback=phase1_only,
                 phase_label="Fase 1",
                 product_tag=product,
             )
@@ -596,7 +473,6 @@ def main(argv: list[str] | None = None) -> None:
             _wait_and_sync(
                 r2,
                 sync_keys_hint=SYNC_KEYS_TABLE_PHASE,
-                only_for_fallback=phase2_only,
                 phase_label="Fase 2",
                 product_tag=product,
             )
@@ -617,7 +493,6 @@ def main(argv: list[str] | None = None) -> None:
         _wait_and_sync(
             result,
             sync_keys_hint=set(SYNC_KEYS_RASTER_PHASE | SYNC_KEYS_TABLE_PHASE),
-            only_for_fallback=only,
             phase_label="Pipeline",
             product_tag=product,
         )
@@ -625,6 +500,11 @@ def main(argv: list[str] | None = None) -> None:
 
     if all_results:
         print_global_summary(all_results)
+
+    if not args.enqueue_only and not args.dry_run_download:
+        from .lib.genius_frontend_catalog import refresh_genius_frontend_catalog
+
+        refresh_genius_frontend_catalog()
 
 
 if __name__ == "__main__":

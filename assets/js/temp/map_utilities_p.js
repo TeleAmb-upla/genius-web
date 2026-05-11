@@ -1,11 +1,13 @@
 import { ToColorYear } from './year/palette_year.js';
 import { ToColorMonth } from './month/palette_month.js';
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { legendDomain } from '../legend_ranges.js';
+import { mountGeniusLeafletMapTitle } from '../map_data_catalog.js';
 
 // Función para crear la leyenda SVG para LST anual
 // Función para crear la leyenda SVG para LST anual
 export function createyearLegendSVG() {
-    const domain = [18, 42]; // Mínimo y máximo de temperatura
+    const domain = legendDomain('lst', 'raster', 'yearly');
     const steps = 18; // Cantidad de colores
     const colorsBase = ["#00008B", "#00BFFF", "#32CD32", "#FFFF00", "#FFA500", "#FF4500"]; // Colores base
 
@@ -49,10 +51,10 @@ export function createyearLegendSVG() {
     return `
         <svg class="map-legend-svg" width="165" height="${totalHeight + 80}" xmlns="http://www.w3.org/2000/svg">
             <!-- Título principal alineado a la izquierda -->
-            <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Temperatura Superficial</text>
+            <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Temperatura superficial</text>
 
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="5" y="40" font-size="12" font-family="Arial">LST (°C) Anual</text>
+            <text x="5" y="40" font-size="12" font-family="Arial">Anual (°C)</text>
 
             <!-- Bloques de colores -->
             ${legendItems}
@@ -67,7 +69,7 @@ export function createyearLegendSVG() {
 
 // Función para crear la leyenda SVG para mensual
 export function createmonthLegendSVG() {
-    const domain =  [8, 44]; // Mínimo y máximo
+    const domain = legendDomain('lst', 'raster', 'monthly');
    const steps = 18; // Cantidad de colores
     const colorsBase = ["#00008B", "#00BFFF", "#32CD32", "#FFFF00", "#FFA500", "#FF4500"]; // Colores base
 
@@ -111,10 +113,10 @@ export function createmonthLegendSVG() {
     return `
         <svg class="map-legend-svg" width="165" height="${totalHeight + 80}" xmlns="http://www.w3.org/2000/svg">
             <!-- Título principal alineado a la izquierda -->
-            <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Temperatura Superficial</text>
+            <text x="5" y="20" font-size="14" font-family="Arial" font-weight="bold">Temperatura superficial</text>
 
             <!-- Subtítulo alineado a la izquierda -->
-            <text x="5" y="40" font-size="12" font-family="Arial">LST (°C) Mensual</text>
+            <text x="5" y="40" font-size="12" font-family="Arial">Mensual (°C)</text>
 
             <!-- Bloques de colores -->
             ${legendItems}
@@ -129,15 +131,6 @@ export function createmonthLegendSVG() {
 
 
 // Función para añadir o actualizar el título centrado del mapa
-export function addCenteredTitle(map, titleText) {
-    let mapTitleDiv = document.getElementById('map-title');
-    if (!mapTitleDiv) {
-        mapTitleDiv = document.createElement('div');
-        mapTitleDiv.id = 'map-title';
-        mapTitleDiv.className = 'map-title';
-        map.getContainer().appendChild(mapTitleDiv);
-    }
-    if (titleText !== undefined) {
-        mapTitleDiv.innerHTML = `<strong>${titleText}</strong>`;
-    }
+export function addCenteredTitle(map, titleText, options = {}) {
+    mountGeniusLeafletMapTitle(map, titleText, options);
 }

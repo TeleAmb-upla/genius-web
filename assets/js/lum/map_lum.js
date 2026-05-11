@@ -1,6 +1,7 @@
-﻿import { addCenteredTitle } from './map_utilities_p.js';
-import { loadinf_critica } from '../inf_critica_leaflet.js';
+﻿import { GENIUS_ILLUMINATION_MAP_TITLE, removeGeniusLeafletMapTitle } from '../map_data_catalog.js';
+import { addCenteredTitle } from './map_utilities_p.js';
 import { attachMapOpacityPanel } from '../slider_opacity.js';
+import { GENIUS_LAT, GENIUS_LNG, GENIUS_ZOOM_URBAN, GENIUS_LEAFLET_MAP_OPTIONS, addGeniusLeafletZoomControl } from '../map_interaction_defaults.js';
 
 let currentMap = null;
 let luminosityOverlay = null;
@@ -10,10 +11,10 @@ async function loadWebpOverlay(imagePath, boundsPath) {
     try {
         const boundsResp = await fetch(resolveAssetUrl(boundsPath));
         if (!boundsResp.ok) return null;
-        const imageResp = await fetch(resolveAssetUrl(imagePath), { method: 'HEAD' });
-        if (!imageResp.ok) return null;
         const boundsData = await boundsResp.json();
-        return L.imageOverlay(resolveAssetUrl(imagePath), boundsData.bounds, { opacity: 1 });
+        const imageUrl = resolveAssetUrl(imagePath);
+        // Sin HEAD: algunos hosts locales no lo implementan; Leaflet carga el raster por URL.
+        return L.imageOverlay(imageUrl, boundsData.bounds, { opacity: 1 });
     } catch (error) {
         console.warn(`No se pudo cargar ${imagePath}:`, error);
         return null;
@@ -82,11 +83,12 @@ function createPillSelector(mapContainer, onSelect) {
 
 export async function map_lum() {
     if (currentMap) {
+        removeGeniusLeafletMapTitle(currentMap);
         currentMap.remove();
         currentMap = null;
     }
 
-    currentMap = L.map("p46").setView([-33.04752000, -71.44249000], 12.6);
+    currentMap = L.map("p46", GENIUS_LEAFLET_MAP_OPTIONS).setView([GENIUS_LAT, GENIUS_LNG], GENIUS_ZOOM_URBAN);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
         minZoom: 0,
@@ -94,8 +96,9 @@ export async function map_lum() {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
     }).addTo(currentMap);
 
-    L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
-    addCenteredTitle(currentMap);
+    L.control.scale({ position: 'bottomright', metric: true, imperial: false }).addTo(currentMap);
+    addGeniusLeafletZoomControl(currentMap);
+    addCenteredTitle(currentMap, GENIUS_ILLUMINATION_MAP_TITLE);
 
     luminosityOverlay =
         await loadWebpOverlay(
@@ -133,15 +136,6 @@ export async function map_lum() {
         });
     }
 
-    const infCriticaData = await loadinf_critica(currentMap);
-    const overlayOnly = {};
-    if (infCriticaData && typeof infCriticaData === 'object') {
-        overlayOnly["Infraestructura crítica (vectores)"] = L.layerGroup(Object.values(infCriticaData));
-    }
-    if (Object.keys(overlayOnly).length > 0) {
-        L.control.layers(null, overlayOnly).addTo(currentMap);
-    }
-
     attachMapOpacityPanel(
         mapContainer,
         (opacity) => {
@@ -152,7 +146,7 @@ export async function map_lum() {
     );
 
     const legendContainer = document.createElement('div');
-    legendContainer.className = 'map-legend-panel info legend';
+    legendContainer.className = 'map-legend-panel';
 
     const legendTitle = document.createElement('div');
     legendTitle.className = 'map-legend-panel__title';

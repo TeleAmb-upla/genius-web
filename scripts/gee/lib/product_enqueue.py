@@ -1,11 +1,104 @@
 """
 Helpers y templates para orquestación de enqueue de productos.
 
-Consolida patrones repetidos en productos/enqueue.py para evitar duplicación.
+Consolida patrones repetidos en productos/*/enqueue.py (filtro ``--only``, fase tablas).
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
+
+
+def export_want(only: set[str] | None, name: str) -> bool:
+    """True si hay que ejecutar la categoría *name* (asset / raster / csv / geojson / suhi)."""
+    return only is None or name in only
+
+
+@dataclass(frozen=True)
+class TablesPhasePollutant:
+    """Decisión común LST / AOD / NO2 / SO2: CSV y GeoJSON vs Drive frescura."""
+
+    force_yearly_csv: bool
+    clim_csv_needs_refresh: bool
+    ym_csv_needs_refresh: bool
+    force_yearly_geo: bool
+    csv_run: bool
+    ym_csv_download_only: bool
+    geo_run: bool
+    tables_run: bool
+    local_stale_drive_ok: bool
+
+
+def resolve_tables_phase_pollutant(
+    plan: Any,
+    *,
+    force_full: bool,
+    drive_freshness: Any | None,
+    tables_run_override: bool | None,
+) -> TablesPhasePollutant:
+    """
+    Misma lógica que comparten LST, AOD y ``atmosphere/enqueue._enqueue_s5p``:
+    cuándo encolar CSV (incl. año-mes), cuándo solo descargar, cuándo GeoJSON.
+    """
+    force_yearly_csv = bool(
+        drive_freshness and drive_freshness.yearly_csv_missing_or_stale
+    )
+    clim_csv_needs_refresh = bool(
+        drive_freshness and drive_freshness.clim_csv_local_stale
+    )
+    ym_csv_needs_refresh = bool(
+        drive_freshness and drive_freshness.yearmonth_csv_local_stale
+    )
+    force_yearly_geo = bool(
+        drive_freshness and drive_freshness.yearly_geo_missing_or_stale
+    )
+    if tables_run_override is not None:
+        csv_run = tables_run_override
+        geo_run = tables_run_override
+    else:
+        csv_run = (
+            plan.run
+            or plan.is_full_refresh
+            or force_full
+            or force_yearly_csv
+            or clim_csv_needs_refresh
+        )
+        geo_run = (
+            plan.run or plan.is_full_refresh or force_full or force_yearly_geo
+        )
+    ym_csv_download_only = bool(ym_csv_needs_refresh and not csv_run)
+    tables_run = csv_run or geo_run
+    local_stale_drive_ok = bool(
+        drive_freshness and drive_freshness.local_tables_stale_drive_ok
+    )
+    return TablesPhasePollutant(
+        force_yearly_csv=force_yearly_csv,
+        clim_csv_needs_refresh=clim_csv_needs_refresh,
+        ym_csv_needs_refresh=ym_csv_needs_refresh,
+        force_yearly_geo=force_yearly_geo,
+        csv_run=csv_run,
+        ym_csv_download_only=ym_csv_download_only,
+        geo_run=geo_run,
+        tables_run=tables_run,
+        local_stale_drive_ok=local_stale_drive_ok,
+    )
+
+
+def resolve_tables_phase_ndvi(
+    plan: Any,
+    *,
+    force_yearly_csv: bool,
+    clim_csv_needs_refresh: bool,
+    force_yearly_geo: bool,
+    tables_run_override: bool | None,
+) -> tuple[bool, bool, bool]:
+    """Retorna ``(csv_run, geo_run, tables_run)`` — NDVI no usa el patrón año-mes solo-descarga."""
+    if tables_run_override is not None:
+        o = tables_run_override
+        return o, o, o
+    csv_run = plan.run or force_yearly_csv or clim_csv_needs_refresh
+    geo_run = plan.run or force_yearly_geo
+    return csv_run, geo_run, csv_run or geo_run
 
 
 def add_tasks(

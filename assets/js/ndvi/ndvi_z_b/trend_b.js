@@ -1,50 +1,16 @@
-import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
-import { getProductYearRangeLabel } from '../../map_data_catalog.js';
-
-const ndviRangeLabel = getProductYearRangeLabel('ndvi');
-
-// Función para asignar colores a los valores según el rango definido
-function valueToSTColor(value) {
-    const domain = [-0.032, -0.0044];
-    const range = [
-        "#ff0000", // Rojo intenso para los valores negativos bajos
-        "#ff3d66", // Rojo medio para valores negativos moderados
-        "#ff75ad", // Rojo suave para valores negativos más cercanos a 0
-        "#ffffff", // Blanco para el valor 0
-        "#75aaff", // Azul claro para valores positivos bajos
-        "#4d66ff", // Azul medio para valores positivos moderados
-        "#0313ff"  // Azul intenso para valores positivos altos
-    ];
-
-    // Calcular el índice con más precisión
-    const step = (domain[1] - domain[0]) / (range.length - 1);
-
-    if (value < domain[0]) {
-        return range[0]; // Menor que el mínimo
-    } 
-    if (value > domain[1]) {
-        return range[range.length - 1]; // Mayor que el máximo
-    }
-
-    // Calcular la posición exacta del índice y usar interpolación lineal si es necesario
-    const index = (value - domain[0]) / step;
-    const lowerIndex = Math.floor(index);
-    const upperIndex = Math.min(lowerIndex + 1, range.length - 1);
-    const fractionalPart = index - lowerIndex;
-
-    // Interpolar entre colores si es necesario
-    if (fractionalPart === 0) {
-        return range[lowerIndex];
-    }
-
-    // Mezclar colores si estás entre dos índices
-    return d3.interpolateRgb(range[lowerIndex], range[upperIndex])(fractionalPart);
-}
-
+import { geniusTitleForProduct } from '../../map_data_catalog.js';
+import { legendDomain } from '../../legend_ranges.js';
+import {
+    fillZonalTrendLegendPanel,
+} from '../../trend_scale.js';
+import { ndviBarrioPopupHtmlTrend } from '../ndvi_zonal_explorer.js';
+import { geniusPrepareExclusiveGeoPopup } from '../../maplibre_exclusive_geo_popup.js';
+import { zonalNdviTrendSlopeToColor } from '../ndvi_zonal_trend_color.js';
 
 export async function map_trend(map) {
     const geojsonUrl = resolveAssetUrl('assets/data/geojson/NDVI/NDVI_Yearly_ZonalStats/NDVI_Yearly_ZonalStats_Barrios/Trend_NDVI_ZonalStats_Barrios.geojson');
     const propertyName = 'slope_median';
+    const domain = legendDomain('ndvi', 'zonalBarrio', 'trend');
 
     // Eliminar la fuente y la capa si ya existen
     if (map.getSource('generic-trend')) {
@@ -62,7 +28,7 @@ export async function map_trend(map) {
             feature.properties.color = 'rgba(0,0,0,0)';
             feature.properties.trendOutline = 'rgba(0,0,0,0)';
         } else {
-            feature.properties.color = valueToSTColor(n);
+            feature.properties.color = zonalNdviTrendSlopeToColor(n, domain);
             feature.properties.trendOutline = '#000000';
         }
     });
@@ -88,10 +54,11 @@ export async function map_trend(map) {
     map.on('click', 'generic-trend-layer', (e) => {
         const properties = e.features[0].properties;
 
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`<div class="popup-title">${properties.NOMBRE || 'Manzana'}</div><div class="popup-row"><span class="popup-label">Tendencia</span><span class="popup-value">${properties.slope_median != null && !Number.isNaN(Number(properties.slope_median)) ? Number(properties.slope_median).toFixed(4) : 'Sin datos'}</span></div>`)
-            .addTo(map);
+            .setHTML(ndviBarrioPopupHtmlTrend(properties));
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     // Cambiar el cursor al pasar el ratón sobre la capa
@@ -121,47 +88,13 @@ export function createTrendLegend() {
     legendContent.className = 'map-legend-panel';
 
     const title = document.createElement('div');
-    title.textContent = 'Tendencia NDVI Barrios';
+    title.textContent = geniusTitleForProduct('Tendencia NDVI Barrios', 'ndvi');
     title.className = 'map-legend-panel__title';
-    legendContent.appendChild(title);
-
-    const subtitle = document.createElement('div');
-    subtitle.textContent = ndviRangeLabel;
-    subtitle.className = 'map-legend-panel__subtitle';
-    legendContent.appendChild(subtitle);
-
-    const domain = [-0.032, -0.0044];
-    const steps = 7;
-    const colors = ["#0313ff", "#4d66ff", "#75aaff", "#ffffff", "#ff75ad", "#ff3d66", "#ff0000"];
-    const stepValue = (domain[1] - domain[0]) / (steps - 1);
-    const values = Array.from({ length: steps }, (_, i) => domain[0] + i * stepValue);
-
-    values.forEach((value, index) => {
-        const color = colors[index];
-        const legendItem = document.createElement('div');
-        legendItem.className = 'map-legend-panel__row';
-
-        const colorBox = document.createElement('span');
-        colorBox.className = 'map-legend-panel__swatch';
-        colorBox.style.background = color;
-
-        const label = document.createElement('span');
-        label.className = 'map-legend-panel__label';
-        if (index === 0) {
-            label.textContent = `<${value.toFixed(3)}`;
-        } else if (index === values.length - 1) {
-            label.textContent = `>${value.toFixed(3)}`;
-        } else {
-            const nextValue = values[index + 1];
-            label.textContent = `${value.toFixed(3)} - ${nextValue.toFixed(3)}`;
-        }
-
-        legendItem.appendChild(colorBox);
-        legendItem.appendChild(label);
-        legendContent.appendChild(legendItem);
+    fillZonalTrendLegendPanel(legendContent, title, 'ndvi', 'zonalBarrio', {
+        steps: 7,
+        decimals: 3,
     });
 
     return legendContent;
 }
 
-  

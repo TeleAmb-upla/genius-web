@@ -16,6 +16,43 @@ def _attach_value_property(
     return ee.Feature(feature).set(time_key, time_value)
 
 
+def _coalesce_zonal_median_scalar(feature: ee.Feature, prop: str) -> ee.Feature:
+    """
+    Tras ``reduceRegions(..., ee.Reducer.median())``, Earth Engine puede nombrar la
+    propiedad ``{prop}_median`` o ``median``. Unifica a *prop* para los selectores
+    de exportación (misma idea que los CSV zonal en ``unified_product_extraction``).
+    """
+    feat = ee.Feature(feature)
+    names = feat.propertyNames()
+    key_m = f"{prop}_median"
+    key_mean = f"{prop}_mean"
+    v = ee.Algorithms.If(
+        names.contains(key_m),
+        feat.get(key_m),
+        ee.Algorithms.If(
+            names.contains("median"),
+            feat.get("median"),
+            ee.Algorithms.If(
+                names.contains(prop),
+                feat.get(prop),
+                ee.Algorithms.If(
+                    names.contains(key_mean),
+                    feat.get(key_mean),
+                    ee.Algorithms.If(
+                        names.contains("mean"), feat.get("mean"), None
+                    ),
+                ),
+            ),
+        ),
+    )
+    return feat.set(prop, v)
+
+
+def _normalize_trend_zonal_features(feature: ee.Feature) -> ee.Feature:
+    f = _coalesce_zonal_median_scalar(ee.Feature(feature), "slope_median")
+    return _coalesce_zonal_median_scalar(f, "p_value")
+
+
 def months_zonal_geojson_tasks(
     ic: ee.ImageCollection,
     *,
@@ -32,7 +69,9 @@ def months_zonal_geojson_tasks(
     image_transform: Callable[[ee.Image], ee.Image] | None = None,
 ) -> list[ee.batch.Task]:
     """
-    Para cada mes en la colección: mediana de ``source_band``, renombrada a ``value_property``.
+    Para cada mes en la colección: mediana **temporal** de ``source_band``, renombrada a
+    ``value_property``; agregación **espacial** por barrio/manzana con mediana de píxeles
+    (``reduceRegions``), alineado a los CSV regionales y a la metodología del proyecto.
     ``stem_prefix`` ej. ``AOD_Monthly_ZonalStats`` → ``AOD_Monthly_ZonalStats_Barrios_01``.
     """
     months_list = (
@@ -59,14 +98,21 @@ def months_zonal_geojson_tasks(
             median_img = image_transform(median_img)
         else:
             median_img = median_img.rename(value_property)
-        image_return = ee.Image([median_img]).clip(unidad_fc).set("month", m)
+        image_return = ee.Image([median_img]).set("month", m)
 
         triplets = (
             image_return.addBands(ee.Image(1))
-            .reduceRegions(collection=unidad_fc, reducer=ee.Reducer.mean(), scale=scale_m)
+            .reduceRegions(
+                collection=unidad_fc,
+                reducer=ee.Reducer.median(),
+                scale=scale_m,
+                tileScale=4,
+            )
             .map(
                 lambda f: _attach_value_property(
-                    ee.Feature(f).set("imageId", image_return.id()),
+                    _coalesce_zonal_median_scalar(ee.Feature(f), value_property).set(
+                        "imageId", image_return.id()
+                    ),
                     value_property,
                     "Month",
                     m,
@@ -112,19 +158,24 @@ def yearly_zonal_geojson_tasks_last_year(
     year_lookup: dict[int, object] = {int(y): y for y in all_years_raw}
 
     for y in years_loop:
-        stem = f"{stem_prefix}_{nombre_prefijo}_{y}"
+        y_int = int(y)
+        stem = f"{stem_prefix}_{nombre_prefijo}_{y_int}"
         if drive_gate and drive_gate.should_skip_export(
             drive_folder,
             stem,
             (".geojson", ".json"),
         ):
             continue
-        orig_y = year_lookup.get(y, y)
-        selected = ic.select(source_band).filter(ee.Filter.eq("year", orig_y))
+        orig_y = year_lookup.get(y_int, y_int)
+        try:
+            y_filter = int(orig_y)
+        except (TypeError, ValueError):
+            y_filter = orig_y
+        selected = ic.select(source_band).filter(ee.Filter.eq("year", y_filter))
         n_images = selected.size().getInfo()
         if n_images == 0:
             print(
-                f"  [WARN] Year {y}: 0 images for band '{source_band}' "
+                f"  [WARN] Year {y_int}: 0 images for band '{source_band}' "
                 f"— skipping GeoJSON export ({nombre_prefijo})"
             )
             continue
@@ -133,16 +184,23 @@ def yearly_zonal_geojson_tasks_last_year(
             median_img = image_transform(median_img)
         else:
             median_img = median_img.rename(value_property)
-        image_return = ee.Image([median_img]).clip(unidad_fc).set("year", y)
+        image_return = ee.Image([median_img]).set("year", y_int)
         triplets = (
             image_return.addBands(ee.Image(1))
-            .reduceRegions(collection=unidad_fc, reducer=ee.Reducer.mean(), scale=scale_m)
+            .reduceRegions(
+                collection=unidad_fc,
+                reducer=ee.Reducer.median(),
+                scale=scale_m,
+                tileScale=4,
+            )
             .map(
                 lambda f: _attach_value_property(
-                    ee.Feature(f).set("imageId", image_return.id()),
+                    _coalesce_zonal_median_scalar(ee.Feature(f), value_property).set(
+                        "imageId", image_return.id()
+                    ),
                     value_property,
                     "Year",
-                    y,
+                    y_int,
                 )
             )
         )
@@ -180,12 +238,26 @@ def trend_zonal_geojson_tasks(
     tasks: list[ee.batch.Task] = []
 
     fc_b = image_to_reduce.reduceRegions(
-        collection=barrios, reducer=ee.Reducer.mean(), scale=scale_m
-    ).map(lambda f: f.set("imageId", sens_slope.id()))
+        collection=barrios,
+        reducer=ee.Reducer.median(),
+        scale=scale_m,
+        tileScale=4,
+    ).map(
+        lambda f: _normalize_trend_zonal_features(
+            ee.Feature(f).set("imageId", sens_slope.id())
+        )
+    )
 
     fc_m = image_to_reduce.reduceRegions(
-        collection=manzanas, reducer=ee.Reducer.mean(), scale=scale_m
-    ).map(lambda f: f.set("imageId", sens_slope.id()))
+        collection=manzanas,
+        reducer=ee.Reducer.median(),
+        scale=scale_m,
+        tileScale=4,
+    ).map(
+        lambda f: _normalize_trend_zonal_features(
+            ee.Feature(f).set("imageId", sens_slope.id())
+        )
+    )
 
     if not (
         drive_gate

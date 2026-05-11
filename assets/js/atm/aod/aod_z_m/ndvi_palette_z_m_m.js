@@ -1,7 +1,8 @@
+import { legendDomain } from '../../../legend_ranges.js';
 export function ToColorMonth_z_m(value) {
 
             // Definir los colores de la paleta
-            const domain = [69,199]; // mínimo y máximo
+            const domain = legendDomain('aod', 'zonalManzana', 'monthly');
             const range =  ["#00008B", "#4B0082", "#8A2BE2", "#DA70D6", "#FF69B4", "#FFC0CB"].reverse();
             
             // Calcular el paso entre cada color en función del dominio

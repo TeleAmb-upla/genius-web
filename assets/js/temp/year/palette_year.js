@@ -1,9 +1,12 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
-
+import { legendDomain } from '../../legend_ranges.js';
+import { physicalLst } from '../../raster_quantized_decode.js';
 
 export function ToColorYear(value) {
+    const v = physicalLst(value);
+    if (Number.isNaN(v)) return null;
         // Definir los colores de la paleta
-        const domain = [18, 42]; // mínimo y máximo
+        const domain = legendDomain('lst', 'raster', 'yearly');
     // Definir los colores de la paleta
     const range = ["#00008B", "#00BFFF", "#32CD32", "#FFFF00", "#FFA500", "#FF4500"];
     
@@ -14,13 +17,13 @@ export function ToColorYear(value) {
         .interpolate(d3.interpolateRgb);  // Interpolación RGB para gradiente suave
     
     // Si el valor es menor o mayor al dominio, devolver los colores extremos
-    if (value < domain[0]) {
+    if (v < domain[0]) {
         return range[0]; // Si es menor que el mínimo, devolver el primer color
     } 
-    if (value > domain[1]) {
+    if (v > domain[1]) {
         return range[range.length - 1]; // Si es mayor que el máximo, devolver el último color
     }
 
     // Devolver el color interpolado basado en el valor
-    return colorScale(value);
+    return colorScale(v);
 }

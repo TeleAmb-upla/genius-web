@@ -1,5 +1,10 @@
 ﻿import { ndviToColorYear_z_m } from './ndvi_palette_z_m_y.js';
-import { ndviToColorMonth_z_m } from './ndvi_palette_z_m_m.js'; 
+import { ndviToColorMonth_z_m } from './ndvi_palette_z_m_m.js';
+import {
+    ndviManzanaPopupHtml,
+    ndviManzanaPopupHtmlMonthly,
+} from '../ndvi_zonal_explorer.js';
+import { geniusPrepareExclusiveGeoPopup } from '../../maplibre_exclusive_geo_popup.js';
 
 export async function preprocessGeoJSON(url, currentMode) {
     try {
@@ -59,10 +64,11 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`<div class="popup-title">Manzana</div><div class="popup-row"><span class="popup-label">Personas</span><span class="popup-value">${properties.TOTAL_PERS}</span></div><div class="popup-row"><span class="popup-label">Año</span><span class="popup-value">${properties.Year}</span></div><div class="popup-row"><span class="popup-label">NDVI</span><span class="popup-value">${properties.NDVI != null ? properties.NDVI.toFixed(3) : 'Sin datos'}</span></div>`)
-            .addTo(map);
+            .setHTML(ndviManzanaPopupHtml(properties));
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     map.on('mouseenter', layerId, () => {
@@ -96,10 +102,11 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`<div class="popup-title">Manzana</div><div class="popup-row"><span class="popup-label">Personas</span><span class="popup-value">${properties.TOTAL_PERS}</span></div><div class="popup-row"><span class="popup-label">Mes</span><span class="popup-value">${properties.Month}</span></div><div class="popup-row"><span class="popup-label">NDVI</span><span class="popup-value">${properties.NDVI != null ? properties.NDVI.toFixed(3) : 'Sin datos'}</span></div>`)
-            .addTo(map);
+            .setHTML(ndviManzanaPopupHtmlMonthly(properties));
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     map.on('mouseenter', layerId, () => {

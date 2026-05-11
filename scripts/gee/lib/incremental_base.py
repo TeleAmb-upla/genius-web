@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..config.paths import export_state_path
+
 from . import incremental_plan as incplan
 from . import state as state_lib
 
@@ -21,45 +23,37 @@ class IncrementalStateManager:
     """
     Base class para gestioón de estado incremental por producto.
     
-    Cada subclase debe definir:
+    Cada instancia define:
     - state_filename: nombre del archivo JSON (ej: "ndvi_export_state.json")
     - root_asset_path: path del asset principal (ej: paths.ASSET_NDVI_YEARMONTH)
     - start_year: año de inicio de datos (ej: 2016 para NDVI)
-    - state_root_path: path absoluto donde guardar el archivo (default: scripts/gee/)
+
+    El JSON se guarda bajo ``scripts/gee/state/`` vía ``export_state_path``.
     """
     
     state_filename: str
     root_asset_path: str
     start_year: int
-    state_root_path: Path
     
     def __init__(
         self,
         state_filename: str,
         root_asset_path: str,
         start_year: int,
-        state_root_path: Path | None = None,
     ):
         """
         Args:
             state_filename: nombre del archivo JSON (ej: "ndvi_export_state.json")
             root_asset_path: path completo del asset principal
             start_year: año de inicio de datos
-            state_root_path: path donde guardar el archivo (default: scripts/gee/)
         """
         self.state_filename = state_filename
         self.root_asset_path = root_asset_path
         self.start_year = start_year
-        
-        # Por default, usar scripts/gee/ (un nivel arriba de lib/)
-        if state_root_path is None:
-            self.state_root_path = Path(__file__).resolve().parents[1]
-        else:
-            self.state_root_path = state_root_path
     
     def state_path(self) -> Path:
         """Retorna Path al archivo de estado JSON."""
-        return self.state_root_path / self.state_filename
+        return export_state_path(self.state_filename)
     
     def _read_state(self) -> dict:
         """Lee el estado actual desde el archivo JSON."""

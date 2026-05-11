@@ -1,12 +1,35 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { geniusTitleForProduct } from '../../map_data_catalog.js';
+import {
+    getGeniusChartLayout,
+    GENIUS_CHART_HEADING_CLASS,
+    geniusAnnualAxisTitleY,
+    geniusAnnualSeriesLegendMinBottom,
+    geniusConfigureAnnualBandYearAxis,
+} from '../../chart_layout_genius.js';
+import {
+    geniusFetchYearMonthCsvOptional,
+    GENIUS_YEARMONTH_CSV,
+} from '../../chart_monthly_estado_actual.js';
+import {
+    geniusApplyUrbanAnnualMedianIntraAnnualBand,
+    geniusAnnualRowsWithFiniteMedian,
+    geniusAnnualPctlYExtent,
+    geniusAppendAnnualPctlBand,
+    geniusAppendAnnualSeriesLegend,
+    geniusFilterAodYearMonthValue,
+} from '../../chart_annual_pctl_band.js';
+import { geniusBindNearestPointHover } from '../../chart_tooltip_genius.js';
 
 export async function g_a_aod
   (containerId = "p20") {
       // Define width and height based on container or fallback
       const container = document.getElementById(containerId);
-      const width = container.offsetWidth || 550;
-      const height = container.offsetHeight || 400;
-      const margin = { top: 40, right: 20, bottom: 40, left: 60 };
+      const { width, height, margin: m0 } = getGeniusChartLayout(container);
+      const margin = {
+          ...m0,
+          bottom: Math.max(m0.bottom, geniusAnnualSeriesLegendMinBottom()),
+      };
       const innerWidth = width - margin.left - margin.right;
       const innerHeight = height - margin.top - margin.bottom;
   
@@ -16,8 +39,8 @@ export async function g_a_aod
       // Append the svg object to the div with id "p20"
       var svg = d3.select("#p20")
           .append("svg")
-          .attr("width", width)
-          .attr("height", height)
+          .attr("viewBox", `0 0 ${width} ${height}`)
+          .attr("preserveAspectRatio", "xMidYMid meet")
           .append("g")
           .attr("transform", `translate(${margin.left},${margin.top})`);
   
@@ -29,13 +52,14 @@ export async function g_a_aod
           .style("font-size", "14px")
           .style("font-weight", "bold")
           .style("font-family", "Arial")
-          .text("AODE Interanual Regional");
+          .attr("class", GENIUS_CHART_HEADING_CLASS)
+          .text(geniusTitleForProduct("AOD por año", "aod"));
   
       // Titles for axes
       svg.append("text")
           .attr("text-anchor", "middle")
           .attr("x", innerWidth / 2)
-          .attr("y", innerHeight + 40)
+          .attr("y", geniusAnnualAxisTitleY(innerHeight))
           .style("font-family", "Arial")
           .style("font-size", "12px")
           .text("Años");
@@ -43,7 +67,7 @@ export async function g_a_aod
       svg.append("text")
           .attr("text-anchor", "middle")
           .attr("transform", "rotate(-90)")
-          .attr("y", -margin.left + 15)
+          .attr("y", -Math.max(42, Math.round(margin.left * 0.78)))
           .attr("x", -innerHeight / 2)
           .style("font-family", "Arial")
           .style("font-size", "12px")
@@ -52,31 +76,38 @@ export async function g_a_aod
       // Parse the Data
   
       // Parse the Data
-      const data = await d3.csv(resolveAssetUrl("assets/data/csv/AOD_y_region.csv"));
+      const [data, ymRows] = await Promise.all([
+          d3.csv(resolveAssetUrl("assets/data/csv/AOD_y_urban.csv")),
+          geniusFetchYearMonthCsvOptional(GENIUS_YEARMONTH_CSV.aodUrban),
+      ]);
   
       // Format the data
       data.forEach(d => {
           d.Year = +d.Year;
           d.AOD_median = +d.AOD_median;
       });
-  
-      // Find the minimum and maximum LST_mean values
-    const minNDVI = d3.min(data, d => d.AOD_median);
-    const maxNDVI = d3.max(data, d => d.AOD_median);
+      geniusApplyUrbanAnnualMedianIntraAnnualBand(data, ymRows, {
+          ymValueKey: "AOD_median",
+          medianKey: "AOD_median",
+          p25Key: "AOD_p25",
+          p75Key: "AOD_p75",
+          filterParsedValue: geniusFilterAodYearMonthValue,
+      });
+      const [minNDVI, maxNDVI] = geniusAnnualPctlYExtent(
+          data,
+          "AOD_median",
+          "AOD_p25",
+          "AOD_p75",
+      );
   
       // X axis
       var x = d3.scaleBand()
           .domain(data.map(d => d.Year))
           .range([0, innerWidth]);
   
-      svg.append("g")
-          .attr("transform", `translate(0,${innerHeight})`)
-          .call(d3.axisBottom(x).tickFormat(d3.format("d")))
-          .selectAll("text")
-          .style("text-anchor", "end")
-          .attr("dx", "-.8em")
-          .attr("dy", ".15em")
-          .attr("transform", "rotate(-75)");
+      const xAxisG = svg.append("g").attr(
+          "transform", `translate(0,${innerHeight})`);
+    geniusConfigureAnnualBandYearAxis(xAxisG, x);
   
       // Y axis
       var y = d3.scaleLinear()
@@ -84,9 +115,27 @@ export async function g_a_aod
           .range([innerHeight, 0]);
       svg.append("g")
           .call(d3.axisLeft(y));
+
+      geniusAppendAnnualSeriesLegend(svg, {
+          innerHeight,
+          lineColor: "steelblue",
+          bandFillColor: "steelblue",
+          medianLabel: "Mediana anual (intra-anual)",
+      });
+
+      geniusAppendAnnualPctlBand(svg, {
+          data,
+          xBand: x,
+          yearKey: "Year",
+          y,
+          p25Key: "AOD_p25",
+          p75Key: "AOD_p75",
+          fill: "steelblue",
+      });
+
+      const annualDefined = geniusAnnualRowsWithFiniteMedian(data, "AOD_median");
   
-      // Create a tooltip
-      const tooltip = d3.select("#p20")
+      const tooltip = d3.select(`#${containerId}`)
           .append("div")
           .style("opacity", 0)
           .attr("class", "tooltip")
@@ -95,34 +144,18 @@ export async function g_a_aod
           .style("border-width", "2px")
           .style("border-radius", "5px")
           .style("padding", "5px")
-          .style("position", "absolute");
-  
-      // Mouseover, mousemove, and mouseleave functions
-      var mouseover = function (event, d) {
-          tooltip
-              .style("opacity", 1);
-          d3.select(this)
-              .style("stroke", "black")
-              .style("opacity", 1);
-      }
-  
-      var mousemove = function (event, d) {
-          tooltip
-              .html("AOD: " + d.AOD_median.toFixed(2) + "<br>Año: " + d.Year)
-              .style("left", (event.pageX + 15) + "px")
-              .style("top", (event.pageY - 15) + "px");
-      }
-  
-      var mouseleave = function (event, d) {
-          tooltip
-              .style("opacity", 0);
-          d3.select(this)
-              .style("stroke", "none");
-      }
+          .style("position", "absolute")
+          .style("pointer-events", "none");
   
       // Add the line with smoothing and animation
       var line = d3.line()
           .x(d => x(d.Year) + x.bandwidth() / 2)
+          .defined(
+              (d) =>
+                  d.AOD_median != null &&
+                  d.AOD_median !== "" &&
+                  Number.isFinite(+d.AOD_median),
+          )
           .y(d => y(d.AOD_median))
           .curve(d3.curveCatmullRom.alpha(0.5));
   
@@ -143,19 +176,52 @@ export async function g_a_aod
           .ease(d3.easeLinear)
           .attr("stroke-dashoffset", 0);
   
-      // Add points
       svg.append("g")
           .selectAll("circle")
-          .data(data)
+          .data(annualDefined)
           .enter()
           .append("circle")
           .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
           .attr("cy", d => y(d.AOD_median))
           .attr("r", 4)
           .attr("fill", "steelblue")
-          .attr("pointer-events", "all")
-          .on("mouseover", mouseover)
-          .on("mousemove", mousemove)
-          .on("mouseleave", mouseleave);
+          .attr("pointer-events", "none");
+
+      geniusBindNearestPointHover(svg, {
+          panelId: containerId,
+          innerWidth,
+          innerHeight,
+          tooltip,
+          points: annualDefined.map((d) => ({
+              cx: x(d.Year) + x.bandwidth() / 2,
+              cy: y(d.AOD_median),
+              row: d,
+          })),
+          html: (p) => {
+              const r = p.row;
+              let s =
+                  "AOD: " +
+                  (r.AOD_median != null &&
+                  r.AOD_median !== "" &&
+                  Number.isFinite(+r.AOD_median)
+                      ? (+r.AOD_median).toFixed(2)
+                      : "—") +
+                  "<br>Año: " +
+                  r.Year;
+              if (
+                  r.AOD_p25 != null &&
+                  r.AOD_p75 != null &&
+                  Number.isFinite(+r.AOD_p25) &&
+                  Number.isFinite(+r.AOD_p75)
+              ) {
+                  s +=
+                      "<br>P25–P75: " +
+                      (+r.AOD_p25).toFixed(2) +
+                      " – " +
+                      (+r.AOD_p75).toFixed(2);
+              }
+              return s;
+          },
+      });
   }
   

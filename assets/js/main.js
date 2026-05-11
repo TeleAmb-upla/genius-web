@@ -218,28 +218,38 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   new Swiper('.clients-slider', {
     speed: 400,
-    loop: true,
+    loop: false,
+    rewind: true,
     autoplay: {
       delay: 5000,
-      disableOnInteraction: false
+      disableOnInteraction: false,
+      pauseOnMouseEnter: true
     },
     slidesPerView: 'auto',
     breakpoints: {
       320: {
         slidesPerView: 2,
-        spaceBetween: 40
+        spaceBetween: 28
       },
       480: {
         slidesPerView: 3,
-        spaceBetween: 60
+        spaceBetween: 36
       },
       640: {
         slidesPerView: 4,
-        spaceBetween: 80
+        spaceBetween: 44
       },
       992: {
+        slidesPerView: 5,
+        spaceBetween: 44
+      },
+      1200: {
         slidesPerView: 6,
-        spaceBetween: 120
+        spaceBetween: 48
+      },
+      1400: {
+        slidesPerView: 9,
+        spaceBetween: 28
       }
     }
   });

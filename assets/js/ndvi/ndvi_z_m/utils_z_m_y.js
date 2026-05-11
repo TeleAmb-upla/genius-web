@@ -11,7 +11,7 @@ export function createYearSelector(id) {
 
     const selector = document.createElement('select');
     selector.id = id;
-    const years = getProductYears('ndvi');
+    const years = getProductYears('ndvi_zonal');
     for (const year of years) {
         const option = document.createElement('option');
         option.value = year;

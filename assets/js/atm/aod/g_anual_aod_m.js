@@ -1,11 +1,37 @@
-
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { geniusTitleForProduct } from '../../map_data_catalog.js';
+import {
+    getGeniusChartLayout,
+    GENIUS_CHART_HEADING_CLASS,
+    geniusAnnualAxisTitleY,
+    geniusAnnualSeriesLegendMinBottom,
+    geniusConfigureAnnualBandYearAxis,
+} from '../../chart_layout_genius.js';
+import {
+    geniusFetchYearMonthCsvOptional,
+    GENIUS_YEARMONTH_CSV,
+} from '../../chart_monthly_estado_actual.js';
+import {
+    geniusApplyUrbanAnnualMedianIntraAnnualBand,
+    geniusAnnualRowsWithFiniteMedian,
+    geniusAnnualPctlYExtent,
+    geniusAppendAnnualPctlBand,
+    geniusAppendAnnualSeriesLegend,
+    geniusFilterAodYearMonthValue,
+} from '../../chart_annual_pctl_band.js';
+import { geniusBindNearestPointHover } from '../../chart_tooltip_genius.js';
 
 export async function g_a_aod_m() {
-    // Set the dimensions and margins of the graph
-    var margin = { top: 80, right: 10, bottom: 60, left: 100 },
-        width = 550 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
+    const container = document.getElementById("p26");
+    const { width: outerW, height: outerH, margin: m0 } = getGeniusChartLayout(container);
+    const margin = {
+        ...m0,
+        bottom: Math.max(m0.bottom, geniusAnnualSeriesLegendMinBottom()),
+    };
+    const innerWidth = outerW - margin.left - margin.right;
+    const innerHeight = outerH - margin.top - margin.bottom;
+    const width = innerWidth;
+    const height = innerHeight;
 
     // Clear any existing SVG
     d3.select("#p26").selectAll("*").remove();
@@ -13,8 +39,8 @@ export async function g_a_aod_m() {
     // Append the svg object to the div with id "p26"
     var svg = d3.select("#p26")
         .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
+        .attr("viewBox", `0 0 ${outerW} ${outerH}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -26,38 +52,51 @@ export async function g_a_aod_m() {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial")
-        .text("AOD Interanual Urbano de Quilpué");
+        .attr("class", GENIUS_CHART_HEADING_CLASS)
+        .text(geniusTitleForProduct("AOD por año", "aod"));
 
     // Titles for axes
     svg.append("text")
-        .attr("text-anchor", "end")
-        .attr("x", width / 2 + margin.left - 60)
-        .attr("y", height + margin.top - 40)
+        .attr("text-anchor", "middle")
+        .attr("x", width / 2)
+        .attr("y", geniusAnnualAxisTitleY(height))
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Años");
 
     svg.append("text")
-        .attr("text-anchor", "end")
+        .attr("text-anchor", "middle")
         .attr("transform", "rotate(-90)")
-        .attr("y", -margin.left + 60)
-        .attr("x", -margin.top - 30)
+        .attr("y", -Math.max(42, Math.round(margin.left * 0.78)))
+        .attr("x", -innerHeight / 2)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("AOD");
 
     // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/AOD_y_region.csv"));
+    const [data, ymRows] = await Promise.all([
+        d3.csv(resolveAssetUrl("assets/data/csv/AOD_y_urban.csv")),
+        geniusFetchYearMonthCsvOptional(GENIUS_YEARMONTH_CSV.aodUrban),
+    ]);
 
     // Format the data
     data.forEach(d => {
         d.Year = +d.Year;           // Convert Year to number
         d.AOD_median = +d.AOD_median;    // Convert AOD_median to number
     });
-
-    // Find the minimum and maximum AOD_median values
-    const minNDVI = d3.min(data, d => d.AOD_median);
-    const maxNDVI = d3.max(data, d => d.AOD_median);
+    geniusApplyUrbanAnnualMedianIntraAnnualBand(data, ymRows, {
+        ymValueKey: "AOD_median",
+        medianKey: "AOD_median",
+        p25Key: "AOD_p25",
+        p75Key: "AOD_p75",
+        filterParsedValue: geniusFilterAodYearMonthValue,
+    });
+    const [minNDVI, maxNDVI] = geniusAnnualPctlYExtent(
+        data,
+        "AOD_median",
+        "AOD_p25",
+        "AOD_p75",
+    );
 
 
     // Add X axis
@@ -65,14 +104,11 @@ export async function g_a_aod_m() {
         .domain(data.map(d => d.Year))
         .range([0, width]);
 
-    svg.append("g")
-        .attr("transform", "translate(0," + height + ")")
-        .call(d3.axisBottom(x).tickFormat(d3.format("d")))
-        .selectAll("text")  // Select all the text labels for the X axis
-        .attr("transform", "rotate(-75)")  // Rotate the labels
-        .style("text-anchor", "end")  // Anchor text to the end
-        .attr("dx", "-0.5em")  // Adjust the horizontal position
-        .attr("dy", "-0.5em");  // Adjust the vertical position
+    const xAxisG = svg.append("g").attr(
+        "transform",
+        "translate(0," + height + ")",
+    );
+    geniusConfigureAnnualBandYearAxis(xAxisG, x);
 
 
     // Add Y axis
@@ -82,7 +118,25 @@ export async function g_a_aod_m() {
     svg.append("g")
         .call(d3.axisLeft(y));
 
-    // Create a tooltip
+    geniusAppendAnnualSeriesLegend(svg, {
+        innerHeight: height,
+        lineColor: "steelblue",
+        bandFillColor: "steelblue",
+        medianLabel: "Mediana anual (intra-anual)",
+    });
+
+    geniusAppendAnnualPctlBand(svg, {
+        data,
+        xBand: x,
+        yearKey: "Year",
+        y,
+        p25Key: "AOD_p25",
+        p75Key: "AOD_p75",
+        fill: "steelblue",
+    });
+
+    const annualDefined = geniusAnnualRowsWithFiniteMedian(data, "AOD_median");
+
     const tooltip = d3.select("#p26")
         .append("div")
         .style("opacity", 0)
@@ -92,36 +146,20 @@ export async function g_a_aod_m() {
         .style("border-width", "2px")
         .style("border-radius", "5px")
         .style("padding", "5px")
-        .style("position", "absolute");
+        .style("position", "absolute")
+        .style("pointer-events", "none");
 
-    // Mouseover, mousemove, and mouseleave functions
-    var mouseover = function (event, d) {
-        tooltip
-            .style("opacity", 1);
-        d3.select(this)
-            .style("stroke", "black")
-            .style("opacity", 1);
-    }
-
-    var mousemove = function (event, d) {
-        tooltip
-            .html("AOD: " + d.AOD_median.toFixed(2) + "<br>Año: " + d.Year)
-            .style("left", (event.pageX + 15) + "px")
-            .style("top", (event.pageY - 15) + "px");
-    }
-
-    var mouseleave = function (event, d) {
-        tooltip
-            .style("opacity", 0);
-        d3.select(this)
-            .style("stroke", "none");
-            
-        }
         // Add the line with smoothing and animation
     var line = d3.line()
-    .x(d => x(d.Year) + x.bandwidth() / 2) // Ensure the line passes through the center of the band
+    .x(d => x(d.Year) + x.bandwidth() / 2)
+    .defined(
+        (d) =>
+            d.AOD_median != null &&
+            d.AOD_median !== "" &&
+            Number.isFinite(+d.AOD_median),
+    )
     .y(d => y(d.AOD_median))
-    .curve(d3.curveCatmullRom.alpha(0.5)); // Use curveCatmullRom for smoothing
+    .curve(d3.curveCatmullRom.alpha(0.5));
 
     var animation = svg.append("path")
     .datum(data)
@@ -140,19 +178,52 @@ export async function g_a_aod_m() {
     .ease(d3.easeLinear)
     .attr("stroke-dashoffset", 0);
 
-    // Add larger, invisible circles for better mouse interaction
     svg.append("g")
         .selectAll("circle")
-        .data(data)
+        .data(annualDefined)
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
         .attr("cy", d => y(d.AOD_median))
-        .attr("r", 4) // Larger radius for easier interaction
+        .attr("r", 4)
         .attr("fill", "steelblue")
-        .attr("pointer-events", "all") // Ensure these circles capture mouse events
-        .on("mouseover", mouseover)
-        .on("mousemove", mousemove)
-        .on("mouseleave", mouseleave);
+        .attr("pointer-events", "none");
+
+    geniusBindNearestPointHover(svg, {
+        panelId: "p26",
+        innerWidth,
+        innerHeight,
+        tooltip,
+        points: annualDefined.map((d) => ({
+            cx: x(d.Year) + x.bandwidth() / 2,
+            cy: y(d.AOD_median),
+            row: d,
+        })),
+        html: (p) => {
+            const r = p.row;
+            let s =
+                "AOD: " +
+                (r.AOD_median != null &&
+                r.AOD_median !== "" &&
+                Number.isFinite(+r.AOD_median)
+                    ? (+r.AOD_median).toFixed(2)
+                    : "—") +
+                "<br>Año: " +
+                r.Year;
+            if (
+                r.AOD_p25 != null &&
+                r.AOD_p75 != null &&
+                Number.isFinite(+r.AOD_p25) &&
+                Number.isFinite(+r.AOD_p75)
+            ) {
+                s +=
+                    "<br>P25–P75: " +
+                    (+r.AOD_p25).toFixed(2) +
+                    " – " +
+                    (+r.AOD_p75).toFixed(2);
+            }
+            return s;
+        },
+    });
 
 }

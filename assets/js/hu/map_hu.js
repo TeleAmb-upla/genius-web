@@ -7,33 +7,49 @@ import { map_2023 } from './function/year_2023.js';
 import { map_2024 } from './function/year_2024.js';
 import { map_2025 } from './function/year_2025.js';
 import { map_2026 } from './function/year_2026.js';
+import { geniusTitleForProduct, removeGeniusLeafletMapTitle } from '../map_data_catalog.js';
 import { addCenteredTitle, createLegendSVG } from './function/map_utilities_p.js';
-import { loadinf_critica } from '../inf_critica_leaflet.js';
 import { attachMapOpacityPanel } from '../slider_opacity.js';
+import { GENIUS_LAT, GENIUS_LNG, GENIUS_ZOOM_URBAN, GENIUS_LEAFLET_MAP_OPTIONS, addGeniusLeafletZoomControl } from '../map_interaction_defaults.js';
 
 let currentMap = null;
 let currentLayers = {};
 let legendDiv = null;
-let mapTitleDiv = null;
+
+const HU_PRELIMINARY_NOTICE_ID = "map-hu-preliminary-notice";
+
+function removeHuPreliminaryNotice() {
+    document.getElementById(HU_PRELIMINARY_NOTICE_ID)?.remove();
+}
+
+function addHuPreliminaryNotice(map) {
+    removeHuPreliminaryNotice();
+    const el = document.createElement("div");
+    el.id = HU_PRELIMINARY_NOTICE_ID;
+    el.className = "map-hu-preliminary-notice";
+    el.setAttribute("role", "note");
+    el.innerHTML =
+        "<strong>Datos preliminares.</strong> La serie puede mostrar variaciones entre años por limitaciones del modelo y de las imágenes; " +
+        "una menor superficie clasificada <strong>no implica por sí sola</strong> que el tejido urbano haya disminuido " +
+        "(p. ej. efectos de nubosidad, estación o umbrales de clasificación).";
+    map.getContainer().appendChild(el);
+}
 
 export async function map_hu() {
     if (currentMap) {
+        removeGeniusLeafletMapTitle(currentMap);
         currentMap.remove();
         currentMap = null;
         currentLayers = {};
-
-        if (mapTitleDiv) {
-            mapTitleDiv.remove();
-            mapTitleDiv = null;
-        }
 
         if (legendDiv) {
             legendDiv.remove();
             legendDiv = null;
         }
+        removeHuPreliminaryNotice();
     }
 
-    currentMap = L.map("p47").setView([-33.04752000, -71.44249000], 12.6);
+    currentMap = L.map("p47", GENIUS_LEAFLET_MAP_OPTIONS).setView([GENIUS_LAT, GENIUS_LNG], GENIUS_ZOOM_URBAN);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
         minZoom: 0,
@@ -41,7 +57,8 @@ export async function map_hu() {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>'
     }).addTo(currentMap);
 
-    L.control.scale({ metric: true, imperial: false }).addTo(currentMap);
+    L.control.scale({ position: 'bottomright', metric: true, imperial: false }).addTo(currentMap);
+    addGeniusLeafletZoomControl(currentMap);
 
     const yearlyLayers = [
         ["Huella Urbana 2026", map_2026],
@@ -69,12 +86,6 @@ export async function map_hu() {
         overlayLayers[name] = layer;
     });
 
-    const infCriticaData = await loadinf_critica(currentMap);
-    if (infCriticaData && typeof infCriticaData === 'object') {
-        const layersArray = Object.values(infCriticaData);
-        overlayLayers["Infraestructura crítica (vectores)"] = L.layerGroup(layersArray);
-    }
-
     const layerControl = L.control.layers(null, overlayLayers).addTo(currentMap);
     const layersList = layerControl.getContainer().querySelector('.leaflet-control-layers-list');
     const title = document.createElement('h4');
@@ -90,7 +101,8 @@ export async function map_hu() {
         currentMap.addLayer(currentLayers[defaultLayer]);
     }
 
-    addCenteredTitle(currentMap);
+    addCenteredTitle(currentMap, geniusTitleForProduct("Huella urbana anual", "hu"));
+    addHuPreliminaryNotice(currentMap);
 
     if (legendDiv) {
         legendDiv.remove();

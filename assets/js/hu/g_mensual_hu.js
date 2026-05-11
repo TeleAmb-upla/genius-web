@@ -1,4 +1,7 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { geniusTitleForProduct } from '../map_data_catalog.js';
+import { getGeniusChartLayout, GENIUS_CHART_HEADING_CLASS } from '../chart_layout_genius.js';
+import { geniusBindNearestPointHover } from '../chart_tooltip_genius.js';
 
 export async function g_m_hu() {
     // Clear any existing SVG
@@ -6,17 +9,15 @@ export async function g_m_hu() {
 
     // Define dimensions and margins
     const container = document.getElementById("p48");
-    const width = container ? (container.offsetWidth || 550) : 550;
-    const height = container ? (container.offsetHeight || 400) : 400;
-    const margin = { top: 40, right: 20, bottom: 40, left: 60 };
+    const { width, height, margin } = getGeniusChartLayout(container);
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
     // Append the svg object to the div with id "p48"
     var svg = d3.select("#p48")
         .append("svg")
-        .attr("width", width)
-        .attr("height", height)
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -28,21 +29,22 @@ export async function g_m_hu() {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial")
-        .text("Huella Urbana interanual Área Urbana");
+        .attr("class", GENIUS_CHART_HEADING_CLASS)
+        .text(geniusTitleForProduct("Huella urbana por mes", "hu"));
 
     // Títulos de los ejes
     svg.append("text")
-        .attr("text-anchor", "end")
+        .attr("text-anchor", "middle")
         .attr("x", innerWidth / 2)
-        .attr("y", innerHeight + 35)
+        .attr("y", innerHeight + Math.max(32, margin.bottom * 0.65))
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Años");
 
     svg.append("text")
-        .attr("text-anchor", "end")
+        .attr("text-anchor", "middle")
         .attr("transform", "rotate(-90)")
-        .attr("y", -margin.left + 15)
+        .attr("y", -Math.max(42, Math.round(margin.left * 0.78)))
         .attr("x", -innerHeight / 2)
         .style("font-family", "Arial")
         .style("font-size", "12px")
@@ -111,7 +113,6 @@ export async function g_m_hu() {
         .keys(subgroups)
         (data);
 
-    // Tooltip div
     var tooltip = d3.select("#p48")
         .append("div")
         .style("opacity", 0)
@@ -121,33 +122,8 @@ export async function g_m_hu() {
         .style("border-width", "1px")
         .style("border-radius", "5px")
         .style("padding", "10px")
-        .style("position", "absolute");
-
-    // Tooltip mouseover event handler
-    var mouseover = function(event, d) {
-        tooltip.style("opacity", 1);
-        d3.select(this)
-            .style("stroke", "black")  // Agregar borde negro
-            .style("stroke-width", 2);  // Hacer el borde más grueso
-    }
-
-    // Tooltip mousemove event handler
-    var mousemove = function(event, d) {
-        // Asegurarse de que se está accediendo correctamente a los datos del círculo
-        tooltip
-            .html("Año: " + d.Year + "<br>Área Dentro PRC: " + d.Area_DentroPRC + " ha"
-                + "<br>Área Fuera PRC: " + d.Area_FueraPRC + " ha<br>Precisión Kappa: " + Number(d.Precision_Kappa).toFixed(2))
-            .style("left", (event.pageX + 10) + "px")  // Ajusta la posición del tooltip
-            .style("top", (event.pageY - 28) + "px");
-    }
-
-    // Tooltip mouseleave event handler
-    var mouseleave = function(event, d) {
-        tooltip.style("opacity", 0);
-        d3.select(this)
-            .style("stroke", "none")  // Quitar borde negro
-            .style("stroke-width", 0);  // Quitar grosor de borde
-    }
+        .style("position", "absolute")
+        .style("pointer-events", "none");
 
     // Show the bars with conditional coloring
     svg.append("g")
@@ -169,16 +145,7 @@ export async function g_m_hu() {
             const parentKey = d3.select(this.parentNode).datum().key; // Acceso a la clave del subgrupo
             return parentKey === "Area_DentroPRC" ? colorPorAno[d.data.Year] : "url(#diagonalHatch)";
         })
-        .on("mouseover", mouseover)  // Evento para resaltar la barra y mostrar tooltip
-        .on("mousemove", function(event, d) {
-            // Tooltip para las barras (rectángulos)
-            tooltip
-                .html("Año: " + d.data.Year + "<br>Área Dentro PRC: " + d.data.Area_DentroPRC + " ha"
-                    + "<br>Área Fuera PRC: " + d.data.Area_FueraPRC + " ha<br>Precisión Kappa: " + Number(d.data.Precision_Kappa).toFixed(2))
-                .style("left", (event.pageX + 10) + "px")  // Ajusta la posición del tooltip
-                .style("top", (event.pageY - 28) + "px");
-        })
-        .on("mouseleave", mouseleave);  // Evento para quitar resaltado y esconder tooltip
+        .attr("pointer-events", "none");
 
     // Line to connect points
     var line = d3.line()
@@ -200,9 +167,7 @@ export async function g_m_hu() {
         .attr("cy", d => y(d.Area_DentroPRC + d.Area_FueraPRC))  // Position the point above the stack
         .attr("r", 4)
         .attr("fill", "black")
-        .on("mouseover", mouseover)  // Evento para mostrar tooltip
-        .on("mousemove", mousemove)  // Evento para mover tooltip
-        .on("mouseleave", mouseleave);  // Evento para esconder tooltip
+        .attr("pointer-events", "none");
 
     // Legend group
     var legendGroup = svg.append("g")
@@ -263,5 +228,30 @@ export async function g_m_hu() {
         .style("font-size", "10px")
         .style("font-family", "Arial")
         .text("Área Dentro PRC por Año");
+
+    geniusBindNearestPointHover(svg, {
+        panelId: "p48",
+        innerWidth,
+        innerHeight,
+        tooltip,
+        points: data.map((d) => {
+            const T = d.Area_DentroPRC + d.Area_FueraPRC;
+            return {
+                cx: x(d.Year) + x.bandwidth() / 2,
+                cy: (innerHeight + y(T)) / 2,
+                row: d,
+                color: colorPorAno[d.Year] ?? "#333",
+            };
+        }),
+        html: (p) =>
+            "Año: " +
+            p.row.Year +
+            "<br>Área Dentro PRC: " +
+            p.row.Area_DentroPRC +
+            " ha<br>Área Fuera PRC: " +
+            p.row.Area_FueraPRC +
+            " ha<br>Precisión Kappa: " +
+            Number(p.row.Precision_Kappa).toFixed(2),
+    });
 
 }

@@ -1,3 +1,5 @@
+import { legendDomain } from '../../legend_ranges.js';
+
 // Leyenda Anual (LST barrio — clases discretas)
 export function createYearLegend() {
     const legendContent = document.createElement('div');
@@ -65,7 +67,7 @@ export function createMonthLegend() {
     subtitle.className = 'map-legend-panel__subtitle';
     legendContent.appendChild(subtitle);
 
-    const domain = [13, 42];
+    const domain = legendDomain('lst', 'zonalBarrio', 'monthly');
     const steps = 18;
     const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const colors = [

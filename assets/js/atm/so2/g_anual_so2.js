@@ -1,11 +1,33 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { geniusYearSpanSuffix, getProductYears } from '../../map_data_catalog.js';
+import {
+    getGeniusChartLayout,
+    GENIUS_CHART_HEADING_CLASS,
+    geniusAnnualAxisTitleY,
+    geniusAnnualSeriesLegendMinBottom,
+    geniusConfigureAnnualBandYearAxis,
+} from '../../chart_layout_genius.js';
+import {
+    geniusFetchYearMonthCsvOptional,
+    GENIUS_YEARMONTH_CSV,
+} from '../../chart_monthly_estado_actual.js';
+import {
+    geniusApplyUrbanAnnualMedianIntraAnnualBand,
+    geniusAnnualRowsWithFiniteMedian,
+    geniusAnnualPctlYExtent,
+    geniusAppendAnnualPctlBand,
+    geniusAppendAnnualSeriesLegend,
+} from '../../chart_annual_pctl_band.js';
+import { geniusBindNearestPointHover } from '../../chart_tooltip_genius.js';
 
 export async function g_a_so2(containerId = "p38") {
  // Get container dimensions
     const container = document.getElementById(containerId);
-    const width = container.offsetWidth || 550;
-    const height = container.offsetHeight || 400;
-    const margin = { top: 80, right: 10, bottom: 60, left: 100 };
+    const { width, height, margin: m0 } = getGeniusChartLayout(container);
+    const margin = {
+        ...m0,
+        bottom: Math.max(m0.bottom, geniusAnnualSeriesLegendMinBottom()),
+    };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -15,8 +37,8 @@ export async function g_a_so2(containerId = "p38") {
     // Append the svg object to the div with id containerId
     var svg = d3.select(`#${containerId}`)
         .append("svg")
-        .attr("width", width)
-        .attr("height", height)
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -28,24 +50,26 @@ export async function g_a_so2(containerId = "p38") {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial")
-        .html(() => `
-            SO<tspan baseline-shift="sub">2</tspan> Interanual Regional
-        `);
+        .attr("class", GENIUS_CHART_HEADING_CLASS)
+        .html(
+            () =>
+                `SO<tspan baseline-shift="sub">2</tspan> Interanual Urbano de Quilpué${geniusYearSpanSuffix('so2')}`,
+        );
 
     // Titles for axes
     svg.append("text")
-        .attr("text-anchor", "end")
-        .attr("x", innerWidth / 2 + margin.left - 60)
-        .attr("y", innerHeight + margin.top - 40)
+        .attr("text-anchor", "middle")
+        .attr("x", innerWidth / 2)
+        .attr("y", geniusAnnualAxisTitleY(innerHeight))
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Años");
 
     svg.append("text")
-        .attr("text-anchor", "end")
+        .attr("text-anchor", "middle")
         .attr("transform", "rotate(-90)")
-        .attr("y", -margin.left + 60)
-        .attr("x", -margin.top - 30)
+        .attr("y", -Math.max(42, Math.round(margin.left * 0.78)))
+        .attr("x", -innerHeight / 2)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .html(() => `
@@ -53,26 +77,46 @@ export async function g_a_so2(containerId = "p38") {
     `);
 
     // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/SO2_y_region.csv"));
+    const [rawAnnual, ymRowsAll] = await Promise.all([
+        d3.csv(resolveAssetUrl("assets/data/csv/SO2_y_urban.csv")),
+        geniusFetchYearMonthCsvOptional(GENIUS_YEARMONTH_CSV.so2Urban),
+    ]);
+    const yearsSo2 = new Set(getProductYears("so2"));
+    const data = rawAnnual.filter((r) =>
+        yearsSo2.has(Math.round(+r.Year)),
+    );
+    const ymRows = (ymRowsAll || []).filter((r) =>
+        yearsSo2.has(Math.round(+r.Year)),
+    );
 
     // Format the data
     data.forEach(d => {
         d.Year = +d.Year;
         d.SO2 = +d.SO2;
     });
-
-    // Find the minimum and maximum SO2_median_fixed values
-    const minNDVI = d3.min(data, d => d.SO2);
-    const maxNDVI = d3.max(data, d => d.SO2);
+    geniusApplyUrbanAnnualMedianIntraAnnualBand(data, ymRows, {
+        ymValueKey: "SO2",
+        medianKey: "SO2",
+        p25Key: "SO2_p25",
+        p75Key: "SO2_p75",
+    });
+    const [minNDVI, maxNDVI] = geniusAnnualPctlYExtent(
+        data,
+        "SO2",
+        "SO2_p25",
+        "SO2_p75",
+    );
 
     // Add X axis
     var x = d3.scaleBand()
         .domain(data.map(d => d.Year))
         .range([0, innerWidth]);
 
-    svg.append("g")
-        .attr("transform", "translate(0," + innerHeight + ")")
-        .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+    const xAxisG = svg.append("g").attr(
+        "transform",
+        "translate(0," + innerHeight + ")",
+    );
+    geniusConfigureAnnualBandYearAxis(xAxisG, x);
 
     // Add Y axis
     var y = d3.scaleLinear()
@@ -81,7 +125,25 @@ export async function g_a_so2(containerId = "p38") {
     svg.append("g")
         .call(d3.axisLeft(y));
 
-    // Create a tooltip
+    geniusAppendAnnualSeriesLegend(svg, {
+        innerHeight,
+        lineColor: "steelblue",
+        bandFillColor: "steelblue",
+        medianLabel: "Mediana anual (intra-anual)",
+    });
+
+    geniusAppendAnnualPctlBand(svg, {
+        data,
+        xBand: x,
+        yearKey: "Year",
+        y,
+        p25Key: "SO2_p25",
+        p75Key: "SO2_p75",
+        fill: "steelblue",
+    });
+
+    const annualDefined = geniusAnnualRowsWithFiniteMedian(data, "SO2");
+
     const tooltip = d3.select(`#${containerId}`)
         .append("div")
         .style("opacity", 0)
@@ -91,34 +153,18 @@ export async function g_a_so2(containerId = "p38") {
         .style("border-width", "2px")
         .style("border-radius", "5px")
         .style("padding", "5px")
-        .style("position", "absolute");
-
-    // Mouseover, mousemove, and mouseleave functions
-    var mouseover = function (event, d) {
-        tooltip
-            .style("opacity", 1);
-        d3.select(this)
-            .style("stroke", "black")
-            .style("opacity", 1);
-    }
-
-    var mousemove = function (event, d) {
-        tooltip
-            .html("SO²: " + d.SO2.toFixed(2) + "<br>Año: " + d.Year)
-            .style("left", (event.pageX + 15) + "px")
-            .style("top", (event.pageY - 15) + "px");
-    }
-
-    var mouseleave = function (event, d) {
-        tooltip
-            .style("opacity", 0);
-        d3.select(this)
-            .style("stroke", "none");
-    }
+        .style("position", "absolute")
+        .style("pointer-events", "none");
 
     // Add the line with smoothing and animation
     var line = d3.line()
         .x(d => x(d.Year) + x.bandwidth() / 2)
+        .defined(
+            (d) =>
+                d.SO2 != null &&
+                d.SO2 !== "" &&
+                Number.isFinite(+d.SO2),
+        )
         .y(d => y(d.SO2))
         .curve(d3.curveCatmullRom.alpha(0.5));
 
@@ -139,18 +185,49 @@ export async function g_a_so2(containerId = "p38") {
         .ease(d3.easeLinear)
         .attr("stroke-dashoffset", 0);
 
-    // Add larger, invisible circles for better mouse interaction
     svg.append("g")
         .selectAll("circle")
-        .data(data)
+        .data(annualDefined)
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
         .attr("cy", d => y(d.SO2))
         .attr("r", 4)
         .attr("fill", "steelblue")
-        .attr("pointer-events", "all")
-        .on("mouseover", mouseover)
-        .on("mousemove", mousemove)
-        .on("mouseleave", mouseleave);
+        .attr("pointer-events", "none");
+    geniusBindNearestPointHover(svg, {
+        panelId: containerId,
+        innerWidth,
+        innerHeight,
+        tooltip,
+        points: annualDefined.map((d) => ({
+            cx: x(d.Year) + x.bandwidth() / 2,
+            cy: y(d.SO2),
+            row: d,
+        })),
+        html: (p) => {
+            const r = p.row;
+            let s =
+                "SO²: " +
+                (r.SO2 != null && r.SO2 !== "" && Number.isFinite(+r.SO2)
+                    ? (+r.SO2).toFixed(2)
+                    : "—") +
+                "<br>Año: " +
+                r.Year;
+            if (
+                r.SO2_p25 != null &&
+                r.SO2_p75 != null &&
+                Number.isFinite(+r.SO2_p25) &&
+                Number.isFinite(+r.SO2_p75)
+            ) {
+                s +=
+                    "<br>P25–P75: " +
+                    (+r.SO2_p25).toFixed(2) +
+                    " – " +
+                    (+r.SO2_p75).toFixed(2);
+            }
+            return s;
+        },
+    });
+
 }

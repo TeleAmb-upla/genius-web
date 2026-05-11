@@ -1,16 +1,26 @@
 ﻿import { ToColorYear_z_b } from './ndvi_palette_z_b_y.js'; 
 import { ToColorMonth_z_b } from './ndvi_palette_z_b_m.js';
+import {
+    atmBarrioPopupHtml,
+    atmBarrioPopupHtmlMonthly,
+} from '../../atm_zonal_explorer.js';
+import { geniusPrepareExclusiveGeoPopup } from '../../../maplibre_exclusive_geo_popup.js';
 
 export async function preprocessGeoJSON(url, currentMode) {
     try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Failed to fetch data: ${response.statusText}`);
         const data = await response.json();
-        data.features.forEach(feature => {
-            if (feature.properties && feature.properties.NO2_median !== undefined) {
-                feature.properties.color = currentMode === 'yearly'
-                    ? ToColorYear_z_b(feature.properties.NO2_median)
-                    : ToColorMonth_z_b(feature.properties.NO2_median);
+        data.features.forEach((feature) => {
+            const raw = feature.properties && feature.properties.NO2_median;
+            if (!feature.properties) return;
+            if (raw != null && Number.isFinite(Number(raw))) {
+                feature.properties.color =
+                    currentMode === 'yearly'
+                        ? ToColorYear_z_b(Number(raw))
+                        : ToColorMonth_z_b(Number(raw));
+            } else {
+                feature.properties.color = '#d9d9d9';
             }
         });
         return data;
@@ -57,15 +67,11 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const v = properties.NO2_median;
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`
-                <div class="popup-title">${properties.NOMBRE || 'Barrio'}</div>
-                <div class="popup-row"><span class="popup-label">Año</span><span class="popup-value">${properties.Year}</span></div>
-                <div class="popup-row"><span class="popup-label">NO₂ (µg/m³)</span><span class="popup-value">${v != null ? v.toFixed(2) : 'Sin datos'}</span></div>
-            `)
-            .addTo(map);
+            .setHTML(atmBarrioPopupHtml('no2', properties));
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     map.on('mouseenter', layerId, () => {
@@ -99,15 +105,11 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const v = properties.NO2_median;
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`
-                <div class="popup-title">${properties.NOMBRE || 'Barrio'}</div>
-                <div class="popup-row"><span class="popup-label">Mes</span><span class="popup-value">${properties.Month}</span></div>
-                <div class="popup-row"><span class="popup-label">NO₂ (µg/m³)</span><span class="popup-value">${v != null ? v.toFixed(2) : 'Sin datos'}</span></div>
-            `)
-            .addTo(map);
+            .setHTML(atmBarrioPopupHtmlMonthly('no2', properties));
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     map.on('mouseenter', layerId, () => {

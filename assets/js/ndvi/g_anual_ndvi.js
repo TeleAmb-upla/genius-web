@@ -1,11 +1,34 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { geniusTitleForProduct } from '../map_data_catalog.js';
+import {
+    getGeniusChartLayout,
+    GENIUS_CHART_HEADING_CLASS,
+    geniusAnnualAxisTitleY,
+    geniusAnnualSeriesLegendMinBottom,
+    geniusConfigureAnnualBandYearAxis,
+} from '../chart_layout_genius.js';
+import {
+    geniusFetchYearMonthCsvOptional,
+    GENIUS_YEARMONTH_CSV,
+} from '../chart_monthly_estado_actual.js';
+import {
+    geniusApplyUrbanAnnualMedianIntraAnnualBand,
+    geniusAnnualRowsWithFiniteMedian,
+    geniusAnnualPctlYExtent,
+    geniusAppendAnnualPctlBand,
+    geniusAppendAnnualSeriesLegend,
+    geniusFilterNdviYearMonthValue,
+} from '../chart_annual_pctl_band.js';
+import { geniusBindNearestPointHover } from '../chart_tooltip_genius.js';
 
 export async function g_a_ndvi() {
     // Usa el tamaño del contenedor definido por CSS
     const container = document.getElementById("p02");
-    const width = container.offsetWidth || 550;
-    const height = container.offsetHeight || 400;
-    const margin = { top: 80, right: 10, bottom: 60, left: 100 };
+    const { width, height, margin: m0 } = getGeniusChartLayout(container);
+    const margin = {
+        ...m0,
+        bottom: Math.max(m0.bottom, geniusAnnualSeriesLegendMinBottom()),
+    };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -28,47 +51,60 @@ export async function g_a_ndvi() {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial")
-        .text("NDVI Interanual Área Urbana");
+        .attr("class", GENIUS_CHART_HEADING_CLASS)
+        .text(geniusTitleForProduct("NDVI por año", "ndvi"));
 
     // Titles for axes
     svg.append("text")
-        .attr("text-anchor", "end")
-        .attr("x", innerWidth / 2 + margin.left - 60)
-        .attr("y", innerHeight + margin.top - 40)
+        .attr("text-anchor", "middle")
+        .attr("x", innerWidth / 2)
+        .attr("y", geniusAnnualAxisTitleY(innerHeight))
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Años");
 
     svg.append("text")
-        .attr("text-anchor", "end")
+        .attr("text-anchor", "middle")
         .attr("transform", "rotate(-90)")
-        .attr("y", -margin.left + 60)
-        .attr("x", -margin.top - 30)
+        .attr("y", -Math.max(42, Math.round(margin.left * 0.78)))
+        .attr("x", -innerHeight / 2)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("NDVI");
 
-    // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/NDVI_y_urban.csv"));
+    const [data, ymRows] = await Promise.all([
+        d3.csv(resolveAssetUrl("assets/data/csv/NDVI_y_urban.csv")),
+        geniusFetchYearMonthCsvOptional(GENIUS_YEARMONTH_CSV.ndviUrban),
+    ]);
 
-    // Format the data
-    data.forEach(d => {
-        d.Year = +d.Year;           // Convert Year to number
-        d.NDVI_median = +d.NDVI;    // Convert NDVI_median to number
+    data.forEach((d) => {
+        d.Year = +d.Year;
+        d.NDVI_median = +d.NDVI;
     });
-
-    // Find the minimum and maximum NDVI_median values
-    const minNDVI = d3.min(data, d => d.NDVI_median);
-    const maxNDVI = d3.max(data, d => d.NDVI_median);
+    geniusApplyUrbanAnnualMedianIntraAnnualBand(data, ymRows, {
+        ymValueKey: "NDVI",
+        medianKey: "NDVI_median",
+        p25Key: "NDVI_p25",
+        p75Key: "NDVI_p75",
+        filterParsedValue: geniusFilterNdviYearMonthValue,
+    });
+    const [minNDVI, maxNDVI] = geniusAnnualPctlYExtent(
+        data,
+        "NDVI_median",
+        "NDVI_p25",
+        "NDVI_p75",
+    );
 
     // Add X axis
     var x = d3.scaleBand()
         .domain(data.map(d => d.Year))
         .range([0, innerWidth])
         
-    svg.append("g")
-        .attr("transform", "translate(0," + innerHeight + ")")
-        .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+    const xAxisG = svg.append("g").attr(
+        "transform",
+        "translate(0," + innerHeight + ")",
+    );
+    geniusConfigureAnnualBandYearAxis(xAxisG, x);
 
     // Add Y axis
     var y = d3.scaleLinear()
@@ -77,7 +113,25 @@ export async function g_a_ndvi() {
     svg.append("g")
         .call(d3.axisLeft(y));
 
-    // Create a tooltip
+    geniusAppendAnnualSeriesLegend(svg, {
+        innerHeight,
+        lineColor: "steelblue",
+        bandFillColor: "steelblue",
+        medianLabel: "Mediana anual (intra-anual)",
+    });
+
+    geniusAppendAnnualPctlBand(svg, {
+        data,
+        xBand: x,
+        yearKey: "Year",
+        y,
+        p25Key: "NDVI_p25",
+        p75Key: "NDVI_p75",
+        fill: "steelblue",
+    });
+
+    const annualDefined = geniusAnnualRowsWithFiniteMedian(data, "NDVI_median");
+
     const tooltip = d3.select("#p02")
         .append("div")
         .style("opacity", 0)
@@ -87,36 +141,20 @@ export async function g_a_ndvi() {
         .style("border-width", "2px")
         .style("border-radius", "5px")
         .style("padding", "5px")
-        .style("position", "absolute");
+        .style("position", "absolute")
+        .style("pointer-events", "none");
 
-    // Mouseover, mousemove, and mouseleave functions
-    var mouseover = function (event, d) {
-        tooltip
-            .style("opacity", 1);
-        d3.select(this)
-            .style("stroke", "black")
-            .style("opacity", 1);
-    }
-
-    var mousemove = function (event, d) {
-        tooltip
-            .html("NDVI: " + d.NDVI_median.toFixed(2) + "<br>Año: " + d.Year)
-            .style("left", (event.pageX + 15) + "px")
-            .style("top", (event.pageY - 15) + "px");
-    }
-
-    var mouseleave = function (event, d) {
-        tooltip
-            .style("opacity", 0);
-        d3.select(this)
-            .style("stroke", "none");
-            
-        }
         // Add the line with smoothing and animation
     var line = d3.line()
-    .x(d => x(d.Year) + x.bandwidth() / 2) // Ensure the line passes through the center of the band
+    .x(d => x(d.Year) + x.bandwidth() / 2)
+    .defined(
+        (d) =>
+            d.NDVI_median != null &&
+            d.NDVI_median !== "" &&
+            Number.isFinite(+d.NDVI_median),
+    )
     .y(d => y(d.NDVI_median))
-    .curve(d3.curveCatmullRom.alpha(0.5)); // Use curveCatmullRom for smoothing
+    .curve(d3.curveCatmullRom.alpha(0.5));
 
     var animation = svg.append("path")
     .datum(data)
@@ -135,19 +173,52 @@ export async function g_a_ndvi() {
     .ease(d3.easeLinear)
     .attr("stroke-dashoffset", 0);
 
-    // Add larger, invisible circles for better mouse interaction
     svg.append("g")
         .selectAll("circle")
-        .data(data)
+        .data(annualDefined)
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
         .attr("cy", d => y(d.NDVI_median))
-        .attr("r", 4) // Larger radius for easier interaction
+        .attr("r", 4)
         .attr("fill", "steelblue")
-        .attr("pointer-events", "all") // Ensure these circles capture mouse events
-        .on("mouseover", mouseover)
-        .on("mousemove", mousemove)
-        .on("mouseleave", mouseleave);
+        .attr("pointer-events", "none");
+
+    geniusBindNearestPointHover(svg, {
+        panelId: "p02",
+        innerWidth,
+        innerHeight,
+        tooltip,
+        points: annualDefined.map((d) => ({
+            cx: x(d.Year) + x.bandwidth() / 2,
+            cy: y(d.NDVI_median),
+            row: d,
+        })),
+        html: (p) => {
+            const r = p.row;
+            let s =
+                "NDVI: " +
+                (r.NDVI_median != null &&
+                r.NDVI_median !== "" &&
+                Number.isFinite(+r.NDVI_median)
+                    ? (+r.NDVI_median).toFixed(2)
+                    : "—") +
+                "<br>Año: " +
+                r.Year;
+            if (
+                r.NDVI_p25 != null &&
+                r.NDVI_p75 != null &&
+                Number.isFinite(+r.NDVI_p25) &&
+                Number.isFinite(+r.NDVI_p75)
+            ) {
+                s +=
+                    "<br>P25–P75: " +
+                    (+r.NDVI_p25).toFixed(2) +
+                    " – " +
+                    (+r.NDVI_p75).toFixed(2);
+            }
+            return s;
+        },
+    });
 
 }

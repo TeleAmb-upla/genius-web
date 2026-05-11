@@ -5,13 +5,13 @@ import datetime
 from pathlib import Path
 
 from ...config import paths
+from ...config.paths import export_state_path
 from ...lib import state as state_lib
-from ...lib import yearmonth as ym_lib
 
-START_YEAR = 2019
+START_YEAR = 2018
 END_YEAR_RANGE = None
 
-STATE_PATH = Path(__file__).resolve().parents[2] / "hu_export_state.json"
+STATE_PATH = export_state_path("hu_export_state.json")
 
 
 def state_path() -> Path:

@@ -1,6 +1,6 @@
 
-const startYear = 1997;
-const endYear = 2025;
+const startYear = 2013;
+const endYear = new Date().getUTCFullYear() - 1;
 
 const islaYearlyFiles_json = Array.from({ length: endYear - startYear + 1 }, (_, i) => {
     const year = startYear + i;

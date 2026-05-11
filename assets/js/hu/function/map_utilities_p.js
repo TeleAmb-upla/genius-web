@@ -1,14 +1,9 @@
+import { mountGeniusLeafletMapTitle } from '../../map_data_catalog.js';
+
 // Función para agregar o actualizar el título centrado al mapa
-export function addCenteredTitle(map, titleText) {
-    let mapTitleDiv = document.getElementById('map-title');
-    if (!mapTitleDiv) {
-        mapTitleDiv = document.createElement('div');
-        mapTitleDiv.id = 'map-title';
-        mapTitleDiv.className = 'map-title';
-        map.getContainer().appendChild(mapTitleDiv);
-    }
+export function addCenteredTitle(map, titleText, options = {}) {
     const text = titleText !== undefined ? titleText : 'Huella Urbana anual';
-    mapTitleDiv.innerHTML = `<strong>${text}</strong>`;
+    mountGeniusLeafletMapTitle(map, text, options);
 }
 
 // Función para crear la leyenda SVG para los años

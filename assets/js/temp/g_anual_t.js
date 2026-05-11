@@ -1,4 +1,23 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { geniusTitleForProduct } from '../map_data_catalog.js';
+import {
+    getGeniusChartLayout,
+    GENIUS_CHART_HEADING_CLASS,
+    geniusAnnualAxisTitleY,
+    geniusAnnualSeriesLegendMinBottom,
+    geniusConfigureAnnualBandYearAxis,
+} from '../chart_layout_genius.js';
+import {
+    geniusFetchYearMonthCsvOptional,
+    GENIUS_YEARMONTH_CSV,
+} from '../chart_monthly_estado_actual.js';
+import {
+    geniusApplyLstUrbanAnnualMedianIntraAnnualBand,
+    geniusAnnualPctlYExtent,
+    geniusAppendAnnualPctlBand,
+    geniusAppendAnnualSeriesLegend,
+} from '../chart_annual_pctl_band.js';
+import { geniusBindNearestPointHover } from '../chart_tooltip_genius.js';
 
 export async function g_a_t() {
     // Clear any existing SVG
@@ -6,17 +25,19 @@ export async function g_a_t() {
 
     // Define width and height based on container or fallback
     const container = document.getElementById("p11");
-    const width = container.offsetWidth || 550;
-    const height = container.offsetHeight || 400;
-    const margin = { top: 40, right: 20, bottom: 40, left: 60 };
+    const { width, height, margin: m0 } = getGeniusChartLayout(container);
+    const margin = {
+        ...m0,
+        bottom: Math.max(m0.bottom, geniusAnnualSeriesLegendMinBottom()),
+    };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
     // Append the svg object to the div with id "p11"
     var svg = d3.select("#p11")
         .append("svg")
-        .attr("width", width)
-        .attr("height", height)
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -28,13 +49,14 @@ export async function g_a_t() {
         .style("font-size", "14px")
         .style("font-weight", "bold")
         .style("font-family", "Arial")
-        .text("LST Interanual Área Urbana");
+        .attr("class", GENIUS_CHART_HEADING_CLASS)
+        .text(geniusTitleForProduct("Temperatura por año", "lst"));
 
     // Titles for axes
     svg.append("text")
         .attr("text-anchor", "middle")
         .attr("x", innerWidth / 2)
-        .attr("y", innerHeight + 40)
+        .attr("y", geniusAnnualAxisTitleY(innerHeight))
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("Años");
@@ -42,39 +64,35 @@ export async function g_a_t() {
     svg.append("text")
         .attr("text-anchor", "middle")
         .attr("transform", "rotate(-90)")
-        .attr("y", -margin.left + 15)
+        .attr("y", -Math.max(42, Math.round(margin.left * 0.78)))
         .attr("x", -innerHeight / 2)
         .style("font-family", "Arial")
         .style("font-size", "12px")
         .text("LST (C°)");
 
-    // Parse the Data
+    const [data, ymRows] = await Promise.all([
+        d3.csv(resolveAssetUrl("assets/data/csv/LST_y_urban.csv")),
+        geniusFetchYearMonthCsvOptional(GENIUS_YEARMONTH_CSV.lstUrban),
+    ]);
 
-    // Parse the Data
-    const data = await d3.csv(resolveAssetUrl("assets/data/csv/LST_y_urban.csv"));
-
-    // Format the data
-    data.forEach(d => {
-        d.Year = +d.Year;           // Convert Year to number
-        d.LST_mean = +d.LST_mean;    // Convert LST_mean to number
+    data.forEach((d) => {
+        d.Year = +d.Year;
     });
-
-    // Find the minimum and maximum LST_mean values
-    const minNDVI = d3.min(data, d => d.LST_mean);
-    const maxNDVI = d3.max(data, d => d.LST_mean);
+    geniusApplyLstUrbanAnnualMedianIntraAnnualBand(data, ymRows);
+    let [minNDVI, maxNDVI] = geniusAnnualPctlYExtent(
+        data,
+        "LST_median",
+        "LST_p25",
+        "LST_p75",
+    );
     // Añadir eje X
     var x = d3.scaleBand()
         .domain(data.map(d => d.Year))
         .range([0, innerWidth]);
 
-    svg.append("g")
-        .attr("transform", `translate(0,${innerHeight})`)
-        .call(d3.axisBottom(x).tickFormat(d3.format("d")))
-        .selectAll("text")
-        .style("text-anchor", "end") // Cambiar el anclaje del texto
-        .attr("dx", "-.8em")         // Desplazar ligeramente a la izquierda
-        .attr("dy", ".15em")         // Desplazar ligeramente hacia abajo
-        .attr("transform", "rotate(-75)"); // Rotar -75 grados
+    const xAxisG = svg.append("g").attr(
+          "transform", `translate(0,${innerHeight})`);
+    geniusConfigureAnnualBandYearAxis(xAxisG, x); // Rotar -75 grados
         // Add Y axis
         var y = d3.scaleLinear()
             .domain([minNDVI - 0.01, maxNDVI + 0.01]) // Adjust the domain to add a margin below and above
@@ -82,7 +100,27 @@ export async function g_a_t() {
         svg.append("g")
             .call(d3.axisLeft(y));
 
-    // Create a tooltip
+    geniusAppendAnnualSeriesLegend(svg, {
+        innerHeight,
+        lineColor: "steelblue",
+        bandFillColor: "steelblue",
+        medianLabel: "Mediana anual (intra-anual)",
+    });
+
+    geniusAppendAnnualPctlBand(svg, {
+        data,
+        xBand: x,
+        yearKey: "Year",
+        y,
+        p25Key: "LST_p25",
+        p75Key: "LST_p75",
+        fill: "steelblue",
+    });
+
+    const annualDefined = data.filter(
+        (d) => d.LST_median != null && Number.isFinite(d.LST_median),
+    );
+
     const tooltip = d3.select("#p11")
         .append("div")
         .style("opacity", 0)
@@ -92,35 +130,14 @@ export async function g_a_t() {
         .style("border-width", "2px")
         .style("border-radius", "5px")
         .style("padding", "5px")
-        .style("position", "absolute");
+        .style("position", "absolute")
+        .style("pointer-events", "none");
 
-    // Mouseover, mousemove, and mouseleave functions
-    var mouseover = function (event, d) {
-        tooltip
-            .style("opacity", 1);
-        d3.select(this)
-            .style("stroke", "black")
-            .style("opacity", 1);
-    }
-
-    var mousemove = function (event, d) {
-        tooltip
-            .html("LST: " + d.LST_mean.toFixed(2) + "<br>Año: " + d.Year)
-            .style("left", (event.pageX + 15) + "px")
-            .style("top", (event.pageY - 15) + "px");
-    }
-
-    var mouseleave = function (event, d) {
-        tooltip
-            .style("opacity", 0);
-        d3.select(this)
-            .style("stroke", "none");
-            
-        }
         // Add the line with smoothing and animation
     var line = d3.line()
     .x(d => x(d.Year) + x.bandwidth() / 2) // Ensure the line passes through the center of the band
-    .y(d => y(d.LST_mean))
+    .defined(d => d.LST_median != null && Number.isFinite(d.LST_median))
+    .y(d => y(d.LST_median))
     .curve(d3.curveCatmullRom.alpha(0.5)); // Use curveCatmullRom for smoothing
 
     var animation = svg.append("path")
@@ -140,19 +157,50 @@ export async function g_a_t() {
     .ease(d3.easeLinear)
     .attr("stroke-dashoffset", 0);
 
-    // Add larger, invisible circles for better mouse interaction
     svg.append("g")
         .selectAll("circle")
-        .data(data)
+        .data(annualDefined)
         .enter()
         .append("circle")
         .attr("cx", d => x(d.Year) + x.bandwidth() / 2)
-        .attr("cy", d => y(d.LST_mean))
-        .attr("r", 4) // Larger radius for easier interaction
+        .attr("cy", d => y(d.LST_median))
+        .attr("r", 4)
         .attr("fill", "steelblue")
-        .attr("pointer-events", "all") // Ensure these circles capture mouse events
-        .on("mouseover", mouseover)
-        .on("mousemove", mousemove)
-        .on("mouseleave", mouseleave);
+        .attr("pointer-events", "none");
+
+    geniusBindNearestPointHover(svg, {
+        panelId: "p11",
+        innerWidth,
+        innerHeight,
+        tooltip,
+        points: annualDefined.map((d) => ({
+            cx: x(d.Year) + x.bandwidth() / 2,
+            cy: y(d.LST_median),
+            row: d,
+        })),
+        html: (p) => {
+            const r = p.row;
+            let s =
+                "Mediana: " +
+                (r.LST_median != null && Number.isFinite(r.LST_median)
+                    ? r.LST_median.toFixed(2)
+                    : "—") +
+                " °C<br>Año: " +
+                r.Year;
+            if (
+                r.LST_p25 != null &&
+                r.LST_p75 != null &&
+                Number.isFinite(+r.LST_p25) &&
+                Number.isFinite(+r.LST_p75)
+            ) {
+                s +=
+                    "<br>P25–P75: " +
+                    (+r.LST_p25).toFixed(2) +
+                    " – " +
+                    (+r.LST_p75).toFixed(2);
+            }
+            return s;
+        },
+    });
 
 }

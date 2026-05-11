@@ -1,9 +1,11 @@
 import { ToColorYear } from './year/palette_year.js';
 import { ToColorMonth } from './month/palette_month.js';
+import { legendDomain } from '../../legend_ranges.js';
+import { mountGeniusLeafletMapTitle } from '../../map_data_catalog.js';
 
 // Función para crear la leyenda SVG para Profundidad Óptica de Aerosoles
 export function createyearLegendSVG() {
-    const domain = [87.8, 112.6]; // Mínimo y máximo
+    const domain = legendDomain('aod', 'raster', 'yearly');
     const steps = 7; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
 
@@ -36,8 +38,8 @@ export function createyearLegendSVG() {
     // Retornar el SVG completo
     return `
         <svg class="map-legend-svg" width="200" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="15" font-size="12" font-family="Arial" font-weight="bold">Profundidad Óptica de Aerosoles </text>
-            <text x="0" y="30" font-size="12" font-family="Arial">AOD Anual</text>
+            <text x="0" y="15" font-size="12" font-family="Arial" font-weight="bold">Profundidad óptica de aerosoles</text>
+            <text x="0" y="30" font-size="12" font-family="Arial">Anual</text>
             ${legendItems}
 
         </svg>
@@ -48,7 +50,7 @@ export function createyearLegendSVG() {
 
 // Función para crear la leyenda SVG para Profundidad Óptica de Aerosoles
 export function createmonthLegendSVG() {
-    const domain = [73.3, 131.9]; // Mínimo y máximo
+    const domain = legendDomain('aod', 'raster', 'monthly');
     const steps = 7; // Cantidad de valores que queremos en la leyenda (6)
     const stepValue = (domain[1] - domain[0]) / (steps - 1); // Calcular el paso entre cada valor
     
@@ -77,8 +79,8 @@ export function createmonthLegendSVG() {
     // Retornar el SVG completo
     return `
         <svg class="map-legend-svg" width="200" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="15" font-size="12" font-family="Arial" font-weight="bold" >Profundidad Óptica de Aerosoles</text>
-              <text x="0" y="30" font-size="12" font-family="Arial">AOD Menasual</text>
+            <text x="0" y="15" font-size="12" font-family="Arial" font-weight="bold">Profundidad óptica de aerosoles</text>
+              <text x="0" y="30" font-size="12" font-family="Arial">Mensual</text>
             ${legendItems}
     
         </svg>
@@ -87,15 +89,6 @@ export function createmonthLegendSVG() {
 
 
 // Función para añadir o actualizar el título centrado del mapa
-export function addCenteredTitle(map, titleText) {
-    let mapTitleDiv = document.getElementById('map-title');
-    if (!mapTitleDiv) {
-        mapTitleDiv = document.createElement('div');
-        mapTitleDiv.id = 'map-title';
-        mapTitleDiv.className = 'map-title';
-        map.getContainer().appendChild(mapTitleDiv);
-    }
-    if (titleText !== undefined) {
-        mapTitleDiv.innerHTML = `<strong>${titleText}</strong>`;
-    }
+export function addCenteredTitle(map, titleText, options = {}) {
+    mountGeniusLeafletMapTitle(map, titleText, options);
 }

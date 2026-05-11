@@ -78,6 +78,22 @@ def list_missing_yearmonth_months(
     return missing
 
 
+def wall_calendar_year_month_chile() -> tuple[int, int]:
+    """
+    Último **mes civil completo** en ``America/Santiago`` (derivado de ``datetime.now()``).
+
+    Coincide con ``geniusWallCalendarYearMonth()`` en el front: la máscara GEE
+    ``mes > mes_tope → sentinela`` debe usar este tope, no el mes calendario en curso.
+    """
+    from zoneinfo import ZoneInfo
+
+    now = datetime.datetime.now(ZoneInfo("America/Santiago"))
+    y, m = now.year, now.month
+    if m == 1:
+        return y - 1, 12
+    return y, m - 1
+
+
 def list_missing_yearly(
     asset_path: str,
     *,

@@ -1,28 +1,34 @@
 import { createYearSelector, positionYearSelector } from './temp_z_b/utils_z_b_y.js';
 import { createMonthSelector, positionMonthSelector } from './temp_z_b/utils_z_b_m.js';
 import { LayersControl } from '../control.js';
+import { mountLayersControlForExplorer } from '../genius_layers_control_mount.js';
 import { updateMapLayerYear, updateMapLayerMonth } from './temp_z_b/layer_z_b.js';
 import { createYearLegend, createMonthLegend } from './temp_z_b/legend.js';
 import {map_trend, createTrendLegend} from './temp_z_b/trend_b.js';
-import{ loadInfCriticaMapLibre } from '../inf_critica_map_libre.js';
 import { attachMapOpacityPanel } from '../slider_opacity.js';
 import { applyOpacityToVectorTrendLayers } from '../maplibre_opacity_util.js';
-import { getDefaultYearPair } from '../map_data_catalog.js';
+import { getDefaultYearPair, geniusTitleForProduct, mountGeniusMapTitleElement } from '../map_data_catalog.js';
 import { setCompareSingleMapMode } from '../map_compare_mode.js';
+import { GENIUS_ZOOM_URBAN, applyGeniusMapLibreInteraction } from '../map_interaction_defaults.js';
+import { installLstZonalExplorerHost } from './lst_zonal_explorer.js';
 
 export async function map_t_zonal_b() {
+  installLstZonalExplorerHost();
   const [defaultBeforeYear, defaultAfterYear] = getDefaultYearPair('lst');
-  
+  const mapTitleText = geniusTitleForProduct(
+    'Temperatura por barrio',
+    'lst',
+  );
+
   const container = document.getElementById('p13');
   container.innerHTML = `
 <div id="before_b_lst" style="width: 100%; height: 100%; font-family: Arial, sans-serif; color: black;"></div>
 <div id="after_b_lst" style="width: 100%; height: 100%; font-family: Arial, sans-serif; color: black;"></div>
-<div id="title" class="map-title">
-  LST Estadística Zonal (Barrio)
-</div>
+<div id="title" class="map-title"></div>
 
 
   `;
+  mountGeniusMapTitleElement(container.querySelector('#title'), mapTitleText, {temporalTitle: true});
 
   const beforeMap = new maplibregl.Map({
     container: 'before_b_lst', // Contenedor ajustado a 'before_b_lst'
@@ -49,7 +55,7 @@ export async function map_t_zonal_b() {
         ]
     },
     center: [-71.44249000, -33.04752000],
-    zoom: 12.6
+    zoom: GENIUS_ZOOM_URBAN
 });
 
 const afterMap = new maplibregl.Map({
@@ -77,28 +83,31 @@ const afterMap = new maplibregl.Map({
         ]
     },
     center: [-71.44249000, -33.04752000],
-    zoom: 12.6
+    zoom: GENIUS_ZOOM_URBAN
 });
 
-   // Agregar controles de navegación a la izquierda
-   const beforeNavControl = new maplibregl.NavigationControl({ showCompass: true, showZoom: true });
+
+   applyGeniusMapLibreInteraction(beforeMap);
+
+
+   applyGeniusMapLibreInteraction(afterMap);
+
+   // Zoom +/- (compare sincroniza cámaras): un solo control, esquina superior izquierda del mapa (solo before)
+   const beforeNavControl = new maplibregl.NavigationControl({ showCompass: false, showZoom: true });
    beforeMap.addControl(beforeNavControl, 'top-left');
  
-   const afterNavControl = new maplibregl.NavigationControl({ showCompass: true, showZoom: true });
-   afterMap.addControl(afterNavControl, 'top-left');
- 
-   // Agregar controles de escala métrica
+// Agregar controles de escala métrica
    const scaleControlBefore = new maplibregl.ScaleControl({
      maxWidth: 100,
      unit: 'metric'
    });
-   beforeMap.addControl(scaleControlBefore, 'top-right');
+   beforeMap.addControl(scaleControlBefore, 'bottom-right');
  
    const scaleControlAfter = new maplibregl.ScaleControl({
      maxWidth: 100,
      unit: 'metric'
    });
-   afterMap.addControl(scaleControlAfter, 'top-right');
+   afterMap.addControl(scaleControlAfter, 'bottom-right');
  
    // Crear y posicionar selectores de años y meses
    const yearSelectors = document.createElement('div');
@@ -247,38 +256,15 @@ const afterMap = new maplibregl.Map({
 
 }
 
-
-
- 
-   async function toggleInfra(enabled) {
-    if (enabled) {
-        try {
-            await loadInfCriticaMapLibre(beforeMap);
-            await loadInfCriticaMapLibre(afterMap);
-        } catch (e) {
-            console.error('Error loading infra:', e);
-        }
-    } else {
-        [beforeMap, afterMap].forEach(m => {
-            if (m.getLayer('infra-layer')) m.removeLayer('infra-layer');
-            if (m.getSource('infraestructuraCritica')) m.removeSource('infraestructuraCritica');
-        });
-    }
-}
-
-   const controls = new LayersControl(setMode, toggleInfra);
-   controls._container.style.position = 'absolute';
-   controls._container.style.top = '10px';
-   controls._container.style.right = '10px';
-   controls._container.style.zIndex = '10';
-   container.appendChild(controls._container);
+   const controls = new LayersControl(setMode);
+   mountLayersControlForExplorer(controls, container, { zIndex: '10' });
 
    let mapsLoaded = 0;
    function onMapLoaded() {
      mapsLoaded++;
      if (mapsLoaded === 2) {
        createOpacitySlider();
-       setMode('yearly');
+       void setMode('yearly');
      }
    }
 

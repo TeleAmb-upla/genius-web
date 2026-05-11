@@ -15,6 +15,9 @@ un año civil completo nuevo (véase ``last_trend_raster_full_year`` en el estad
 Sin `--single-pass`, el encolado va en dos tandas (rasters primero, luego CSV+GeoJSON);
 Earth Engine puede paralelizar, pero el **orden estricto espera/sync** está en `pipeline`.
 
+Tras ``initialize_ee()`` se llama ``warm_unified_extraction_layer()`` (mismo registro
+que ``pipeline``) para cargar ``lib.unified_product_extraction`` antes de encolar.
+
 Uso (desde la raíz del repositorio, con credenciales EE configuradas):
 
     python -m scripts.gee.export_all
@@ -40,7 +43,12 @@ if __name__ == "__main__" and not __package__:
 
 from .audit_terminal import format_enqueue_message, print_audit_block
 from .earth_engine_init.ee_init import initialize_ee
-from .pipeline import _enqueue_for_product, _parse_products, _plan_for_product
+from .products.registry import (
+    _enqueue_for_product,
+    _parse_products,
+    _plan_for_product,
+    warm_unified_extraction_layer,
+)
 
 
 def _parse_only(raw: str | None) -> set[str] | None:
@@ -106,6 +114,7 @@ def main(argv: list[str] | None = None) -> None:
     products = _parse_products(args.product)
 
     initialize_ee()
+    warm_unified_extraction_layer()
 
     p1_names = frozenset({"asset", "raster"})
     p2_names = frozenset({"csv", "geojson"})

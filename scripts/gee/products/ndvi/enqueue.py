@@ -3,26 +3,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...drive.drive_audit import DriveFreshnessHints
+from ...drive.drive_audit import DriveFreshnessHints, validate_local_monthly_csvs
 from ...config.enqueue_types import EnqueueResult
 from ...lib import yearmonth as ym_lib
+from ...lib.product_enqueue import add_tasks, export_want, resolve_tables_phase_ndvi
 from ...config import paths
 from ...earth_engine_init import vectors
 from . import csv_tasks
 from . import geojson_tasks
 from . import incremental
 from . import raster_tasks
-
-
-def _add_tasks(out: list[Any], items: list[Any] | Any | None) -> None:
-    if items is None:
-        return
-    if isinstance(items, list):
-        out.extend(t for t in items if t is not None)
-    else:
-        if items is not None:
-            out.append(items)
-
 
 def enqueue_ndvi_exports(
     *,
@@ -41,9 +31,6 @@ def enqueue_ndvi_exports(
     messages: list[str] = []
     ran_derivative = False
 
-    def want(name: str) -> bool:
-        return only is None or name in only
-
     missing_assets = incremental.list_missing_ndvi_yearmonth_months()
     plan = incremental.plan_derivative_exports(
         missing_asset_months=missing_assets,
@@ -55,9 +42,18 @@ def enqueue_ndvi_exports(
     force_yearly_csv = bool(
         drive_freshness and drive_freshness.yearly_csv_missing_or_stale
     )
-    local_csv_needs_refresh = bool(
-        drive_freshness and drive_freshness.local_csv_stale
+    ndvi_monthly_ok, ndvi_monthly_reasons, ndvi_monthly_invalid = validate_local_monthly_csvs(
+        "ndvi"
     )
+    local_ndvi_monthly_stale = not ndvi_monthly_ok
+    clim_csv_needs_refresh = bool(
+        drive_freshness and drive_freshness.clim_csv_local_stale
+    ) or local_ndvi_monthly_stale
+    if local_ndvi_monthly_stale:
+        for _r in ndvi_monthly_reasons:
+            messages.append(
+                f"[csv] Mensual NDVI en repo inválido (auditoría local): {_r}"
+            )
     force_yearly_geo = bool(
         drive_freshness and drive_freshness.yearly_geo_missing_or_stale
     )
@@ -66,25 +62,21 @@ def enqueue_ndvi_exports(
         or (last_calendar_year in plan.years_touched)
         or (tables_run_override is True)
         or force_yearly_csv
-        or local_csv_needs_refresh
+        or clim_csv_needs_refresh
         or force_yearly_geo
     )
-    csv_run = (
-        (plan.run or force_yearly_csv or local_csv_needs_refresh)
-        if tables_run_override is None
-        else tables_run_override
+    csv_run, geo_run, _ = resolve_tables_phase_ndvi(
+        plan,
+        force_yearly_csv=force_yearly_csv,
+        clim_csv_needs_refresh=clim_csv_needs_refresh,
+        force_yearly_geo=force_yearly_geo,
+        tables_run_override=tables_run_override,
     )
-    geo_run = (
-        (plan.run or force_yearly_geo)
-        if tables_run_override is None
-        else tables_run_override
-    )
-    tables_run = csv_run or geo_run
 
-    if want("asset"):
-        _add_tasks(asset, raster_tasks.start_ndvi_ym_asset_tasks())
+    if export_want(only, "asset"):
+        add_tasks(asset, raster_tasks.start_ndvi_ym_asset_tasks())
 
-    if want("raster"):
+    if export_want(only, "raster"):
         ic_r = vectors.ndvi_yearmonth_collection()
         if missing_assets:
             messages.append(
@@ -119,7 +111,7 @@ def enqueue_ndvi_exports(
                     drive_gate=drive_gate,
                     bypass_drive_gate=need_trend_year,
                 )
-                _add_tasks(drive, tr_task)
+                add_tasks(drive, tr_task)
                 if tr_task:
                     sync.add("raster_trend")
                     ran_derivative = True
@@ -149,7 +141,7 @@ def enqueue_ndvi_exports(
                     drive_gate=drive_gate,
                     bypass_drive_gate=full_refresh,
                 )
-                _add_tasks(drive, monthly_tasks)
+                add_tasks(drive, monthly_tasks)
                 sync.add("raster_monthly")
                 ran_derivative = True
                 climatology_target = incremental.target_ym_for_monthly_climatology(ic_r)
@@ -183,7 +175,7 @@ def enqueue_ndvi_exports(
                             file_stems=(f"NDVI_Yearly_{yr}",),
                             reason=f"falta año {yr} en Drive",
                         )
-                _add_tasks(
+                add_tasks(
                     drive,
                     raster_tasks.start_ndvi_yearly_raster_tasks(
                         year_numbers=year_nums,
@@ -199,7 +191,7 @@ def enqueue_ndvi_exports(
                         paths.DRIVE_RASTER_SD,
                         stem_prefixes=("NDVI_Monthly_StdDev",),
                     )
-                _add_tasks(
+                add_tasks(
                     drive,
                     raster_tasks.start_ndvi_sd_raster_task(drive_gate=drive_gate),
                 )
@@ -210,28 +202,48 @@ def enqueue_ndvi_exports(
         drive_freshness and drive_freshness.local_tables_stale_drive_ok
     )
 
-    if want("csv"):
+    if export_want(only, "csv"):
         if csv_run and local_stale_drive_ok:
-            sync.update({"csv", "csv_yearmonth"})
+            sync.add("csv")
             ran_derivative = True
             messages.append(
                 "CSV: Drive ya tiene versión reciente; descargando sin re-exportar."
             )
         elif csv_run:
+            for _p in ndvi_monthly_invalid:
+                if _p.is_file():
+                    try:
+                        _p.unlink()
+                        messages.append(
+                            f"[csv] Eliminado local inválido antes de re-export: {_p.name}"
+                        )
+                    except OSError as _e:
+                        messages.append(
+                            f"[csv] No se pudo eliminar {_p.name}: {_e}"
+                        )
             if drive_gate:
-                drive_gate.clear_before_reexport(
-                    paths.DRIVE_CSV_MONTHLY, extensions=(".csv",),
-                    stem_prefixes=("NDVI_m_",),
-                    reason="re-export CSV mensual",
-                )
+                _monthly_stems = tuple(sorted({p.stem for p in ndvi_monthly_invalid}))
+                if _monthly_stems:
+                    drive_gate.clear_before_reexport(
+                        paths.DRIVE_CSV_MONTHLY,
+                        extensions=(".csv",),
+                        file_stems=_monthly_stems,
+                        reason="re-export CSV mensual (solo inválidos en repo)",
+                    )
+                else:
+                    drive_gate.clear_before_reexport(
+                        paths.DRIVE_CSV_MONTHLY,
+                        extensions=(".csv",),
+                        stem_prefixes=("NDVI_m_",),
+                        reason="re-export CSV mensual",
+                    )
                 drive_gate.clear_before_reexport(
                     paths.DRIVE_CSV_YEARLY, extensions=(".csv",),
                     stem_prefixes=("NDVI_y_",),
-                    reason="re-export CSV anual",
+                    reason="re-export CSV anual (urbano, áreas verdes, zonal)",
                 )
-            _add_tasks(drive, csv_tasks.start_ndvi_m_csv_tasks(drive_gate=drive_gate))
-            _add_tasks(drive, csv_tasks.start_ndvi_ym_csv_tasks(drive_gate=drive_gate))
-            sync.update({"csv", "csv_yearmonth"})
+            add_tasks(drive, csv_tasks.start_ndvi_m_csv_tasks(drive_gate=drive_gate))
+            sync.add("csv")
             ran_derivative = True
             if (
                 plan.is_full_refresh
@@ -239,13 +251,13 @@ def enqueue_ndvi_exports(
                 or (tables_run_override is True)
                 or force_yearly_csv
             ):
-                _add_tasks(drive, csv_tasks.start_ndvi_y_csv_tasks(drive_gate=drive_gate))
+                add_tasks(drive, csv_tasks.start_ndvi_y_csv_tasks(drive_gate=drive_gate))
             else:
                 messages.append("Omitido: CSV anual (sin años nuevos en el delta).")
         else:
             messages.append("Omitidos: CSV — sin datos nuevos ni CSV inválidos.")
 
-    if want("geojson"):
+    if export_want(only, "geojson"):
         drive_missing_geo_years = list(
             drive_freshness.drive_missing_yearly_geo_years
         ) if drive_freshness else []
@@ -271,7 +283,7 @@ def enqueue_ndvi_exports(
                         reason=f"GeoJSON anual Manzanas {yr} inválido/faltante — re-export",
                     )
             if drive_missing_geo_years:
-                _add_tasks(
+                add_tasks(
                     drive,
                     geojson_tasks.start_ndvi_y_geojson_tasks(
                         year_numbers=drive_missing_geo_years or None,
@@ -321,14 +333,14 @@ def enqueue_ndvi_exports(
                     ),
                     reason="re-export GeoJSON mensual",
                 )
-            _add_tasks(
+            add_tasks(
                 drive,
                 geojson_tasks.start_ndvi_m_geojson_tasks(
                     month_numbers=month_filter,
                     drive_gate=drive_gate,
                 ),
             )
-            _add_tasks(
+            add_tasks(
                 drive,
                 geojson_tasks.start_ndvi_sd_av_geojson_task(drive_gate=drive_gate),
             )
@@ -360,7 +372,7 @@ def enqueue_ndvi_exports(
                     stem_prefixes=("Trend_NDVI_ZonalStats_Manzanas",),
                     reason="re-export GeoJSON tendencia",
                 )
-            _add_tasks(
+            add_tasks(
                 drive,
                 geojson_tasks.start_ndvi_t_geojson_tasks(drive_gate=drive_gate),
             )

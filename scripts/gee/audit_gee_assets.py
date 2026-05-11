@@ -9,9 +9,9 @@ Desde la raíz del repositorio:
 
 Imprime:
   - Objetivo de reloj UTC (último mes civil cerrado, último año civil cerrado).
-  - Para cada ImageCollection año-mes (NDVI, AOD, NO2, SO2): máximo (year, month),
+  - Para cada ImageCollection año-mes (NDVI, AOD, NO2, SO2, LST): máximo (year, month),
     año anual efectivo (`effective_yearly_export_year`) y mensajes de auditoría.
-  - Para colecciones anuales (LST, Huella): máximo `year` vs objetivo.
+  - Para Huella: asset anual — máximo `year` vs objetivo.
 
 Requiere: earthengine-api, acceso de lectura a los assets del proyecto.
 """
@@ -106,7 +106,7 @@ def main() -> None:
     _audit_ym_asset("NO2 — año-mes", paths.ASSET_NO2_YEARMONTH, "no2")
     _audit_ym_asset("SO2 — año-mes", paths.ASSET_SO2_YEARMONTH, "so2")
 
-    _audit_yearly_asset("LST — anual (asset)", paths.ASSET_LST_YEARLY, "lst")
+    _audit_ym_asset("LST — año-mes", paths.ASSET_LST_YEARMONTH, "lst")
     _audit_yearly_asset("Huella urbana — anual (asset)", paths.ASSET_HU_YEARLY, "hu")
 
     print()

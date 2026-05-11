@@ -1,7 +1,5 @@
-"""Estado incremental AOD (``aod_export_state.json``)."""
+"""Estado incremental AOD (``aod_export_state.json`` en ``scripts/gee/state/``)."""
 from __future__ import annotations
-
-from pathlib import Path
 
 import ee
 
@@ -12,13 +10,10 @@ from ....lib import incremental_plan as incplan
 from ....lib import state as state_lib
 from ....lib import yearmonth as ym_lib
 
-# Instancia de manager
-# Nota: Para AOD (en atmosphere/aod/), necesitamos subir 3 niveles para llegar a gee/
 _manager = inc_base.IncrementalStateManager(
     state_filename="aod_export_state.json",
     root_asset_path=paths.ASSET_AOD_YEARMONTH,
     start_year=2001,
-    state_root_path=Path(__file__).resolve().parents[3],  # scripts/gee/
 )
 
 

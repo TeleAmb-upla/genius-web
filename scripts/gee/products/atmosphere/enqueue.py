@@ -9,17 +9,9 @@ from ...drive.drive_audit import DriveFreshnessHints
 from ...config.enqueue_types import EnqueueResult
 from ...drive.drive_export_gate import DriveExportGate
 from ...lib import yearmonth as ym_lib
+from ...lib.product_enqueue import add_tasks, export_want, resolve_tables_phase_pollutant
 from .spec import PollutantSpec, no2_spec, so2_spec
 from . import tasks_core as tc
-
-
-def _add_tasks(out: list[Any], items: list[Any] | Any | None) -> None:
-    if items is None:
-        return
-    if isinstance(items, list):
-        out.extend(t for t in items if t is not None)
-    else:
-        out.append(items)
 
 
 def _enqueue_s5p(
@@ -41,9 +33,6 @@ def _enqueue_s5p(
     messages: list[str] = []
     ran_derivative = False
 
-    def want(name: str) -> bool:
-        return only is None or name in only
-
     missing = tc.list_missing_ym(spec)
     plan = tc.plan_derivative_exports(
         spec,
@@ -52,10 +41,10 @@ def _enqueue_s5p(
     )
     ic = ee.ImageCollection(spec.asset_ym)
 
-    if want("asset"):
-        _add_tasks(asset, tc.start_ym_asset_tasks(spec))
+    if export_want(only, "asset"):
+        add_tasks(asset, tc.start_ym_asset_tasks(spec))
 
-    if want("raster"):
+    if export_want(only, "raster"):
         if missing:
             messages.append(
                 f"[raster {spec.key}] Asset año-mes incompleto: omitidos derivados."
@@ -72,7 +61,7 @@ def _enqueue_s5p(
                     drive_gate=drive_gate,
                     bypass_drive_gate=True,
                 )
-                _add_tasks(drive, tr)
+                add_tasks(drive, tr)
                 if tr:
                     sync.add(f"{sync_prefix}_raster_trend")
                     ran_derivative = True
@@ -99,7 +88,7 @@ def _enqueue_s5p(
                             file_stems=(f"{spec.key.upper()}_Yearly_{yr}",),
                             reason=f"falta año {yr} en Drive",
                         )
-                _add_tasks(
+                add_tasks(
                     drive,
                     tc.start_yearly_raster_tasks(
                         spec,
@@ -121,7 +110,7 @@ def _enqueue_s5p(
                         stem_prefixes=(f"{spec.key.upper()}_Monthly_",),
                         reason=f"refresco climatología mensual {spec.key.upper()} (datos nuevos en GEE)",
                     )
-                _add_tasks(
+                add_tasks(
                     drive,
                     tc.start_monthly_raster_tasks(
                         spec,
@@ -142,64 +131,48 @@ def _enqueue_s5p(
             if drive_freshness:
                 sync_full_mirror |= set(drive_freshness.sync_full_mirror_extra_keys)
 
-    # --- Granular csv / geo separation ---
-    force_yearly_csv = bool(
-        drive_freshness and drive_freshness.yearly_csv_missing_or_stale
+    # --- Fase tablas: CSV / GeoJSON (lógica común LST/AOD/S5P en product_enqueue) ---
+    tp = resolve_tables_phase_pollutant(
+        plan,
+        force_full=force_full,
+        drive_freshness=drive_freshness,
+        tables_run_override=tables_run_override,
     )
-    local_csv_needs_refresh = bool(
-        drive_freshness and drive_freshness.local_csv_stale
-    )
-    force_yearly_geo = bool(
-        drive_freshness and drive_freshness.yearly_geo_missing_or_stale
-    )
-    csv_run = (
-        (plan.run or plan.is_full_refresh or force_full or force_yearly_csv or local_csv_needs_refresh)
-        if tables_run_override is None
-        else tables_run_override
-    )
-    geo_run = (
-        (plan.run or plan.is_full_refresh or force_full or force_yearly_geo)
-        if tables_run_override is None
-        else tables_run_override
-    )
-    tables_run = csv_run or geo_run
+    csv_run = tp.csv_run
+    ym_csv_download_only = tp.ym_csv_download_only
+    geo_run = tp.geo_run
+    tables_run = tp.tables_run
+    local_stale_drive_ok = tp.local_stale_drive_ok
 
-    local_stale_drive_ok = bool(
-        drive_freshness and drive_freshness.local_tables_stale_drive_ok
-    )
-
-    if want("csv") and csv_run and local_stale_drive_ok:
-        sync.update(
-            {f"{sync_prefix}_csv_monthly", f"{sync_prefix}_csv_yearly"}
+    if export_want(only, "csv") and ym_csv_download_only:
+        sync.add(f"{sync_prefix}_csv_monthly")
+        messages.append(
+            f"CSV {spec.key.upper()}: falta o inválido en local (zonal o urbano); "
+            f"sincronizando carpeta mensual desde Drive. Regenerar *_YearMonth_urban en repo si aplica."
         )
+    elif export_want(only, "csv") and csv_run and local_stale_drive_ok:
+        sync.add(f"{sync_prefix}_csv_monthly")
         ran_derivative = True
         messages.append(
-            f"CSV {spec.key.upper()}: Drive ya tiene versión reciente; "
-            f"descargando sin re-exportar."
+            f"CSV {spec.key.upper()}: Drive tiene zonal mensual reciente; "
+            f"descargando (sin re-exportar)."
         )
-    elif want("csv") and csv_run:
+    elif export_want(only, "csv") and csv_run:
         if drive_gate:
             drive_gate.clear_before_reexport(
                 spec.drive_monthly, extensions=(".csv",),
-                stem_prefixes=(f"{spec.key.upper()}_m_",),
-                reason=f"re-export CSV mensual {spec.key.upper()}",
+                stem_prefixes=(f"{spec.key.upper()}_m_zonal_barrios",),
+                reason=f"re-export CSV mensual zonal barrios {spec.key.upper()}",
             )
-            drive_gate.clear_before_reexport(
-                spec.drive_yearly, extensions=(".csv",),
-                stem_prefixes=(f"{spec.key.upper()}_y_",),
-                reason=f"re-export CSV anual {spec.key.upper()}",
-            )
-        _add_tasks(drive, tc.start_csv_tasks(spec, drive_gate=drive_gate))
-        sync.update(
-            {f"{sync_prefix}_csv_monthly", f"{sync_prefix}_csv_yearly"}
-        )
+        add_tasks(drive, tc.start_csv_tasks(spec, drive_gate=drive_gate))
+        sync.add(f"{sync_prefix}_csv_monthly")
         ran_derivative = True
-    elif want("csv"):
+    elif export_want(only, "csv"):
         messages.append(
             f"Omitidos CSV {spec.key.upper()} — sin datos nuevos ni CSV inválidos."
         )
 
-    if want("geojson"):
+    if export_want(only, "geojson"):
         run_monthly_geo = plan.run or plan.is_full_refresh or force_full
         if run_monthly_geo:
             month_filter = None if plan.is_full_refresh else plan.month_subset
@@ -227,7 +200,7 @@ def _enqueue_s5p(
                     ),
                     reason=f"re-export GeoJSON mensual {spec.key.upper()}",
                 )
-            _add_tasks(
+            add_tasks(
                 drive,
                 tc.start_m_geojson_tasks(
                     spec,
@@ -262,7 +235,7 @@ def _enqueue_s5p(
                     stem_prefixes=(spec.geo_trend_stem_m,),
                     reason=f"re-export GeoJSON tendencia {spec.key.upper()}",
                 )
-            _add_tasks(drive, tc.start_t_geojson_tasks(spec, drive_gate=drive_gate))
+            add_tasks(drive, tc.start_t_geojson_tasks(spec, drive_gate=drive_gate))
             sync.update(
                 {
                     f"{sync_prefix}_geo_trend_b",
@@ -283,12 +256,14 @@ def _enqueue_s5p(
         local_invalid_geo_yrs = list(
             drive_freshness.local_invalid_yearly_geo_years
         ) if drive_freshness else []
+        local_all_null_geo_yrs = list(
+            drive_freshness.local_all_null_yearly_geo_years
+        ) if drive_freshness else []
         full_refresh_geo_yrs: list[int] = []
         if (
             not skip_yearly
             and (force_full or plan.is_full_refresh)
             and not drive_missing_geo_yrs
-            and not local_invalid_geo_yrs
         ):
             ic_for_years = ee.ImageCollection(spec.asset_ym)
             max_year = ym_lib.effective_yearly_export_year(ic_for_years)
@@ -298,8 +273,14 @@ def _enqueue_s5p(
             full_refresh_geo_yrs = [
                 int(y) for y in all_years_raw if int(y) <= max_year
             ]
-        years_to_export = drive_missing_geo_yrs or full_refresh_geo_yrs
-        geo_yearly_needed = bool(drive_missing_geo_yrs)
+        years_to_export = sorted(
+            {
+                *drive_missing_geo_yrs,
+                *full_refresh_geo_yrs,
+                *local_all_null_geo_yrs,
+            }
+        )
+        geo_yearly_needed = bool(drive_missing_geo_yrs or local_all_null_geo_yrs)
         local_needs_resync = bool(local_invalid_geo_yrs)
         if (not skip_yearly or geo_yearly_needed or local_needs_resync) and geo_run:
             if years_to_export and drive_gate:
@@ -315,7 +296,7 @@ def _enqueue_s5p(
                         reason=f"GeoJSON anual Manzanas {yr} inválido/faltante — re-export",
                     )
             if years_to_export:
-                _add_tasks(
+                add_tasks(
                     drive,
                     tc.start_y_geojson_tasks(
                         spec,
@@ -339,7 +320,8 @@ def _enqueue_s5p(
                 )
                 ran_derivative = True
                 messages.append(
-                    f"GeoJSON anuales {spec.key.upper()} válidos en Drive; re-descargando copia local sin re-export."
+                    f"GeoJSON anuales {spec.key.upper()}: copia local inválida o faltante; "
+                    f"re-descarga desde Drive (sin re-export GEE)."
                 )
         elif not geo_run and not run_monthly_geo:
             messages.append(

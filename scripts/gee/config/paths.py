@@ -1,13 +1,37 @@
 """
 Rutas del repositorio (relativas a la raíz del proyecto) y nombres de carpeta en Google Drive.
 
-Earth Engine solo admite un nombre de carpeta de Drive por exportación (sin subrutas).
+Google Drive vs Earth Engine (Assets)
+-------------------------------------
+Las exportaciones ``Export.image.toDrive`` / ``Export.table.toDrive`` **no** escriben en
+el árbol de *Assets* de GEE (``users/...``). Escriben en **Google Drive**, en la cuenta
+asociada a ``earthengine authenticate`` (típicamente **Mi unidad**).
+
+* Cada constante ``DRIVE_*`` es el **nombre de una carpeta** (un solo segmento, sin
+  ``/``). Earth Engine crea la carpeta bajo la raíz de esa unidad si aún no existe.
+* Para encontrar los archivos: abre https://drive.google.com → **Mi unidad** → busca el
+  nombre exacto (p. ej. ``NDVI_Monthly``, ``NO2_Yearly_ZonalStats_Barrios``). Si en la
+  pestaña *Tasks* del Code Editor el enlace “abrir en Drive” no funciona, usa la búsqueda
+  en Drive con ese mismo nombre.
+* El script de descarga busca carpetas por **nombre exacto**. Si existen varias carpetas
+  con el mismo nombre, la API usa la primera coincidencia (ver aviso en consola).
+
+Las rutas ``REPO_*`` son **solo locales** en este repositorio; no son el destino de EE.
+
+Earth Engine admite un nombre de carpeta por exportación (no una ruta anidada tipo
+``Padre/Hijo`` en un solo string).
+
 Tras completar las tareas en https://code.earthengine.google.com/tasks , descarga los
 archivos y colócalos en las rutas REPO_* indicadas para que coincidan con el front-end.
 
 Flujo encolado + espera + descarga: python -m scripts.gee.pipeline
 Solo descarga desde Drive: python -m scripts.gee.drive.download_drive_to_repo
 (ambos usan las credenciales de earthengine authenticate).
+
+Cuando bajan CSV/tablas al repo, el pipeline y la descarga Drive regeneran
+``assets/js/genius_map_catalog.generated.js`` (años por producto y título de
+iluminación leído de ``illumination_front_catalog.json``) vía
+``python -m scripts.gee.lib.genius_frontend_catalog``.
 """
 import os
 from pathlib import Path
@@ -53,6 +77,7 @@ REPO_GEOJSON_NDVI_TREND_B = REPO_GEOJSON_NDVI_YEARLY_B
 REPO_GEOJSON_NDVI_TREND_M = REPO_GEOJSON_NDVI_YEARLY_M
 
 # --- Carpetas en Google Drive (crear vacías o EE las crea al exportar) ---
+# Ubicación real: Google Drive de la cuenta EE → Mi unidad → carpeta con este nombre.
 DRIVE_RASTER_MONTHLY = "NDVI_Monthly"
 # Solo NDVI_Yearly_YYYY.tif → REPO_RASTER_NDVI_YEARLY (no mezclar con tendencia).
 DRIVE_RASTER_YEARLY = "NDVI_Yearly"
@@ -61,7 +86,9 @@ DRIVE_RASTER_TREND = "NDVI_Trend"
 DRIVE_RASTER_SD = "NDVI_StdDev"
 
 # CSV NDVI -> REPO_CSV (compartido con otros CSV del sitio).
-# Mensual: NDVI_m_av, NDVI_m_urban | Anual: NDVI_y_av, NDVI_y_urban (ver csv_tasks.py).
+# Mensual: NDVI_m_av, NDVI_m_urban, NDVI_m_zonal_barrios |
+# Anual: NDVI_y_av, NDVI_y_urban, NDVI_y_zonal_barrios (csv_tasks.py).
+# Tras sync clave ``csv`` (download_drive_to_repo) se regenera NDVI_zonal_explorer_*.json.
 # Año-mes: tabla Year, Month, NDVI (urbano) → REPO_NDVI_YEARMONTH_CSV.
 DRIVE_CSV_MONTHLY = "NDVI_Monthly"
 DRIVE_CSV_YEARLY = "NDVI_Yearly"
@@ -171,9 +198,9 @@ DRIVE_HU_YEARLY = "Huella_Urbana_Yearly"
 REPO_RASTER_HU_YEARLY = PROJECT_ROOT / "assets" / "data" / "raster" / "Huella_Urbana"
 REPO_CSV_HU = PROJECT_ROOT / "assets" / "data" / "csv"
 
-# --- LST (Landsat L8+L9) ---
-ASSET_LST_YEARLY = (
-    "users/plataformagenius/Temperatura_Superficial/LST_V2/LST_Yearly"
+# --- LST (ImageCollection año–mes en GEE; anual derivado = mediana mensual por año) ---
+ASSET_LST_YEARMONTH = (
+    "users/plataformagenius/Temperatura_Superficial/LST/LST_YearMonth"
 )
 REPO_RASTER_LST_MONTHLY = PROJECT_ROOT / "assets" / "data" / "raster" / "LST" / "LST_Monthly"
 REPO_RASTER_LST_YEARLY = PROJECT_ROOT / "assets" / "data" / "raster" / "LST" / "LST_Yearly"
@@ -196,6 +223,8 @@ DRIVE_LST_RASTER_YEARLY = "LST_Yearly"
 DRIVE_LST_RASTER_TREND = "LST_Trend"
 DRIVE_LST_CSV_MONTHLY = DRIVE_LST_RASTER_MONTHLY
 DRIVE_LST_CSV_YEARLY = DRIVE_LST_RASTER_YEARLY
+# Tras sync ``lst_csv_monthly`` / ``lst_csv_yearly`` (download_drive_to_repo) se regenera
+# LST_zonal_explorer_*.json vía scripts/repo/bundles/build_lst_zonal_explorer_bundle.py.
 DRIVE_LST_GEO_MONTHLY_B = "LST_Monthly_ZonalStats_Barrios"
 DRIVE_LST_GEO_MONTHLY_M = "LST_Monthly_ZonalStats_Manzanas"
 DRIVE_LST_GEO_YEARLY_B = "LST_Yearly_ZonalStats_Barrios"
@@ -206,3 +235,25 @@ DRIVE_LST_SUHI_YEARLY = "LST_SUHI_Yearly"
 REPO_GEOJSON_LST_SUHI_YEARLY = (
     PROJECT_ROOT / "assets" / "data" / "geojson" / "LST" / "LST_SUHI_Yearly"
 )
+
+# --- Paquete GEE (scripts/gee/): JSON de estado incremental por producto ---
+GEE_PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+EXPORT_STATE_DIR = GEE_PACKAGE_ROOT / "state"
+
+
+def export_state_path(filename: str) -> Path:
+    """
+    Ruta estable al JSON de estado bajo ``scripts/gee/state/``.
+
+    Si aún existe el archivo en la raíz legacy ``scripts/gee/`` (layout antiguo),
+    lo mueve una sola vez al subdirectorio ``state/``.
+    """
+    new_p = EXPORT_STATE_DIR / filename
+    if new_p.is_file():
+        return new_p
+    legacy = GEE_PACKAGE_ROOT / filename
+    if legacy.is_file():
+        EXPORT_STATE_DIR.mkdir(parents=True, exist_ok=True)
+        legacy.rename(new_p)
+        return new_p
+    return new_p

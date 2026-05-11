@@ -1,6 +1,8 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import { legendDomain } from '../../../legend_ranges.js';
+import { physicalNo2 } from '../../../raster_quantized_decode.js';
 
-const domain = [9.625, 26.75]; // Valores mínimo y máximo de tu dataset
+const domain = legendDomain('no2', 'raster', 'monthly');
 const baseColors = [
     '#000000', // black
     '#0000FF', // blue
@@ -11,6 +13,8 @@ const baseColors = [
     '#FF0000'  // red
 ];
 export function ToColorMonth(value) {
+    const v = physicalNo2(value);
+    if (Number.isNaN(v)) return null;
     // Número de intervalos entre cada par de colores base
     const numIntervalsBetweenColors = 2;
     const totalColors = (baseColors.length - 1) * numIntervalsBetweenColors + 1;
@@ -41,5 +45,5 @@ export function ToColorMonth(value) {
         .clamp(true); // Limitar los valores fuera del dominio
 
     // Obtener el color correspondiente al valor dado
-    return colorScale(value);
+    return colorScale(v);
 }

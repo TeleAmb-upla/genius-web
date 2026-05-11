@@ -36,6 +36,11 @@ def wait_for_tasks(
         f"{lead}Esperando {n} tarea(s) de Earth Engine (export a Drive)…",
         file=stream,
     )
+    # Evitar cientos de líneas idénticas: avisar cuando cambie el número de activas,
+    # o cada heartbeat_secs si no hay cambio (la cola GEE puede tardar mucho en tablas).
+    heartbeat_secs = max(120.0, poll_seconds * 4.0)
+    prev_active: int | None = None
+    last_msg_mono = start
     while True:
         active = [t for t in pending if t.active()]
         if not active:
@@ -45,10 +50,34 @@ def wait_for_tasks(
                 f"Tiempo de espera agotado ({timeout_seconds}s) con "
                 f"{len(active)} tarea(s) aún activas."
             )
-        print(
-            f"{lead}  … {len(active)}/{n} activas; reintento en {poll_seconds:.0f}s",
-            file=stream,
+        now = time.monotonic()
+        ac = len(active)
+        elapsed_min = (now - start) / 60.0
+        should_print = (
+            ac != prev_active
+            or (now - last_msg_mono) >= heartbeat_secs
         )
+        if should_print:
+            if ac != prev_active and prev_active is not None:
+                print(
+                    f"{lead}  … {ac}/{n} activas ({n - ac} terminadas); "
+                    f"~{elapsed_min:.1f} min desde el inicio; siguiente comprobación en {poll_seconds:.0f}s",
+                    file=stream,
+                )
+            elif prev_active is None:
+                print(
+                    f"{lead}  … {ac}/{n} activas; siguiente comprobación en {poll_seconds:.0f}s "
+                    f"(las tablas zonal/CSV en GEE suelen tardar varios minutos o más)",
+                    file=stream,
+                )
+            else:
+                print(
+                    f"{lead}  … sigue {ac}/{n} activas (~{elapsed_min:.1f} min en total; "
+                    f"mismo recuento; próximo aviso en ~{heartbeat_secs:.0f}s)",
+                    file=stream,
+                )
+            prev_active = ac
+            last_msg_mono = now
         time.sleep(poll_seconds)
 
     errors: list[str] = []

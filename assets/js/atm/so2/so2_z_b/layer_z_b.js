@@ -1,6 +1,11 @@
 ﻿import { ToColorYear_z_b } from './ndvi_palette_z_b_y.js'; 
 import { ToColorMonth_z_b } from './ndvi_palette_z_b_m.js';
 import { so2UmolForDisplay } from '../so2_units.js';
+import {
+    atmBarrioPopupHtml,
+    atmBarrioPopupHtmlMonthly,
+} from '../../atm_zonal_explorer.js';
+import { geniusPrepareExclusiveGeoPopup } from '../../../maplibre_exclusive_geo_popup.js';
 
 export async function preprocessGeoJSON(url, currentMode) {
     try {
@@ -64,15 +69,11 @@ export async function updateMapLayerYear(map, sourceId, layerId, year) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const vU = so2UmolForDisplay(properties.SO2);
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`
-                <div class="popup-title">${properties.NOMBRE || properties.MANZENT || 'Barrio'}</div>
-                <div class="popup-row"><span class="popup-label">Año</span><span class="popup-value">${properties.Year}</span></div>
-                <div class="popup-row"><span class="popup-label">SO₂ (µmol/m²)</span><span class="popup-value">${vU != null ? vU.toFixed(2) : 'Sin datos'}</span></div>
-            `)
-            .addTo(map);
+            .setHTML(atmBarrioPopupHtml('so2', properties));
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     map.on('mouseenter', layerId, () => {
@@ -106,15 +107,11 @@ export async function updateMapLayerMonth(map, sourceId, layerId, month) {
 
     map.on('click', layerId, (e) => {
         const properties = e.features[0].properties;
-        const vU = so2UmolForDisplay(properties.SO2);
-        new maplibregl.Popup({ className: 'geo-popup' })
+        const popup = new maplibregl.Popup({ className: 'geo-popup' })
             .setLngLat(e.lngLat)
-            .setHTML(`
-                <div class="popup-title">${properties.NOMBRE || properties.MANZENT || 'Barrio'}</div>
-                <div class="popup-row"><span class="popup-label">Mes</span><span class="popup-value">${properties.Month}</span></div>
-                <div class="popup-row"><span class="popup-label">SO₂ (µmol/m²)</span><span class="popup-value">${vU != null ? vU.toFixed(2) : 'Sin datos'}</span></div>
-            `)
-            .addTo(map);
+            .setHTML(atmBarrioPopupHtmlMonthly('so2', properties));
+        geniusPrepareExclusiveGeoPopup(popup);
+        popup.addTo(map);
     });
 
     map.on('mouseenter', layerId, () => {

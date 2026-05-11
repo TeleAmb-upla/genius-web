@@ -8,3 +8,5 @@
 #   Primera sync por carpeta = espejo completo; luego solo faltantes (drive_sync_keys_state.json).
 
 earthengine-api>=1.0.0
+google-api-python-client>=2.0.0
+google-auth-httplib2>=0.2.0

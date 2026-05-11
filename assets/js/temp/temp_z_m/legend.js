@@ -1,3 +1,4 @@
+import { legendDomain } from '../../legend_ranges.js';
 export function createYearLegend() {
     const legendContent = document.createElement('div');
     legendContent.id = 'yearLegend';
@@ -13,7 +14,7 @@ export function createYearLegend() {
     subtitle.className = 'map-legend-panel__subtitle';
     legendContent.appendChild(subtitle);
 
-    const domain = [17, 40];
+    const domain = legendDomain('lst', 'zonalManzana', 'yearly');
     const steps = 18;
     const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const colors = [
@@ -67,7 +68,7 @@ export function createMonthLegend() {
     subtitle.className = 'map-legend-panel__subtitle';
     legendContent.appendChild(subtitle);
 
-    const domain = [11.5, 43.5];
+    const domain = legendDomain('lst', 'zonalManzana', 'monthly');
     const steps = 18;
     const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const colors = [

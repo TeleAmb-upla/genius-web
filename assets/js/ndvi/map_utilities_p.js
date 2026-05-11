@@ -1,10 +1,12 @@
 import { ndviToColor } from './ndvi_year/ndvi_palette.js';
 import { ndviToColorMonth } from './ndvi_month/ndvi_palette_month.js';
+import { legendDomain } from '../legend_ranges.js';
+import { mountGeniusLeafletMapTitle } from '../map_data_catalog.js';
 
 
 // Función para crear la leyenda SVG para NDVI anual
 export function createyearLegendSVG(isMobile = false) {
-    const domain = [-0.3359, 0.7422];
+    const domain = legendDomain('ndvi', 'raster', 'yearly');
     const steps = 6;
     const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#2E5D2D', '#194D18'];
@@ -36,8 +38,8 @@ export function createyearLegendSVG(isMobile = false) {
     // Retornar el SVG completo con el subtítulo y el texto adicional
     return `
         <svg class="map-legend-svg" width="${width}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="${fontSizeTitle + 2}" font-size="${fontSizeTitle}" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
-            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Anual</text>
+            <text x="0" y="${fontSizeTitle + 2}" font-size="${fontSizeTitle}" font-family="Arial" font-weight="bold">Indicador de vegetación</text>
+            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">Anual</text>
             ${legendItems}
         </svg>
     `;
@@ -46,7 +48,7 @@ export function createyearLegendSVG(isMobile = false) {
 
 // Función para crear la leyenda SVG para NDVI mensual
 export function createmonthLegendSVG(isMobile = false) {
-    const domain = [-0.3281, 0.7969];
+    const domain = legendDomain('ndvi', 'raster', 'monthly');
     const steps = 6;
     const stepValue = (domain[1] - domain[0]) / (steps - 1);
     const colors = ['#ff0000', '#DF923D', '#FCD163', '#74A901', '#2E5D2D', '#194D18'];
@@ -76,23 +78,14 @@ export function createmonthLegendSVG(isMobile = false) {
 
     return `
         <svg class="map-legend-svg" width="${width}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
-            <text x="0" y="${fontSizeTitle + 2}" font-size="${fontSizeTitle}" font-family="Arial" font-weight="bold">Indicador de Vegetación</text>
-            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">NDVI Mensual</text>
+            <text x="0" y="${fontSizeTitle + 2}" font-size="${fontSizeTitle}" font-family="Arial" font-weight="bold">Indicador de vegetación</text>
+            <text x="0" y="${fontSizeTitle + fontSizeSubtitle + 5}" font-size="${fontSizeSubtitle}" font-family="Arial">Mensual</text>
             ${legendItems}
         </svg>
     `;
 }
 
 // Función para añadir o actualizar el título centrado del mapa
-export function addCenteredTitle(map, titleText) {
-    let mapTitleDiv = document.getElementById('map-title');
-    if (!mapTitleDiv) {
-        mapTitleDiv = document.createElement('div');
-        mapTitleDiv.id = 'map-title';
-        mapTitleDiv.className = 'map-title';
-        map.getContainer().appendChild(mapTitleDiv);
-    }
-    if (titleText !== undefined) {
-        mapTitleDiv.innerHTML = `<strong>${titleText}</strong>`;
-    }
+export function addCenteredTitle(map, titleText, options = {}) {
+    mountGeniusLeafletMapTitle(map, titleText, options);
 }

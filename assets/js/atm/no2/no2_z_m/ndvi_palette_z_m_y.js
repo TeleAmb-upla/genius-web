@@ -1,7 +1,8 @@
+import { legendDomain } from '../../../legend_ranges.js';
 export function ToColorYear_z_m(value) {
 
         // Definir los colores de la paleta
-        const domain = [11.125,24.5]; // mínimo y máximo 25.813,40.313
+        const domain = legendDomain('no2', 'zonalManzana', 'yearly');
 
         const range =   [ '#333333', // black
             '#0000FF', // blue

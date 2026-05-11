@@ -1,5 +1,6 @@
+import { legendDomain } from '../../legend_ranges.js';
 export function ndviToColorYear_z_m(ndvi) {
-    const domain = [0.0059,0.4746]; // mínimo y máximo 0.0059,0.4746
+    const domain = legendDomain('ndvi', 'zonalManzana', 'yearly');
 
     // Paleta de colores invertida que representa los diferentes valores de NDVI
     const range = [    '#ff0000', // Rojo intenso
